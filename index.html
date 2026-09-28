@@ -3177,7 +3177,7 @@ setInterval(xvJEval,1000); setInterval(xvRender,1000);
   let ok=false; try{ ok=sessionStorage.getItem(KEY)===H; }catch(e){}
   if(ok){ gate.remove(); fab.remove(); return; }
   const sha=async s=>{ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); };
-  const others=()=>[...document.body.children].filter(el=>el!==gate&&el!==fab&&el.tagName!=='SCRIPT'&&el.tagName!=='STYLE');
+  const others=()=>[...document.body.children].filter(el=>el!==gate&&el!==fab&&el.id!=='muTg'&&el.id!=='muBox'&&el.tagName!=='SCRIPT'&&el.tagName!=='STYLE');
   /* koin ₿ melayang sebagai ornamen */
   for(let i=0;i<14;i++){ const c=document.createElement('div'); c.className='gcoin'; c.textContent='₿';
     Object.assign(c.style,{left:(Math.random()*100)+'%',bottom:'-40px',fontSize:(12+Math.random()*26)+'px',animationDuration:(14+Math.random()*16)+'s',animationDelay:(-Math.random()*20)+'s'}); gate.appendChild(c); }
@@ -3192,6 +3192,51 @@ setInterval(xvJEval,1000); setInterval(xvRender,1000);
     if(h===H){ msg.className='gmsg ok'; msg.textContent='✓ Akses diterima. Selamat trading!'; try{ sessionStorage.setItem(KEY,H); }catch(err){}
       setTimeout(()=>{ gate.classList.add('bye'); fab.classList.remove('show'); others().forEach(el=>el.inert=false); clearInterval(pxT); setTimeout(()=>{ gate.remove(); fab.remove(); },1000); },700); }
     else { msg.className='gmsg'; msg.textContent=inp.value?'✗ Password salah, coba lagi.':'Password belum diisi.'; card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); inp.select(); } });
+})();
+</script>
+
+
+<!-- ===== TOGGLE MUSIK (audio saja, video disembunyikan) ===== -->
+<style>
+#muTg{position:fixed;right:200px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);z-index:9996;height:36px;padding:0 12px 0 5px;display:flex;align-items:center;gap:8px;border-radius:999px;
+  background:rgba(0,0,0,.92);border:2px solid #f7931a;color:#fff;font:800 10px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.14em;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.6),0 0 14px rgba(247,147,26,.25)}
+#muTg:hover{box-shadow:0 8px 22px rgba(0,0,0,.6),0 0 20px rgba(247,147,26,.5)}
+#muTg:focus-visible{outline:2px solid #ffcf7a;outline-offset:2px}
+#muTg .ic{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#ffd08a,#f7931a 60%,#c46e00);color:#1a0f00;font-size:10px;line-height:1}
+#muTg .bars{display:flex;gap:2px;align-items:flex-end;height:12px}
+#muTg .bars i{width:2px;height:3px;border-radius:1px;background:#f7931a}
+#muTg.on .bars i{animation:mueq .9s ease-in-out infinite}
+#muTg.on .bars i:nth-child(2){animation-delay:-.3s} #muTg.on .bars i:nth-child(3){animation-delay:-.6s} #muTg.on .bars i:nth-child(4){animation-delay:-.15s}
+@keyframes mueq{0%,100%{height:3px}50%{height:12px}}
+#muTg.err{border-color:#555;opacity:.6;cursor:not-allowed}
+#muBox{position:fixed;left:-9999px;top:0;width:200px;height:200px;opacity:0;pointer-events:none}
+@media (max-width:699px){ #muTg{right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 118px);padding:0 8px 0 5px} #muTg .lb{display:none} }
+@media (prefers-reduced-motion:reduce){ #muTg.on .bars i{animation:none;height:8px} }
+</style>
+<button id="muTg" type="button" aria-pressed="false" aria-label="Putar musik" title="Putar musik"><span class="ic" id="muIc">▶</span><span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="lb" id="muLb">MUSIK</span></button>
+<div id="muBox" aria-hidden="true"><div id="muP"></div></div>
+<script>
+(()=>{
+  const VID='a8_tPrslIZg', KEY='btcusdt-music', btn=document.getElementById('muTg'), ic=document.getElementById('muIc'), lb=document.getElementById('muLb');
+  let p=null, ready=false, err=false, want=true; try{ want=localStorage.getItem(KEY)!=='pause'; }catch(e){}
+  const playing=()=>ready&&[1,3].includes(p.getPlayerState());
+  const ui=()=>{ const on=playing(); btn.classList.toggle('on',on); ic.textContent=on?'❚❚':'▶'; btn.setAttribute('aria-pressed',on);
+    const t=err?'Musik tidak tersedia':on?'Jeda musik':'Putar musik'; btn.setAttribute('aria-label',t); btn.title=t; };
+  const save=v=>{ try{ localStorage.setItem(KEY,v); }catch(e){} };
+  const play=()=>{ if(!ready||err) return; try{ p.setPlaybackQuality('small'); p.unMute(); p.setVolume(60); p.playVideo(); }catch(e){} };
+  btn.addEventListener('click',()=>{ if(err) return; if(playing()){ want=false; save('pause'); p.pauseVideo(); } else { want=true; save('play'); play(); } setTimeout(ui,150); });
+  /* browser menahan autoplay bersuara sampai ada interaksi: musik mulai pada klik/ketik pertama di halaman */
+  const kick=e=>{ if(e.target.closest&&e.target.closest('#muTg')) return; if(want&&ready&&!playing()) play(); };
+  ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,kick,{capture:true,passive:true}));
+  window.onYouTubeIframeAPIReady=()=>{
+    p=new YT.Player('muP',{width:200,height:200,videoId:VID,playerVars:{autoplay:1,playsinline:1,controls:0,rel:0,loop:1,playlist:VID},
+      events:{
+        onReady:e=>{ ready=true; if(want) play(); ui(); },
+        onStateChange:e=>{ if(e.data===0&&want){ p.seekTo(0); p.playVideo(); } ui(); },
+        onError:e=>{ err=true; btn.classList.add('err'); lb.textContent='N/A'; ui(); }
+      }});
+  };
+  const s=document.createElement('script'); s.src='https://www.youtube.com/iframe_api'; s.async=true; s.onerror=()=>{ err=true; btn.classList.add('err'); ui(); }; document.head.appendChild(s);
 })();
 </script>
 
