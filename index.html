@@ -1012,7 +1012,7 @@ function candleChecks(c, I, i, vi, htfTrend, tf){
   return {st, L, lean:L?'LONG':'SHORT', trend, r, h, hp, vw, atr:a, vr, ap, close, htfTrend};
 }
 
-/* ---------- aturan utama: ikuti trend 15M · reversal = penanda TUNGGU sampai 15M bertahan ≥20 candle ---------- */
+/* ---------- aturan utama: ikuti trend 15M · reversal langsung diizinkan (tanpa penahanan 20 candle) ---------- */
 const REV_N=20, REV={cache:null, mark:null};
 function trend15(){
   const c=S.mtf['15m']?.candles; if(!c||c.length<60) return null;
@@ -1020,11 +1020,7 @@ function trend15(){
   const cl=c.map(k=>k.close), e9=ema(cl,9), e21=ema(cl,21);
   const sg=i=>e9[i]==null||e21[i]==null?0:e9[i]>e21[i]?1:-1;
   const runAt=i=>{ const s=sg(i); let k=i; while(k>0&&sg(k)===s) k--; return {s,len:i-k,next:k}; };
-  const r0=runAt(n); let est=null;
-  if(r0.len>=REV_N) est=r0.s;
-  else { let j=r0.next; while(j>0&&est==null){ const r=runAt(j); if(r.s&&r.len>=REV_N) est=r.s; j=r.next; } }
-  if(est==null) est=0; // belum ada trend yang bertahan REV_N candle → semua arah menunggu
-  const pending=r0.s&&r0.s!==est?r0.s:0;
+  const r0=runAt(n), est=r0.s, pending=0; // aturan tahan reversal 20 candle dihapus: arah trend = arah EMA9/21 15M saat ini
   REV.cache={key,dir:est,s0:r0.s,run:r0.len,pending,left:Math.max(0,REV_N-r0.len),e9:e9[n],e21:e21[n],t:c[n].time};
   return REV.cache;
 }
@@ -1032,8 +1028,8 @@ const revAr=d=>d>0?'↑':'↓', revUp=d=>d>0?'naik':'turun';
 function revTxt(T){ if(!T) return 'trend 15M memuat…';
   if(!T.dir) return `trend 15M belum bertahan ${REV_N} candle (${revAr(T.s0)} ${T.run}/${REV_N})`;
   return T.pending?`reversal ${revAr(T.pending)} menunggu konfirmasi 15M (${T.run}/${REV_N} candle)`:`trend 15M ${revUp(T.dir)} · ${T.run} candle`; }
-/* null = boleh entry; string = alasan TUNGGU */
-function revGate(d){
+/* aturan penahanan reversal 20 candle 15M DIHAPUS (permintaan user): selalu boleh entry */
+function revGate(d){ return null;
   const T=trend15(); if(!T||!d) return null;
   if(!T.dir) return `${revTxt(T)} · waiting order`;
   if(T.pending) return `reversal ${revAr(T.pending)} menunggu konfirmasi 15M (${T.run}/${REV_N} candle) · waiting order`;
@@ -3177,8 +3173,8 @@ const SET={
     desc:'kaskade likuidasi 5M melawan tren 1H → LIMIT di 50% candle likuidasi (ikut arah likuidasi)'},
   FLW:{name:'FLUSH FOLLOW 15M',grade:'A',tf:'15M',tp:300,sl:450,bars:8,pri:3,bt:[121,71.9,1.80],
     desc:'kaskade 15M ≥2× ATR, volume ≥3×, melawan bias makro → ikut arah likuidasi'},
-  PB:{name:'MACRO PULLBACK',grade:'B',tf:'15M',tp:null,sl:null,bars:16,pri:2,bt:[95,65.3,1.37],
-    desc:'makro 1D/4H/1H searah, tren 15M ≥20 candle, pullback EMA21 + pemicu'},
+  PB:{name:'MACRO PULLBACK',grade:'C',tf:'15M',tp:null,sl:null,bars:16,pri:2,bt:[301,56.1,1.01],
+    desc:'makro 1D/4H/1H searah, tren 15M searah (tanpa syarat 20 candle), pullback EMA21 + pemicu'},
   BO:{name:'SNIPER BREAKOUT',grade:'C',tf:'5M',tp:300,sl:450,bars:24,win:6,pri:1,bt:[906,57.1,0.97],
     desc:'close 5M tembus high/low 2 jam + volume ≥1.5× searah tren 1H, sesi 14–04 WIB → LIMIT retest level tembus'},
 };
@@ -3260,13 +3256,13 @@ function detFLW(c,I,i){ const k=c[i], a=I.atr[i-1], rg=k.high-k.low; let v=0; fo
   const m=macroAt(k.time+900); if(!m||Math.sign(m.sum)!==-d) return null;
   return {dir:d,kind:'MARKET',why:`kaskade 15M ${(rg/a).toFixed(1)}× ATR · vol ${vr.toFixed(1)}× · melawan makro ${m.sum>0?'+':''}${m.sum} → ikut likuidasi`,ck:[['range ≥2× ATR 15M',1],['volume ≥3×',1],['melawan makro 1D/4H/1H',1]]}; }
 function detPB(c,I,i){ const k=c[i], T=k.time+900, m=macroAt(T), h=new Date(T*1000).getUTCHours(); if(!m||h<7||h>=21) return null; const need=L.PB?.strict?3:2;
-  const d=m.sum>=need&&m.m4>=0&&m.m1>0?1:m.sum<=-need&&m.m4<=0&&m.m1<0?-1:0; if(!d||Math.sign(I.run[i])!==d||Math.abs(I.run[i])<20) return null;
+  const d=m.sum>=need&&m.m4>=0&&m.m1>0?1:m.sum<=-need&&m.m4<=0&&m.m1<0?-1:0; if(!d||Math.sign(I.run[i])!==d) return null; // tanpa syarat 20 candle
   let touch=false; for(let j=i-4;j<=i;j++) if(d>0?c[j].low<=I.e21[j]+.1*I.atr[j]:c[j].high>=I.e21[j]-.1*I.atr[j]) touch=true; if(!touch) return null;
   if(!(d>0?k.close>k.open&&k.close>c[i-1].high&&k.close>I.e9[i]:k.close<k.open&&k.close<c[i-1].low&&k.close<I.e9[i])) return null;
   const r=I.rsi[i]; if(d>0?r<48||r>68:r>52||r<32) return null; if(d>0?!(I.hist[i]>I.hist[i-1]):!(I.hist[i]<I.hist[i-1])) return null;
   if(d>0?k.close<I.vwap[i]:k.close>I.vwap[i]) return null; let v=0; for(let j=i-20;j<i;j++) v+=c[j].volume; if(k.volume<v/20) return null;
   const tp=Math.round(clamp(1.2*I.atr[i],100,300)), sl=Math.round(Math.max(tp,1.2*I.atr[i]));
-  return {dir:d,kind:'MARKET',tp,sl,why:`makro ${d>0?'naik':'turun'} ${m.sum>0?'+':''}${m.sum} · tren 15M ${Math.abs(I.run[i])} candle · pullback EMA21 + pemicu · RSI ${r.toFixed(0)}`,ck:[['makro searah',1],['tren 15M ≥20',1],['pullback EMA21',1],['pemicu',1],['RSI/MACD/VWAP/volume',1]]}; }
+  return {dir:d,kind:'MARKET',tp,sl,why:`makro ${d>0?'naik':'turun'} ${m.sum>0?'+':''}${m.sum} · tren 15M ${Math.abs(I.run[i])} candle · pullback EMA21 + pemicu · RSI ${r.toFixed(0)}`,ck:[['makro searah',1],['tren 15M searah',1],['pullback EMA21',1],['pemicu',1],['RSI/MACD/VWAP/volume',1]]}; }
 
 /* simulasi riwayat (candle sendiri, SL dianggap kena dulu) */
 function simHist(c,i,s,tp,sl,bars,win){
@@ -3308,10 +3304,10 @@ function addSig(type,s,barT,dur){
     expires:s.kind==='LIMIT'?start+cfg.win*300:now+300,bars:cfg.bars,why:s.why,ck:s.ck,status:s.kind==='LIMIT'?'PENDING':'LIVE',ref:s.ref};
   if(g.kind==='MARKET'){ g.entry=px; g.filledT=now; }
   if(type==='REV'){ for(const o of SIGS) if(o.dir!==g.dir&&(o.status==='PENDING'||o.status==='LIVE'||o.status==='OPEN')){ o.status='BATAL'; o.note='dibatalkan reversal cepat'; o.res=o.res||'BATAL'; } }
-  if(type==='BO'&&!ME.aggr) g.note='grade C: tampil sebagai ide, tidak dikunci ke Desk/Agent';
+  if(cfg.grade==='C'&&!ME.aggr) g.note='grade C: tampil sebagai ide, tidak dikunci ke Desk/Agent';
   SIGS.unshift(g); if(SIGS.length>30) SIGS.length=30;
   MEM.trades.push({id,type,dir:g.dir,t:barT,tp,sl,src:'live',res:null}); saveMem();
-  if(type!=='BO'||ME.aggr) alarm('signal',`${g.dir>0?'BUY':'SELL'} ${g.kind} · ${g.name}`,`${g.kind==='LIMIT'?'Limit '+f0(g.lvl):'Market ±'+f0(px)} · TP +${tp} · SL −${sl} poin`);
+  if(cfg.grade!=='C'||ME.aggr) alarm('signal',`${g.dir>0?'BUY':'SELL'} ${g.kind} · ${g.name}`,`${g.kind==='LIMIT'?'Limit '+f0(g.lvl):'Market ±'+f0(px)} · TP +${tp} · SL −${sl} poin`);
 }
 function manage(){
   const px=livePx(), now=Date.now()/1000, m1=D.m1[D.m1.length-1]; if(!px) return;
@@ -3327,7 +3323,7 @@ function manage(){
     if(g.res&&!g.saved){ g.saved=true; const x=MEM.trades.find(y=>y.id===g.id); if(x){ x.res=g.res; x.pts=g.pts||0; x.entry=g.entry; } learn(); saveMem(); }
   }
   // sinyal utama untuk Desk/Agent: prioritas REV > LIQ > FLW > PB > (BO jika agresif)
-  const act=SIGS.filter(g=>(g.status==='LIVE'||g.status==='PENDING')&&(g.type!=='BO'||ME.aggr)).sort((a,b)=>SET[b.type].pri-SET[a.type].pri);
+  const act=SIGS.filter(g=>(g.status==='LIVE'||g.status==='PENDING')&&(SET[g.type].grade!=='C'||ME.aggr)).sort((a,b)=>SET[b.type].pri-SET[a.type].pri);
   const top=act[0]||null;
   ME.sig=top?{id:top.id,type:top.type,name:top.name,dir:top.dir,live:top.status==='LIVE',pending:top.status==='PENDING',lvl:top.lvl,entry:top.entry??top.lvl,
     tpPts:top.tpPts,slPts:top.slPts,until:(top.filledT||top.expires)+top.bars*(top.type==='FLW'||top.type==='PB'?900:300),expires:top.expires,why:top.why,
@@ -3426,7 +3422,7 @@ function render(){
   const now=Date.now()/1000, px=livePx(), acct=+($('acct')?.value)||1000, rp=+($('riskPct')?.value)||1;
   const cur=SIGS.find(g=>g.status==='LIVE'||g.status==='PENDING'||g.status==='OPEN');
   let h;
-  if(cur){ const c=col(cur.dir), lot=Math.max(.01,acct*rp/100/cur.slPts), e=cur.entry??cur.lvl, isC=cur.type==='BO'&&!ME.aggr;
+  if(cur){ const c=col(cur.dir), lot=Math.max(.01,acct*rp/100/cur.slPts), e=cur.entry??cur.lvl, isC=cur.grade==='C'&&!ME.aggr;
     const stt=cur.status==='PENDING'?`PASANG ${cur.dir>0?'BUY':'SELL'} LIMIT · berlaku ${Math.max(0,Math.ceil((cur.expires-now)/60))} menit`:cur.status==='LIVE'?'ENTRY SEKARANG':'POSISI BERJALAN';
     h=`<div class="snbig"><span class="lbl">${esc(cur.name)} · grade ${cur.grade} · ${SET[cur.type].tf}</span><span class="tag ${cur.status==='LIVE'?'PASS':'WAIT'}">${cur.status}</span></div>
       <div class="snbig"><div class="snact" style="color:${c}">${cur.dir>0?'BUY':'SELL'}${cur.kind==='LIMIT'&&cur.status==='PENDING'?' LIMIT':''}</div><b style="color:${c};font-size:12px">${stt}</b></div>
@@ -3465,7 +3461,7 @@ function render(){
     <div class="lbl" style="margin-top:4px">🧠 Memori AI · backtest vs pengalaman</div>
     <table class="snst num"><tr><th>Setup</th><th>BT win/PF</th><th>Memori N</th><th>Win</th><th>PF</th><th>Status</th></tr>
     ${ORDER.map(k=>{ const s=SET[k], m=L[k]?.all||{n:0}; return `<tr><td>${s.name} <span class="muted">${s.grade}</span></td><td>${s.bt[1]}% / ${s.bt[2]}</td><td>${m.n}</td><td>${m.n?Math.round(m.wr*100)+'%':'—'}</td><td class="${m.n?(m.pf>=1?'up':'down'):''}">${m.n?m.pf.toFixed(2):'—'}</td><td class="${L[k]?.strict?'warn':'up'}">${L[k]?.strict?'KETAT':'normal'}</td></tr>`; }).join('')}</table>
-    <div class="muted" style="font-size:10px">Backtest 365 hari data 1 menit, biaya 15 poin. Gabungan grade A: ±0,9 sinyal/hari. Breakout grade C ±2,5/hari tapi PF 0,97 (hanya di mode AGRESIF). Memori disimpan di browser & memperketat setup yang 20 hasil terakhirnya PF&lt;1.</div>`;
+    <div class="muted" style="font-size:10px">Backtest 365 hari data 1 menit, biaya 15 poin. Gabungan grade A: ±0,9 sinyal/hari. Grade C (breakout ±2,5/hari PF 0,97; pullback tanpa aturan 20 candle ±0,8/hari PF 1,01) hanya masuk Desk/Agent di mode AGRESIF. Memori disimpan di browser & memperketat setup yang 20 hasil terakhirnya PF&lt;1.</div>`;
   setH($('snC3'),h3);
   const hd=$('snHead'); if(hd) hd.textContent=`${cur?(cur.dir>0?'BUY ':'SELL ')+cur.name+' · '+cur.status:'TUNGGU'} · BTC ${f1(px)} · tekanan ${IND.score!=null?(IND.score>0?'+':'')+IND.score:'—'}`;
 }
