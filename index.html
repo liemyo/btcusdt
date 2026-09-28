@@ -480,9 +480,9 @@ tr.active td{background:rgba(234,108,196,.08)}
   body{padding-block:12px;padding-inline:12px}
   .frame{max-width:none;align-items:start;
     grid-template-columns:minmax(320px,1fr) minmax(0,1.75fr) minmax(340px,1.05fr);
-    grid-template-rows:auto auto auto auto auto auto auto auto auto 1fr auto auto auto auto;
-    grid-template-areas:"hdr hdr hdr" "act act act" "mom mom mom" "desk desk desk" "liq liq liq" "mq mq mq" "cyc cyc cyc" "cards main ana" "cards strip ana" "cards graph ana" "quant quant quant" "floor floor floor" "foot foot foot" "note note note"}
-  .a-act{grid-area:act} .a-mom{grid-area:mom} .a-desk{grid-area:desk} .a-hdr{grid-area:hdr} .a-liq{grid-area:liq} .a-mq{grid-area:mq} .a-cyc{grid-area:cyc} .a-cards{grid-area:cards}
+    grid-template-rows:auto auto auto auto auto auto auto auto auto auto 1fr auto auto auto auto;
+    grid-template-areas:"hdr hdr hdr" "act act act" "me me me" "mom mom mom" "desk desk desk" "liq liq liq" "mq mq mq" "cyc cyc cyc" "cards main ana" "cards strip ana" "cards graph ana" "quant quant quant" "floor floor floor" "foot foot foot" "note note note"}
+  .a-act{grid-area:act} .a-me{grid-area:me} .a-mom{grid-area:mom} .a-desk{grid-area:desk} .a-hdr{grid-area:hdr} .a-liq{grid-area:liq} .a-mq{grid-area:mq} .a-cyc{grid-area:cyc} .a-cards{grid-area:cards}
   .a-main{grid-area:main} .a-strip{grid-area:strip} .a-graph{grid-area:graph} .a-ana{grid-area:ana}
   .a-quant{grid-area:quant} .a-floor{grid-area:floor} .a-foot{grid-area:foot} .a-note{grid-area:note}
   .liq{grid-template-columns:minmax(0,1fr) 480px}
@@ -615,6 +615,20 @@ tr.active td{background:rgba(234,108,196,.08)}
   <!-- STATUS AKTIVITAS PASAR -->
   <section class="panel a-act" aria-label="Status aktivitas pasar dan rekomendasi trading">
     <div class="actg num" id="actBar"><span class="muted">Mengukur volume dan transaksi BTCUSDT…</span></div>
+  </section>
+
+  <!-- MACRO ENGINE: sinyal tervalidasi backtest -->
+  <section class="panel a-me" aria-label="Macro Engine sinyal tervalidasi">
+    <div class="ph"><span>◆ Macro Engine · sinyal tervalidasi backtest 1 tahun · likuidasi · memori AI · hot news</span><span class="r num" id="meHead">memuat…</span></div>
+    <div class="meg">
+      <div class="mec" id="meC1"><div class="muted">Memuat data 15M / 1H / 4H / 1D…</div></div>
+      <div class="mec" id="meC2"></div>
+      <div class="mec" id="meC3"></div>
+    </div>
+    <div class="meg meg2">
+      <div class="mec" id="meC4"></div>
+      <div class="mec"><div class="mesec"><h4><span>📰 Berita crypto · lonceng jika HOT</span><span class="muted">6 sumber</span></h4><div class="mnews" id="meNews"><div class="muted">Memuat berita…</div></div></div></div>
+    </div>
   </section>
 
   <!-- MOMENTUM SCALPER -->
@@ -1002,7 +1016,7 @@ function candleChecks(c, I, i, vi, htfTrend, tf){
   return {st, L, lean:L?'LONG':'SHORT', trend, r, h, hp, vw, atr:a, vr, ap, close, htfTrend};
 }
 
-/* ---------- aturan utama: ikuti trend 15M · reversal = penanda TUNGGU sampai 15M bertahan ≥5 candle ---------- */
+/* ---------- aturan utama: ikuti trend 15M · reversal = penanda TUNGGU sampai 15M bertahan ≥20 candle ---------- */
 const REV_N=20, REV={cache:null, mark:null};
 function trend15(){
   const c=S.mtf['15m']?.candles; if(!c||c.length<60) return null;
@@ -1334,6 +1348,9 @@ function gatesFor(A){
   const hr=M.hunt;
   if(hr&&hr.score>=70&&((A.lean==='LONG'&&hr.dir<0)||(A.lean==='SHORT'&&hr.dir>0))){ veto=veto||'risiko sapuan'; g.push({k:'Prediksi sapuan',s:'DROP',d:`${hr.dir>0?'↑':'↓'} ${fmt(hr.p,0)} · skor ${hr.score}`}); }
   else g.push({k:'Prediksi sapuan',s:'PASS',d:hr?`${hr.dir>0?'↑':'↓'} skor ${hr.score}`:'—'});
+  { const ME=window.ME_STATE; if(ME&&ME.ready&&ME.lock){ const d=A.lean==='LONG'?1:-1, s=ME.sig;
+    if(s&&s.live&&s.dir===d) g.push({k:'Macro Engine',s:'PASS',d:`${s.name} ${d>0?'BUY':'SELL'} tervalidasi backtest`});
+    else { veto=veto||'Macro Engine: belum ada sinyal tervalidasi'; g.push({k:'Macro Engine',s:'DROP',d:s&&s.live?`sinyal aktif ${s.dir>0?'BUY':'SELL'} (berlawanan)`:ME.waitWhy}); } } }
   ({thr,riskMult,veto}=xvGates(g,A,thr,riskMult,veto)); // gerbang waktu, regime, aktivitas, stabilitas, akurasi live
   const user=+$('riskPct').value||1; let risk=user, kn='input manual';
   if(bt&&bt.n>=10){ const f=bt.W-(1-bt.W)/(bt.RR||1e9); if(f>0){ risk=Math.min(user,f/2*100); kn=risk<user?'½ Kelly':'input (≤ ½ Kelly)'; } else { risk=user*.5; kn='Kelly ≤ 0 → ½ input'; } }
@@ -1986,6 +2003,9 @@ function enter(A,act){
   const tp2=A.tpNote==='2R'?px+dir*2*risk:A.tp2;
   const e={id:now,t:now,act,price:px,score:A.score,verdict:A.verdict,tf:S.tf,why:whyStr(A),chain:chainStr(A),dir,risk,sl:px-dir*risk,tp1:px+dir*risk,tp2,tpNote:A.tpNote,
     until:now+16*TF_MS[S.tf],status:'OPEN',riskPct:G.risk,riskUsd:(+$('acct').value||0)*G.risk/100};
+  const MS=window.ME_STATE, ms=MS&&MS.ready&&MS.lock?MS.sig:null;
+  if(ms&&ms.live&&ms.dir===dir){ Object.assign(e,{risk:ms.slPts,sl:px-dir*ms.slPts,tp1:px+dir*ms.tpPts/2,tp2:px+dir*ms.tpPts,tpNote:`${ms.name} +${ms.tpPts}`,
+    until:ms.until*1000,why:ms.why,chain:`MACRO ENGINE · ${ms.chain} · TP ${ms.tpPts} / SL ${ms.slPts} poin`,verdict:`ME ${ms.name}`}); e.riskUsd=(+$('acct').value||0)*G.risk/100; D.meUsed=ms.id; }
   D.open=e; D.log.unshift(e); if(D.log.length>500) D.log.length=500; D.sinceT=now; saveD();
   S.log.unshift({t:now,v:`${act} ${A.lean}`,p:px,lean:A.lean}); S.log=S.log.slice(0,30);
   if(S.sound) beep(act==='BUY'?988:392);
@@ -2010,7 +2030,10 @@ function confirmStep(key,fn){
 }
 function decide(A){
   const now=Date.now(), o=D.open, px=S.tick.BTCUSDT?.c||A.entry;
-  const want=A.verdict==='SETUP LONG'?'BUY':A.verdict==='SETUP SHORT'?'SELL':null;
+  const MS=window.ME_STATE, lockM=MS&&MS.ready&&MS.lock;
+  let want=A.verdict==='SETUP LONG'?'BUY':A.verdict==='SETUP SHORT'?'SELL':null;
+  if(lockM) want=MS.sig&&MS.sig.live&&MS.sig.id!==D.meUsed?(MS.sig.dir>0?'BUY':'SELL'):null; // hanya sinyal Macro Engine
+  if(o&&lockM){ D.pending=null; return; } // posisi dikelola TP/SL/waktu, tanpa flip/exit dari skor lama
   if(o){
     const side=o.act==='BUY'?'LONG':'SHORT', opp=o.act==='BUY'?'SELL':'BUY';
     if(want===opp) return confirmStep('FLIP '+opp,()=>{ closeOpen(px,'FLIP'); enter(A,opp); });
@@ -2042,7 +2065,7 @@ function renderDesk(){
     h+=`<div class="dpos"><div style="display:flex;justify-content:space-between;gap:8px"><b class="${o.dir>0?'up':'down'}">${o.dir>0?'LONG':'SHORT'} @ ${fmt(o.price,1)}</b><b class="${ur>=0?'up':'down'}">${sgn(ur,2,'R')} · ${ur>=0?'+':'-'}$${fmt(Math.abs(ur*ru),2)}</b></div>
       <div class="prog"><i style="left:${pos}%"></i></div>
       <div class="muted">SL ${fmt(o.sl,1)} · TP1 ${fmt(o.tp1,1)}${o.tp1hit?' ✓':''} · TP2 ${fmt(o.tp2,1)}${o.tpNote&&o.tpNote!=='2R'?' (magnet)':''} · risiko ${o.riskPct!=null?o.riskPct.toFixed(2)+'%':'—'} · batas ${new Date(o.until).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'})}</div></div>`;
-  } else h+=`<div class="dpos muted">Tidak ada posisi. Entry hanya jika skor ≥ ambang, tidak ada veto, dan bertahan 5 detik.</div>`;
+  } else h+=`<div class="dpos muted">Tidak ada posisi. ${window.ME_STATE&&window.ME_STATE.lock?'KUNCI MACRO ENGINE ON: entry hanya saat sinyal FLUSH FOLLOW / MACRO PULLBACK tervalidasi (TP/SL dalam poin, lihat panel Macro Engine).':'Entry hanya jika skor ≥ ambang, tidak ada veto, dan bertahan 5 detik.'}</div>`;
   h+=`<div class="lbl" style="margin-top:2px">Rantai keputusan</div><div style="display:grid;gap:4px;font-size:11px">`+
     groupScores(A).map(g=>`<div style="display:grid;grid-template-columns:92px 1fr 64px;gap:6px;align-items:center"><span>${g.name}</span><div class="bar"><span style="width:${(g.v*100).toFixed(0)}%;background:${g.v>=.65?C.up:g.v>=.45?C.warn:C.down}"></span></div><span class="muted" style="text-align:right">${g.pass}✓ ${g.drop}✗</span></div>`).join('')+
     `</div><div class="why">${G.g.map(x=>`<span class="${x.s==='PASS'?'up':x.s==='DROP'?'down':'warn'}" title="${x.d}">${x.s==='PASS'?'✓':x.s==='DROP'?'⛔':'!'} ${x.k}: ${x.d}</span>`).join('')}</div>
@@ -2182,6 +2205,7 @@ function decideFast(){
   if(!block&&cand&&cand.type!=='REVERSAL'&&M.hunt&&M.hunt.score>=70&&M.hunt.dir===-cand.dir&&M.hunt.dATR<3) block=`tunggu sapuan ${M.hunt.dir>0?'↑':'↓'} ${fmt(M.hunt.p,0)}`;
   const pend=M.anomalies.find(a=>a.status==='PANTAU'&&now-a.t<20000);
   if(!block&&cand&&cand.type==='MOMENTUM'&&pend) block=`anomali ${AN_TXT[pend.type]} belum tervalidasi`;
+  if(!block&&cand){ const MS=window.ME_STATE; if(MS&&MS.ready&&MS.lock) block='kunci Macro Engine: ⚡ scalper per detik tidak lolos backtest'; }
   if(cand&&cand.type==='REVERSAL'&&revGate(cand.dir)) revMark(cand.dir,cand.why);
   M.sig=cand?{...cand,block}:null;
   if(M.open){ if(cand&&!block&&cand.dir===-M.open.dir) momConfirm('FLIP',()=>{ momClose(m.px,'FLIP'); momEnter(cand); }); else M.pending=null; return; }
@@ -2511,6 +2535,11 @@ function agentDecide(){
   const A=S.A, F=tfFeat(AG.cfg.tf), T=trend15(); if(!A||!F) return null;
   const tfU=AG.cfg.tf.toUpperCase(), o={tf:tfU,px:F.px,atr:F.atr,T};
   if(!T) return {...o,act:'TUNGGU',d:0,conf:0,why:'trend 15M masih memuat',V:[],plan:null};
+  { const ME=window.ME_STATE; if(ME&&ME.ready&&ME.lock){ const s=ME.sig, dd=s?s.dir:(ME.bias||T.dir||1), {V}=agVotes(F,dd);
+    const agree=V.filter(x=>x.v>=.25).length, against=V.filter(x=>x.v<=-.25).length;
+    if(s&&s.live){ const px=F.px, m={ok:true,type:s.dir>0?'BUY MARKET':'SELL MARKET',entry:px,sl:px-s.dir*s.slPts,tp1:px+s.dir*s.tpPts/2,tp2:px+s.dir*s.tpPts,risk:s.slPts,rr1:s.tpPts/2/s.slPts,rr2:s.tpPts/s.slPts};
+      return {...o,act:dTxt(s.dir),d:s.dir,conf:s.conf,agree,against,V,why:`MACRO ENGINE · ${s.name}: ${s.why}`,blocks:[],plan:{ok:false,d:s.dir,why:'sinyal market Macro Engine aktif'},mplan:m}; }
+    return {...o,act:'TUNGGU',d:0,conf:0,agree,against,V,why:`Macro Engine: ${ME.waitWhy}`,blocks:[],plan:{ok:false,d:dd,why:`kunci Macro Engine aktif, pending order sniper dimatikan (tidak lolos backtest) · ${ME.waitWhy}`}}; } }
   if(!T.dir||T.pending){ const dd=T.pending||T.s0||1, {V}=agVotes(F,dd);
     return {...o,act:'TUNGGU',d:0,conf:0,V,why:`${revTxt(T)} · order baru ditahan sampai terkonfirmasi`,plan:{ok:false,d:dd,why:`pending order ditunda: ${revTxt(T)}`}}; }
   const d=T.dir, {V,rs}=agVotes(F,d), sw=V.reduce((a,x)=>a+x.w,0), net=V.reduce((a,x)=>a+x.w*x.v,0)/(sw||1), conf=clamp((net+1)/2,0,1);
@@ -3084,6 +3113,415 @@ setInterval(xvJEval,1000); setInterval(xvRender,1000);
   connect(); ping(); liqInit(); actLoad(true); await refreshMTF(); buildGraph(); renderConv(); refreshRob();
   setInterval(renderConv,5000);
 })();
+})();
+</script>
+
+<!-- ===== MACRO ENGINE · sinyal tervalidasi backtest 1 tahun + memori AI + radar likuidasi + lonceng hot news ===== -->
+<style>
+.a-me .meg{display:grid;grid-template-columns:minmax(260px,1.05fr) minmax(0,1.2fr) minmax(0,1fr);gap:0}
+.a-me .mec{padding:10px 12px;display:grid;gap:8px;align-content:start;min-width:0;border-right:1px solid var(--line)}
+.a-me .mec:last-child{border-right:0}
+.a-me .meg2{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);border-top:1px solid var(--line)}
+.a-me .meact{font-family:var(--display);font-size:46px;line-height:1;letter-spacing:.02em}
+.a-me .melv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border-radius:6px;overflow:hidden}
+.a-me .melv div{background:var(--panel-2);padding:6px 8px;display:grid;gap:2px}
+.a-me .melv b{font-size:14px}
+.a-me .mek{font-size:11px;display:grid;gap:3px}
+.a-me .mek .r{display:flex;justify-content:space-between;gap:8px;align-items:baseline;border-bottom:1px dashed var(--line);padding:2px 0}
+.a-me .mek .r span:first-child{color:var(--ink-2)}
+.a-me .mesec{border:1px solid var(--line-2);border-radius:6px;padding:7px 9px;display:grid;gap:4px;background:var(--panel-2)}
+.a-me .mesec h4{margin:0;font-size:10px;letter-spacing:.16em;text-transform:uppercase;display:flex;justify-content:space-between;gap:6px}
+.a-me .mbias{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.a-me .mbias div{border:1px solid var(--line-2);border-radius:5px;padding:5px 6px;text-align:center;font-size:11px;font-weight:800}
+.a-me .mbias small{display:block;font-size:9px;color:var(--ink-3);font-weight:600;letter-spacing:.1em}
+.a-me .mfeed{font-size:10.5px;display:grid;gap:3px;max-height:150px;overflow:auto}
+.a-me .mfeed div{display:flex;gap:6px;align-items:baseline}
+.a-me .mnews{font-size:11px;display:grid;gap:4px;max-height:210px;overflow:auto}
+.a-me .mnews a{color:var(--ink);text-decoration:none}
+.a-me .mnews a:hover{text-decoration:underline}
+.a-me .mnews .hot{color:#fff;background:var(--down);font-weight:800;font-size:9px;padding:1px 4px;border-radius:3px;margin-right:4px}
+.a-me .mtab{width:100%;border-collapse:collapse;font-size:10.5px}
+.a-me .mtab td,.a-me .mtab th{padding:3px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.a-me .mtab td:first-child,.a-me .mtab th:first-child{text-align:left;white-space:normal}
+.a-me .mbtns{display:flex;gap:6px;flex-wrap:wrap}
+.a-me .mhr{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;font-size:9.5px;text-align:center}
+.a-me .mhr div{border-radius:4px;padding:3px 0;background:var(--panel)}
+.a-me .mmeter{display:grid;grid-template-columns:86px 1fr 52px;gap:6px;align-items:center;font-size:10.5px}
+.a-me .mmeter .bar{height:7px}
+#meHot{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:9980;width:min(760px,calc(100% - 16px));background:#1d0503;border:2px solid var(--down);border-radius:10px;
+  padding:10px 12px;display:grid;gap:4px;box-shadow:0 0 0 4px rgba(242,87,69,.25),0 16px 40px rgba(0,0,0,.8);font-family:var(--mono);color:#fff;animation:meBlink 1s steps(2) infinite}
+#meHot.calm{animation:none}
+#meHot b.t{font-size:14px;line-height:1.3}
+#meHot .x{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase}
+@keyframes meBlink{0%{border-color:var(--down);background:#1d0503}50%{border-color:#fff;background:#3a0906}}
+@media (prefers-reduced-motion:reduce){ #meHot{animation:none} }
+@media (max-width:1100px){ .a-me .meg{grid-template-columns:1fr 1fr} .a-me .meg:not(.meg2) .mec:first-child{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line)} .a-me .meg2{grid-template-columns:1fr} .a-me .meg2 .mec{border-right:0;border-bottom:1px solid var(--line)} }
+@media (max-width:760px){ .a-me .meg{grid-template-columns:1fr} .a-me .mec{border-right:0;border-bottom:1px solid var(--line)} .a-me .meact{font-size:38px} .a-me .mbias{grid-template-columns:repeat(2,minmax(0,1fr))} }
+</style>
+<script>
+(()=>{
+'use strict';
+const API='https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT';
+const $=id=>document.getElementById(id);
+const f0=n=>n==null||isNaN(n)?'—':Math.round(n).toLocaleString('en-US');
+const f1=n=>n==null||isNaN(n)?'—':(+n).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+const sg=n=>n==null||isNaN(n)?'—':(n>=0?'+':'−')+f0(Math.abs(n));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const std=a=>{ if(a.length<2) return 0; const m=mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1)); };
+const hm=t=>new Date(t*1000).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ST={get(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??d; }catch(e){ return d; } },set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
+const setH=(el,h)=>{ if(el&&el._h!==h){ el.innerHTML=h; el._h=h; } };
+
+/* ---- parameter hasil backtest 365 hari (data 1 menit, biaya spread 15 poin/trade) ---- */
+const P={
+  A:{rg:2,vol:3,pos:.25,tb:.55,tp:300,sl:450,bars:8},          // FLUSH FOLLOW: ikut kaskade likuidasi yang melawan bias makro
+  As:{rg:2.5,vol:4},                                              // mode ketat (dipakai jika memori menunjukkan edge melemah)
+  B:{run:20,tpK:1.2,tpMin:100,tpMax:300,slK:1.2,bars:16,h0:7,h1:21}, // MACRO PULLBACK: searah makro, trend 15M ≥ 20 candle
+  COST:15, WIN:300 // jendela entry 5 menit setelah candle sinyal ditutup
+};
+const BT=[
+  ['A · Flush follow (ikut likuidasi melawan makro)',121,71.9,1.80,82.7,10002,1480,'4/4 kuartal +'],
+  ['B · Macro pullback + volume + sesi',95,65.3,1.37,39.2,3723,1284,'3/4 kuartal +'],
+  ['Aturan lama dashboard (1.5/3 ATR)',1426,39.8,0.99,-2.7,-3853,21030,'rugi'],
+  ['Aturan lama + TP=SL 100 poin',4355,49.5,0.73,-15.9,-69443,69528,'rugi'],
+  ['Kejar kaskade searah makro',171,52.0,0.77,-43.4,-7425,8880,'rugi'],
+  ['Reversal setelah likuidasi selesai',107,50.5,0.69,-40.4,-4319,4830,'rugi'],
+];
+
+/* ---- indikator ---- */
+function ema(v,n){ const k=2/(n+1),o=new Array(v.length).fill(null); let s=0;
+  for(let i=0;i<v.length;i++){ if(i<n-1){s+=v[i];continue} if(i===n-1){s+=v[i];o[i]=s/n;continue} o[i]=v[i]*k+o[i-1]*(1-k);} return o; }
+function rsi(v,n=14){ const o=new Array(v.length).fill(null); let g=0,l=0;
+  for(let i=1;i<v.length;i++){ const d=v[i]-v[i-1],u=Math.max(d,0),w=Math.max(-d,0);
+    if(i<=n){ g+=u; l+=w; if(i===n){ g/=n; l/=n; o[i]=100-100/(1+g/(l||1e-9)); } }
+    else { g=(g*(n-1)+u)/n; l=(l*(n-1)+w)/n; o[i]=100-100/(1+g/(l||1e-9)); } } return o; }
+function atr(c,n=14){ const o=new Array(c.length).fill(null); let a=0;
+  for(let i=1;i<c.length;i++){ const tr=Math.max(c[i].high-c[i].low,Math.abs(c[i].high-c[i-1].close),Math.abs(c[i].low-c[i-1].close));
+    if(i<=n){ a+=tr; if(i===n){ a/=n; o[i]=a; } } else { a=(a*(n-1)+tr)/n; o[i]=a; } } return o; }
+function calc(c){
+  const cl=c.map(k=>k.close), I={e9:ema(cl,9),e21:ema(cl,21),e50:ema(cl,50),rsi:rsi(cl),atr:atr(c)};
+  const a=ema(cl,12),b=ema(cl,26),m=cl.map((_,i)=>a[i]!=null&&b[i]!=null?a[i]-b[i]:null), s0=m.findIndex(x=>x!=null), s=ema(m.slice(s0),9);
+  I.hist=m.map((x,i)=>i>=s0&&s[i-s0]!=null?x-s[i-s0]:null);
+  let pv=0,vv=0,day=null; I.vwap=c.map(k=>{ const d=Math.floor(k.time/86400); if(d!==day){day=d;pv=0;vv=0} const tp=(k.high+k.low+k.close)/3; pv+=tp*k.volume; vv+=k.volume; return vv?pv/vv:k.close; });
+  I.run=new Array(c.length).fill(0);
+  for(let i=1;i<c.length;i++){ if(I.e21[i]==null) continue; const sN=I.e9[i]>I.e21[i]?1:-1, sP=I.e21[i-1]==null?0:I.e9[i-1]>I.e21[i-1]?1:-1; I.run[i]=sN*(sN===sP?Math.abs(I.run[i-1])+1:1); }
+  return I;
+}
+function htfFn(arr,dur){
+  const x=arr.map(k=>k.close), e20=ema(x,20), e21=ema(x,21), e50=ema(x,50), e200=ema(x,200);
+  return t=>{ let lo=0,hi=arr.length-1,a=-1; while(lo<=hi){ const m=(lo+hi)>>1; if(arr[m].time+dur<=t){a=m;lo=m+1}else hi=m-1; }
+    return a<0?null:{c:x[a],e20:e20[a],e21:e21[a],e50:e50[a],e200:e200[a]}; };
+}
+
+/* ---- data ---- */
+const D={c:[],h1:[],h4:[],d1:[],m1:[],I:null,key:null,H1:null,H4:null,D1:null};
+const toC=k=>({time:k[0]/1000,open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5],tbv:+k[9]});
+async function kl(tf,limit,end){ const r=await fetch(`${API}&interval=${tf}&limit=${limit}${end?`&endTime=${end}`:''}`,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); return (await r.json()).map(toC); }
+function merge(arr,nw){ for(const k of nw){ const L=arr[arr.length-1]; if(L&&L.time===k.time) arr[arr.length-1]=k; else if(!L||k.time>L.time) arr.push(k); } if(arr.length>4000) arr.splice(0,arr.length-4000); }
+const closed=()=>D.c.slice(0,-1); // candle terakhir masih berjalan
+function macroAt(t){
+  const a=D.H1(t),b=D.H4(t),d=D.D1(t); if(!a||!b||!d||b.e200==null||a.e50==null||d.e20==null) return null;
+  const m4=b.c>b.e50&&b.e50>b.e200?1:b.c<b.e50&&b.e50<b.e200?-1:0, m1=a.e21>a.e50&&a.c>a.e21?1:a.e21<a.e50&&a.c<a.e21?-1:0, md=d.c>d.e20?1:-1;
+  return {m4,m1,md,sum:m4+m1+md};
+}
+const avgV=(c,i)=>{ let s=0; for(let j=i-20;j<i;j++) s+=c[j].volume; return s/20; };
+
+/* ---- memori AI (localStorage, bertahan lintas sesi) ---- */
+const MK='me-mem-v1';
+const MEM=ST.get(MK,null)||{v:1,trades:[],casc:[],news:{},first:Date.now()};
+const saveMem=()=>{ MEM.trades.sort((a,b)=>a.t-b.t); if(MEM.trades.length>800) MEM.trades.splice(0,MEM.trades.length-800);
+  MEM.casc.sort((a,b)=>a.t-b.t); if(MEM.casc.length>500) MEM.casc.splice(0,MEM.casc.length-500);
+  const nk=Object.keys(MEM.news); if(nk.length>600) nk.sort((a,b)=>MEM.news[a]-MEM.news[b]).slice(0,nk.length-600).forEach(k=>delete MEM.news[k]);
+  ST.set(MK,MEM); };
+function statsOf(list){ const r=list.filter(x=>x.res); const n=r.length; if(!n) return {n:0};
+  const p=r.map(x=>x.pts), w=p.filter(x=>x>0), gw=w.reduce((a,b)=>a+b,0), gl=-p.filter(x=>x<=0).reduce((a,b)=>a+b,0);
+  return {n,wr:w.length/n,pf:gl?gw/gl:gw>0?9.99:0,avg:mean(p),tot:p.reduce((a,b)=>a+b,0)}; }
+const L={strictA:false,strictB:false,weakBuckets:[],A:{n:0},B:{n:0},A20:{n:0},B20:{n:0},anti:null,withT:null};
+function learn(){
+  const A=MEM.trades.filter(x=>x.type==='A'&&x.res), B=MEM.trades.filter(x=>x.type==='B'&&x.res);
+  L.A=statsOf(A); L.B=statsOf(B); L.A20=statsOf(A.slice(-20)); L.B20=statsOf(B.slice(-20));
+  L.strictA=L.A20.n>=10&&L.A20.pf<1; L.strictB=L.B20.n>=10&&L.B20.pf<1;
+  L.buckets=Array.from({length:6},(_,k)=>statsOf(B.filter(x=>Math.floor(((x.h+7)%24)/4)===k)));
+  L.weakBuckets=L.buckets.map((s,k)=>s.n>=6&&s.wr<.4?k:-1).filter(k=>k>=0);
+  const cs=MEM.casc.filter(x=>x.f2h!=null), agg=l=>l.length?{n:l.length,f2h:mean(l.map(x=>x.f2h)),rev:l.filter(x=>x.rev50).length/l.length,mfe:mean(l.map(x=>x.mfe))}:null;
+  L.anti=agg(cs.filter(x=>x.anti===true)); L.withT=agg(cs.filter(x=>x.anti===false));
+}
+
+/* ---- setup ---- */
+function sigA(c,I,i,strict){
+  const k=c[i], a=I.atr[i-1], rg=k.high-k.low, vr=k.volume/avgV(c,i), tb=k.volume?k.tbv/k.volume:.5, pos=rg?(k.close-k.low)/rg:.5;
+  const rgK=strict?P.As.rg:P.A.rg, vK=strict?P.As.vol:P.A.vol;
+  let d=pos>1-P.A.pos&&tb>P.A.tb?1:pos<P.A.pos&&tb<1-P.A.tb?-1:0; const dd=d||(k.close>=k.open?1:-1);
+  const m=macroAt(k.time+900);
+  const ck=[
+    [`Range candle ≥ ${rgK}× ATR`,rg>=rgK*a,`${(rg/a).toFixed(1)}×`],
+    [`Volume ≥ ${vK}× rata2 20`,vr>=vK,`${vr.toFixed(1)}×`],
+    [`Close di 25% ujung ${dd>0?'atas':'bawah'}`,dd>0?pos>1-P.A.pos:pos<P.A.pos,`${Math.round(pos*100)}%`],
+    ['Taker searah > 55%',dd>0?tb>P.A.tb:tb<1-P.A.tb,`buy ${Math.round(tb*100)}%`],
+    ['Melawan bias makro (trader searah trend dilikuidasi)',!!m&&Math.sign(m.sum)===-dd,m?`makro ${m.sum>0?'naik':m.sum<0?'turun':'netral'} (${m.sum>0?'+':''}${m.sum})`:'memuat']];
+  const ok=ck.every(x=>x[1]);
+  return {type:'A',name:'FLUSH FOLLOW',dir:ok?dd:0,cand:dd,ck,rg,a,vr,tb,pos,m,
+    tpPts:P.A.tp,slPts:P.A.sl,bars:P.A.bars,why:`kaskade ${dd>0?'naik':'turun'} ${(rg/a).toFixed(1)}× ATR · vol ${vr.toFixed(1)}× · melawan makro → ikut arah likuidasi`};
+}
+function sigB(c,I,i,strict){
+  const k=c[i], T=k.time+900, m=macroAt(T), h=new Date(T*1000).getUTCHours();
+  const md=m?(m.sum>=(strict?3:2)&&m.m4>=0&&m.m1>0?1:m.sum<=-(strict?3:2)&&m.m4<=0&&m.m1<0?-1:0):0;
+  const d=md||Math.sign(I.run[i])||1, run=I.run[i];
+  let touch=false; for(let j=i-4;j<=i;j++) if(d>0?c[j].low<=I.e21[j]+.1*I.atr[j]:c[j].high>=I.e21[j]-.1*I.atr[j]) touch=true;
+  const trig=d>0?k.close>k.open&&k.close>c[i-1].high&&k.close>I.e9[i]:k.close<k.open&&k.close<c[i-1].low&&k.close<I.e9[i];
+  const r=I.rsi[i], rOk=d>0?r>=48&&r<=68:r<=52&&r>=32, vr=k.volume/avgV(c,i), tb=k.volume?k.tbv/k.volume:.5;
+  const bucket=Math.floor(((h+7)%24)/4), weakH=L.weakBuckets.includes(bucket);
+  const ck=[
+    ['Bias makro 1D+4H+1H searah',!!md,m?`1D ${m.md>0?'↑':'↓'} · 4H ${m.m4>0?'↑':m.m4<0?'↓':'•'} · 1H ${m.m1>0?'↑':m.m1<0?'↓':'•'}`:'memuat'],
+    [`Trend 15M bertahan ≥ ${P.B.run} candle (aturan reversal)`,Math.sign(run)===d&&Math.abs(run)>=P.B.run,`${Math.sign(run)===d?Math.abs(run):0}/${P.B.run}`],
+    ['Pullback menyentuh EMA21 (5 candle)',touch,touch?'ya':'belum'],
+    ['Candle pemicu tembus high/low sebelumnya',trig,trig?'ya':'belum'],
+    ['RSI zona sehat',rOk,`RSI ${r.toFixed(0)}`],
+    ['MACD histogram menguat',d>0?I.hist[i]>I.hist[i-1]:I.hist[i]<I.hist[i-1],I.hist[i]>I.hist[i-1]?'naik':'turun'],
+    ['Harga di sisi benar VWAP',d>0?k.close>=I.vwap[i]:k.close<=I.vwap[i],`VWAP ${f0(I.vwap[i])}`],
+    ['Volume ≥ rata2 20',vr>=1,`${vr.toFixed(2)}×`],
+    ['Sesi aktif 14:00–04:00 WIB',h>=P.B.h0&&h<P.B.h1,`${String((h+7)%24).padStart(2,'0')}:00 WIB`]];
+  if(strict) ck.push(['Taker searah (mode ketat)',d>0?tb>=.5:tb<=.5,`buy ${Math.round(tb*100)}%`]);
+  if(weakH) ck.push(['Jam ini tidak lemah di memori',false,'WR historis < 40%']);
+  const ok=ck.every(x=>x[1]), tp=clamp(P.B.tpK*I.atr[i],P.B.tpMin,P.B.tpMax), sl=Math.max(tp,P.B.slK*I.atr[i]);
+  return {type:'B',name:'MACRO PULLBACK',dir:ok?d:0,cand:d,ck,m,tpPts:Math.round(tp),slPts:Math.round(sl),bars:P.B.bars,
+    why:`makro ${d>0?'naik':'turun'} · trend 15M ${Math.abs(run)} candle · pullback EMA21 + pemicu · RSI ${r.toFixed(0)} · vol ${vr.toFixed(1)}×`};
+}
+/* simulasi hasil dengan candle 15M (konservatif: SL dianggap kena lebih dulu) */
+function simulate(c,i,dir,tp,sl,bars){
+  if(i+1>=c.length) return null; const e=c[i+1].open, TP=e+dir*tp, SL=e-dir*sl;
+  for(let j=i+1;j<=i+bars;j++){ if(j>=c.length) return {entry:e,res:null};
+    const k=c[j]; if(dir>0?k.low<=SL:k.high>=SL) return {entry:e,res:'SL',pts:-sl-P.COST,exitT:k.time};
+    if(dir>0?k.high>=TP:k.low<=TP) return {entry:e,res:'TP',pts:tp-P.COST,exitT:k.time}; }
+  const k=c[i+bars]; return {entry:e,res:'TIME',pts:(k.close-e)*dir-P.COST,exitT:k.time+900};
+}
+
+/* ---- scan riwayat + belajar ---- */
+const ME=window.ME_STATE={ready:false,lock:ST.get('me-lock',true),sig:null,waitWhy:'memuat data makro…',bias:0};
+let lastSig=null;
+function scan(){
+  const c=closed(); if(c.length<400) return; const I=D.I, n=c.length-1, boot=ME.boot||0;
+  const have=new Set(MEM.trades.map(x=>x.id)), busy={A:-1,B:-1};
+  for(const x of MEM.trades){ const j=c.findIndex(k=>k.time===x.t); if(j>=0&&x.res==null){ const r=simulate(c,j,x.dir,x.tpPts,x.slPts,x.bars); if(r&&r.res){ Object.assign(x,r); } } }
+  for(let i=300;i<=n;i++){
+    for(const [T,fn,st] of [['A',sigA,L.strictA],['B',sigB,L.strictB]]){
+      if(i<=busy[T]) continue; const s=fn(c,I,i,st); if(!s.dir) continue;
+      const id=T+'-'+c[i].time, r=simulate(c,i,s.dir,s.tpPts,s.slPts,s.bars)||{entry:null,res:null};
+      busy[T]=i+s.bars;
+      if(!have.has(id)){ MEM.trades.push({id,type:T,dir:s.dir,t:c[i].time,h:new Date((c[i].time+900)*1000).getUTCHours(),tpPts:s.tpPts,slPts:s.slPts,bars:s.bars,src:c[i].time+900>=boot/1000-60?'live':'hist',...r}); have.add(id); }
+    }
+    // memori kaskade (semua arah) untuk mempelajari pola likuidasi
+    const k=c[i], a=I.atr[i-1], rg=k.high-k.low, vr=k.volume/avgV(c,i);
+    if(rg>=2*a&&vr>=3){ const id='C-'+k.time; let e=MEM.casc.find(x=>x.id===id); const dir=k.close>=k.open?1:-1, m=macroAt(k.time+900);
+      if(!e){ e={id,t:k.time,dir,rgA:+(rg/a).toFixed(2),vr:+vr.toFixed(2),tb:+(k.tbv/k.volume).toFixed(2),anti:m?Math.sign(m.sum)===-dir:null,f2h:null}; MEM.casc.push(e); }
+      if(e.f2h==null&&i+8<=n){ let mfe=0,mae=0,rev=false; for(let j=i+1;j<=i+8;j++){ mfe=Math.max(mfe,(dir>0?c[j].high-k.close:k.close-c[j].low)); mae=Math.max(mae,(dir>0?k.close-c[j].low:c[j].high-k.close)); if(dir>0?c[j].low<=k.low+rg/2:c[j].high>=k.high-rg/2) rev=true; }
+        Object.assign(e,{f2h:Math.round((c[i+8].close-k.close)*dir),mfe:Math.round(mfe),mae:Math.round(mae),rev50:rev}); } }
+  }
+  learn(); saveMem();
+}
+
+/* ---- keputusan live ---- */
+function evaluate(){
+  const c=closed(); if(c.length<400||!D.I) return; const I=D.I, n=c.length-1, now=Date.now()/1000, fm=D.c[D.c.length-1], px=D.px||fm.close;
+  const a=sigA(c,I,n,L.strictA), b=sigB(c,I,n,L.strictB), m=macroAt(n>=0?c[n].time+900:0);
+  ME.bias=m?Math.sign(m.sum):0; ME.m=m; ME.run=I.run[n]; ME.a=a; ME.b=b;
+  const s=a.dir?a:b.dir?b:null;
+  if(s){ const id=s.type+'-'+c[n].time;
+    if(lastSig!==id){ lastSig=id; const entry=fm.open, T0=fm.time;
+      ME.sig={id,type:s.type,name:s.name,dir:s.dir,entry,tpPts:s.tpPts,slPts:s.slPts,tp:entry+s.dir*s.tpPts,sl:entry-s.dir*s.slPts,t0:T0,entryUntil:T0+P.WIN,until:T0+s.bars*900,
+        why:s.why,chain:`${s.name} · ${s.ck.map(x=>'✓'+x[0].split(' (')[0]).join(' ')}`,conf:s.type==='A'?.8:.7};
+      if(now<T0+P.WIN) alarm('signal',`${s.dir>0?'BUY':'SELL'} · ${s.name}`,`Entry ±${f0(entry)} · TP ${s.tpPts} poin · SL ${s.slPts} poin · ${s.why}`); } }
+  const g=ME.sig;
+  if(g){ const moved=(px-g.entry)*g.dir;
+    if(!g.res&&now>g.t0+5){ if(moved>=g.tpPts) g.res='TP'; else if(moved<=-g.slPts) g.res='SL'; else if(now>=g.until) g.res='WAKTU'; if(g.res) g.resT=now; }
+    g.live=!g.res&&now<g.entryUntil&&moved<.4*g.tpPts&&moved>-.5*g.slPts;
+    g.missed=!g.res&&now<g.entryUntil&&!g.live; g.pl=moved;
+    if(g.res&&now-g.resT>90) ME.sig=null; }
+  const why=[];
+  if(!ME.sig||!ME.sig.live){
+    if(!m) why.push('bias makro memuat');
+    else { const fa=a.ck.filter(x=>!x[1]).length, fb=b.ck.filter(x=>!x[1]);
+      why.push(fb.length<=2?`Pullback ${b.cand>0?'BUY':'SELL'} kurang ${fb.length} syarat: ${fb.map(x=>x[0].toLowerCase()).join(', ')}`:`belum ada flush likuidasi (${fa} syarat kurang) & pullback makro belum terbentuk (${fb.length} syarat kurang)`); }
+  }
+  ME.waitWhy=why.join(' · ')||'menunggu';
+  ME.ready=true;
+  liveFlush(fm,I.atr[n],avgV(D.c,D.c.length-1),m);
+  exhaustion(c,I);
+  render();
+}
+/* ---- radar flush / injeksi volume live (candle berjalan) ---- */
+const R={feed:ST.get('me-radar',[]),flushKey:null,exKey:null,injKey:null,shockKey:null};
+function radar(type,txt,col){ R.feed.unshift({t:Date.now(),type,txt,col}); R.feed=R.feed.slice(0,40); ST.set('me-radar',R.feed); }
+function liveFlush(k,a,av,m){
+  const rg=k.high-k.low, vr=k.volume/(av||1), tb=k.volume?k.tbv/k.volume:.5, dir=k.close>=k.open?1:-1, el=clamp((Date.now()/1000-k.time)/900,0,1);
+  R.live={rgA:rg/a,vr,tb,dir,el,anti:m?Math.sign(m.sum)===-dir:null,pos:rg?(k.close-k.low)/rg:.5};
+  if(rg>=2*a&&vr>=3&&R.flushKey!==k.time){ R.flushKey=k.time; const anti=R.live.anti;
+    const t=`LIKUIDASI BESAR ${dir>0?'↑ SHORT dilikuidasi':'↓ LONG dilikuidasi'} · ${(rg/a).toFixed(1)}× ATR · vol ${vr.toFixed(1)}×`;
+    radar('FLUSH',`${t} · ${anti?'MELAWAN makro → siap IKUT saat candle close '+hm(k.time+900):'SEARAH makro → JANGAN KEJAR (backtest PF 0.77)'}`,anti?'var(--up)':'var(--warn)');
+    alarm('flush',t,anti?`Kaskade melawan bias makro. Validasi di close ${hm(k.time+900)} WIB-lokal: close di 25% ujung + taker searah → sinyal FLUSH FOLLOW.`:'Kaskade searah bias makro: sering sudah telat, jangan kejar.'); }
+}
+function exhaustion(c,I){
+  const n=c.length-1;
+  for(let b=2;b<=6;b++){ const q=n-b; if(q<30) continue; const k=c[q],a=I.atr[q-1],rg=k.high-k.low; if(rg<2*a||k.volume<3*avgV(c,q)) continue;
+    const d=k.close>=k.open?1:-1, m=macroAt(k.time+900); if(!m||Math.sign(m.sum)!==-d) continue;
+    let fresh=false; for(let j=q+1;j<=n;j++) if(d>0?c[j].high>k.high:c[j].low<k.low) fresh=true; if(fresh) continue;
+    const x=c[n]; if(x.volume>1.5*avgV(c,n)) continue;
+    if(d<0?x.close>k.low+.618*rg:x.close<k.high-.618*rg){ const key=k.time+'|'+x.time; if(R.exKey!==key){ R.exKey=key;
+      const t=`Likuidasi ${d>0?'↑':'↓'} ${hm(k.time)} selesai · harga balik ≥61.8% · volume mereda`;
+      radar('REVERSAL?',`${t} → kemungkinan kembali ${-d>0?'NAIK':'TURUN'} searah makro. PANTAU saja: backtest reversal PF 0.69 (sampel ketat hanya 11/tahun)`,'var(--hub)');
+      alarm('watch',`PANTAU REVERSAL ${-d>0?'↑':'↓'}`,t+'. Bukan sinyal otomatis.'); } }
+  }
+}
+function injection(){
+  const m=D.m1; if(m.length<62) return; const cl=m.slice(0,-1), last=cl[cl.length-1], base=cl.slice(-61,-1).map(k=>k.volume), z=(last.volume-mean(base))/(std(base)||1e-9);
+  const mv=(last.close-last.open)/last.open*100, m3=(last.close-cl[cl.length-4].close)/cl[cl.length-4].close*100;
+  R.m1={z,mv,m3};
+  if(z>=4&&Math.abs(mv)>=.2&&R.injKey!==last.time){ R.injKey=last.time;
+    radar('INJEKSI',`Volume masuk ${z.toFixed(1)}σ dalam 1 menit · ${mv>0?'beli':'jual'} agresif ${mv>0?'+':''}${mv.toFixed(2)}% · ${f0(last.volume)} BTC`,mv>0?'var(--up)':'var(--down)'); }
+  if((Math.abs(mv)>=.5||Math.abs(m3)>=.9)&&R.shockKey!==last.time){ R.shockKey=last.time;
+    const t=`SHOCK PASAR ${m3>0?'↑':'↓'} ${m3>0?'+':''}${m3.toFixed(2)}% dalam 3 menit`;
+    radar('SHOCK',t+' · kemungkinan berita besar / likuidasi massal','var(--down)');
+    hot({title:t+' — kemungkinan berita besar atau likuidasi massal, cek berita!',src:'Detektor harga',link:null,score:9,t:Date.now()}); }
+}
+
+/* ---- lonceng / alarm ---- */
+let actx=null;
+const unlock=()=>{ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){} };
+['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true}));
+const CFG={bell:ST.get('me-bell',true)};
+function strike(t0,f,vol,dur){ const out=actx.createGain(); out.gain.value=vol; out.connect(actx.__comp);
+  [[1,1],[2.76,.6],[5.4,.4],[8.93,.25],[13.34,.15]].forEach(([r,a])=>{ const o=actx.createOscillator(), g=actx.createGain(); o.type='sine'; o.frequency.value=f*r;
+    g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(a,t0+.004); g.gain.exponentialRampToValueAtTime(.0008,t0+dur/r**.35); o.connect(g); g.connect(out); o.start(t0); o.stop(t0+dur+.1); });
+  const o=actx.createOscillator(), g=actx.createGain(); o.type='square'; o.frequency.value=f*4.2; g.gain.setValueAtTime(.35,t0); g.gain.exponentialRampToValueAtTime(.001,t0+.08); o.connect(g); g.connect(out); o.start(t0); o.stop(t0+.1); }
+function bell(kind){
+  if(!CFG.bell) return; unlock(); if(!actx) return;
+  if(!actx.__comp){ const c=actx.createDynamicsCompressor(); c.threshold.value=-10; c.knee.value=6; c.ratio.value=6; c.attack.value=.002; c.release.value=.25; const g=actx.createGain(); g.gain.value=1; c.connect(g); g.connect(actx.destination); actx.__comp=c; }
+  const t=actx.currentTime+.02, plan={news:[12,.42,[1046,784]],flush:[8,.32,[880,660]],signal:[4,.4,[1318,988]],watch:[2,.5,[740,740]]}[kind]||[3,.4,[988,988]];
+  for(let i=0;i<plan[0];i++) strike(t+i*plan[1],plan[2][i%2],1,kind==='news'?2.2:1.6);
+  try{ navigator.vibrate&&navigator.vibrate([400,150,400,150,600]); }catch(e){}
+}
+function speak(txt){ try{ if(!CFG.bell||!window.speechSynthesis) return; const u=new SpeechSynthesisUtterance(txt); u.lang='id-ID'; u.rate=1.05; u.volume=1; speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} }
+function notify(title,body){ try{ if(window.Notification&&Notification.permission==='granted') new Notification(title,{body,tag:'me-'+title.slice(0,20),requireInteraction:true}); }catch(e){} }
+function alarm(kind,title,body){ bell(kind); notify(title,body); if(kind==='signal') speak(`Sinyal ${title.startsWith('BUY')?'beli':'jual'} tervalidasi`); if(kind==='flush') speak('Likuidasi besar terdeteksi'); }
+let hotQ=[];
+function hot(item){
+  hotQ.unshift(item); hotQ=hotQ.slice(0,5);
+  let el=$('meHot'); if(!el){ el=document.createElement('div'); el.id='meHot'; el.setAttribute('role','alert'); document.body.appendChild(el); }
+  const it=hotQ[0];
+  el.innerHTML=`<div class="x"><span>🔔 HOT NEWS · ${esc(it.src)} · ${new Date(it.t).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'})}</span><span style="display:flex;gap:6px"><button class="btn sm" type="button" data-a="calm">Diam</button><button class="btn sm" type="button" data-a="close">Tutup</button></span></div>
+    <b class="t">${it.link?`<a href="${esc(it.link)}" target="_blank" rel="noopener" style="color:#fff">${esc(it.title)}</a>`:esc(it.title)}</b>
+    ${hotQ.length>1?`<div style="font-size:10.5px;opacity:.75">${hotQ.slice(1,3).map(x=>'· '+esc(x.title)).join('<br>')}</div>`:''}
+    <div style="font-size:10.5px;opacity:.8">Berita besar = volatilitas & likuidasi. Kurangi lot, lebarkan jarak, atau tunggu candle 15M close.</div>`;
+  el.hidden=false; el.classList.remove('calm'); el.inert=false;
+  el.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.a==='close'){ el.hidden=true; hotQ=[]; } else el.classList.add('calm'); try{ speechSynthesis.cancel(); }catch(er){} };
+  bell('news'); notify('HOT NEWS BTC',it.title); speak('Berita panas! '+(/[a-z]/i.test(it.title)?'Cek dashboard sekarang.':''));
+}
+
+/* ---- berita (rss2json, CORS) ---- */
+const FEEDS=[['Cointelegraph','https://cointelegraph.com/rss'],['CoinDesk','https://www.coindesk.com/arc/outboundfeeds/rss/'],['Decrypt','https://decrypt.co/feed'],['The Block','https://www.theblock.co/rss.xml'],['Bitcoin Magazine','https://bitcoinmagazine.com/.rss/full/'],['CryptoSlate','https://cryptoslate.com/feed/']];
+const KW=[[/\b(breaking|urgent|just in|flash)\b/i,3],[/\b(fomc|federal reserve|the fed|fed (chair|rate|cut|hike)|powell|rate cut|rate hike|interest rate)/i,3],[/\b(hack|hacked|exploit|stolen|drained?)\b/i,3],
+  [/\b(bankrupt\w*|insolven\w*|collapse\w*|halt\w*|suspend\w*|delist\w*)/i,3],[/\b(sec|cftc|doj)\b/i,2],[/\betfs?\b/i,2],[/\b(cpi|inflation|jobs report|nonfarm|payrolls|pce)\b/i,2],[/liquidat/i,2],
+  [/\b(crash\w*|plunge\w*|tumble\w*|dump\w*|sell-?off|slump\w*|bloodbath)\b/i,2],[/\b(surge\w*|soar\w*|rall(y|ies)|all-time high|record high|ath|skyrocket\w*)\b/i,2],[/\b(trump|white house|tariffs?|sanctions?|war|missile|invasion)\b/i,2],
+  [/\b(ban|bans|banned|crackdown)\b/i,2],[/\b(blackrock|microstrategy|saylor|grayscale|fidelity|tesla|strategic (bitcoin )?reserve)\b/i,1],[/\b(binance|coinbase|tether|usdt|circle|mt\.? ?gox)\b/i,1],[/\$\s?\d+(\.\d+)?\s?(b|bn|billion)\b|\bbillion\b/i,1]];
+const NEWS={items:ST.get('me-news',[]),i:0,boot:{}};
+function scoreNews(t){ let s=0; const hit=[]; for(const [re,w] of KW) if(re.test(t)){ s+=w; hit.push(re.source.slice(0,1)); } if(!/bitcoin|btc|crypto|market|fed|sec|etf|stablecoin|tether|binance|coinbase|liquidat|trump|tariff/i.test(t)) s-=2; return s; }
+async function pollNews(){
+  const [src,url]=FEEDS[NEWS.i++%FEEDS.length];
+  try{ const r=await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(url),{cache:'no-store'}); if(!r.ok) return; const j=await r.json(); if(j.status!=='ok') return;
+    const first=!NEWS.boot[src]; NEWS.boot[src]=1; const now=Date.now();
+    for(const x of (j.items||[]).slice(0,15)){ const id=(x.guid||x.link||x.title).slice(-120), t=Date.parse(String(x.pubDate).replace(' ','T')+'Z')||now;
+      if(NEWS.items.some(y=>y.id===id)) continue; const score=scoreNews(x.title+' '+(x.categories||[]).join(' '));
+      const it={id,src,title:x.title,link:x.link,t,score}; NEWS.items.push(it);
+      if(!MEM.news[id]){ MEM.news[id]=now; if(score>=4&&now-t<(first?15:60)*60000) hot(it); } }
+    NEWS.items.sort((a,b)=>b.t-a.t); NEWS.items=NEWS.items.slice(0,40); ST.set('me-news',NEWS.items); saveMem(); renderNews();
+  }catch(e){}
+}
+
+/* ---- tampilan ---- */
+const col=d=>d>0?'var(--up)':d<0?'var(--down)':'var(--ink-3)';
+function ckHtml(s){ return s.ck.map(x=>`<div class="r"><span>${x[1]?'<b class="up">✓</b>':'<b class="down">✗</b>'} ${esc(x[0])}</span><span class="${x[1]?'up':'muted'}">${esc(x[2])}</span></div>`).join(''); }
+function stLine(s,lbl){ return s.n?`<tr><td>${lbl}</td><td>${s.n}</td><td>${Math.round(s.wr*100)}%</td><td>${s.pf.toFixed(2)}</td><td class="${s.avg>=0?'up':'down'}">${sg(s.avg)}</td><td class="${s.tot>=0?'up':'down'}">${sg(s.tot)}</td></tr>`:`<tr><td>${lbl}</td><td colspan="5" class="muted">belum ada data</td></tr>`; }
+function render(){
+  const g=ME.sig, px=D.px, now=Date.now()/1000, acct=+($('acct')?.value)||1000, rp=+($('riskPct')?.value)||1;
+  let h;
+  if(g){ const lot=Math.max(.01,acct*rp/100/g.slPts), c=col(g.dir), st=g.res?`SELESAI · ${g.res}`:g.live?`ENTRY SEKARANG · sisa ${Math.max(0,Math.ceil((g.entryUntil-now)/60))} menit`:g.missed?'TERLEWAT · jangan kejar harga':'POSISI BERJALAN · kelola sampai TP/SL/waktu';
+    h=`<div class="lbl">Sinyal tervalidasi · ${esc(g.name)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="meact" style="color:${c}">${g.dir>0?'BUY':'SELL'}</div><span class="tag ${g.live?'PASS':'WAIT'}">${st}</span></div>
+      <div class="melv num"><div><span class="lbl">Entry</span><b>${f1(g.entry)}</b><span class="muted">±${Math.round(.15*g.tpPts)}</span></div><div><span class="lbl">Take profit</span><b class="up">${f1(g.tp)}</b><span class="muted">+${g.tpPts} poin</span></div><div><span class="lbl">Stop loss</span><b class="down">${f1(g.sl)}</b><span class="muted">−${g.slPts} poin</span></div></div>
+      <div style="font-size:11px">${esc(g.why)}</div>
+      <div class="mek num"><div class="r"><span>Harga sekarang</span><b style="color:${(g.pl||0)>=0?'var(--up)':'var(--down)'}">${f1(px)} (${sg(g.pl)} poin)</b></div>
+        <div class="r"><span>Batas waktu posisi</span><b>${hm(g.until)}</b></div><div class="r"><span>Lot (risiko ${rp}% dari $${f0(acct)})</span><b>${lot.toFixed(2)}</b></div></div>`;
+  } else {
+    h=`<div class="lbl">Sinyal tervalidasi · Macro Engine</div>
+      <div class="meact" style="color:var(--warn)">TUNGGU</div>
+      <div style="font-size:11.5px">${esc(ME.waitWhy)}</div>
+      <div class="muted" style="font-size:10.5px">Hanya 2 setup yang lolos backtest 1 tahun yang boleh entry. Tidak ada sinyal = tidak ada trade. Target realistis 100–300 poin.</div>`;
+  }
+  const lk=ME.lock;
+  h+=`<div class="mbtns"><button class="btn sm" type="button" id="meLock" aria-pressed="${lk}" title="Jika ON: Agent, Decision Desk, dan ⚡ scalper hanya boleh entry saat sinyal Macro Engine">KUNCI SINYAL: ${lk?'ON':'OFF'}</button>
+    <button class="btn sm" type="button" id="meBell" aria-pressed="${CFG.bell}">🔔 LONCENG: ${CFG.bell?'ON':'OFF'}</button><button class="btn sm" type="button" id="meTest">Tes lonceng</button>
+    ${window.Notification&&Notification.permission==='default'?'<button class="btn sm" type="button" id="meNotif">Izinkan notifikasi</button>':''}</div>`;
+  setH($('meC1'),h);
+  const m=ME.m, bx=(lbl,v,sub)=>`<div style="color:${col(v)};border-color:${col(v)}"><small>${lbl}</small>${v>0?'NAIK':v<0?'TURUN':'NETRAL'}${sub?`<small>${sub}</small>`:''}</div>`;
+  const run=ME.run||0, a=ME.a, b=ME.b, lv=R.live;
+  let h2=`<div class="mesec"><h4><span>Bias makro → mikro</span><span class="num" style="color:${col(ME.bias)}">${m?`${m.sum>0?'+':''}${m.sum}/3`:'—'}</span></h4>
+    <div class="mbias num">${m?bx('1D · EMA20',m.md)+bx('4H · EMA50/200',m.m4)+bx('1H · EMA21/50',m.m1):'<div>memuat</div><div></div><div></div>'}${bx('15M · run',Math.sign(run),`${Math.abs(run)}/${P.B.run} candle`)}</div></div>`;
+  if(a) h2+=`<div class="mesec"><h4><span>A · Flush follow ${L.strictA?'<span class="warn">(mode ketat)</span>':''}</span><span class="num">candle ${hm(D.c[D.c.length-2].time)}</span></h4><div class="mek num">${ckHtml(a)}</div></div>`;
+  if(b) h2+=`<div class="mesec"><h4><span>B · Macro pullback ${b.cand>0?'BUY':'SELL'} ${L.strictB?'<span class="warn">(mode ketat)</span>':''}</span><span class="num">${b.ck.filter(x=>x[1]).length}/${b.ck.length} lolos</span></h4><div class="mek num">${ckHtml(b)}</div></div>`;
+  setH($('meC2'),h2);
+  const mm=(lbl,v,max,txt,c2)=>`<div class="mmeter"><span class="muted">${lbl}</span><div class="bar"><span style="width:${clamp(v/max*100,0,100)}%;background:${c2}"></span></div><b>${txt}</b></div>`;
+  let h3=`<div class="mesec"><h4><span>Radar likuidasi · candle 15M berjalan</span><span class="num">${lv?Math.round(lv.el*100)+'%':'—'}</span></h4>`;
+  if(lv) h3+=mm('Range/ATR',lv.rgA,3,lv.rgA.toFixed(2)+'×',lv.rgA>=2?'var(--down)':'var(--hub)')+mm('Volume/rata2',lv.vr,4,lv.vr.toFixed(2)+'×',lv.vr>=3?'var(--down)':'var(--hub)')
+    +mm('Taker buy',lv.tb,1,Math.round(lv.tb*100)+'%',lv.tb>=.55?'var(--up)':lv.tb<=.45?'var(--down)':'var(--warn)')
+    +(R.m1?mm('Injeksi 1m',Math.max(0,R.m1.z),6,R.m1.z.toFixed(1)+'σ',R.m1.z>=4?'var(--down)':'var(--hub)'):'')
+    +`<div class="muted" style="font-size:10px">Flush = range ≥2× ATR & volume ≥3×. Melawan makro → ikut (PF 1.80). Searah makro → jangan kejar.</div>`;
+  h3+=`</div><div class="mesec"><h4><span>Feed radar</span><span class="muted">${R.feed.length}</span></h4><div class="mfeed num">${R.feed.length?R.feed.slice(0,14).map(x=>`<div><span class="muted">${new Date(x.t).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'})}</span><b style="color:${x.col}">${x.type}</b><span>${esc(x.txt)}</span></div>`).join(''):'<div class="muted">Belum ada injeksi/likuidasi besar sejak dibuka.</div>'}</div></div>`;
+  setH($('meC3'),h3);
+  // baris bawah: memori AI + backtest
+  const bk=L.buckets||[];
+  let h4=`<div class="mesec"><h4><span>🧠 Memori AI · belajar dari ${MEM.trades.filter(x=>x.res).length} sinyal & ${MEM.casc.length} kaskade</span><span class="muted">sejak ${new Date(MEM.first).toLocaleDateString('id-ID')}</span></h4>
+    <table class="mtab num"><tr><th>Setup (memori)</th><th>N</th><th>Win</th><th>PF</th><th>Rata2</th><th>Total poin</th></tr>${stLine(L.A,'A · Flush follow')}${stLine(L.A20,'A · 20 terakhir')}${stLine(L.B,'B · Macro pullback')}${stLine(L.B20,'B · 20 terakhir')}</table>
+    <div style="font-size:10.5px">${L.anti?`Pola: setelah <b>flush melawan makro</b> (${L.anti.n}×) harga rata2 lanjut <b class="${L.anti.f2h>=0?'up':'down'}">${sg(L.anti.f2h)} poin</b> dalam 2 jam, balik ≥50%: ${Math.round(L.anti.rev*100)}%.`:''}
+      ${L.withT?` Flush <b>searah makro</b> (${L.withT.n}×): lanjut <b class="${L.withT.f2h>=0?'up':'down'}">${sg(L.withT.f2h)}</b> poin, balik ≥50%: ${Math.round(L.withT.rev*100)}%.`:''}
+      Adaptasi: A ${L.strictA?'<b class="warn">KETAT</b> (edge 20 terakhir melemah → range 2.5× & vol 4×)':'<b class="up">normal</b>'} · B ${L.strictB?'<b class="warn">KETAT</b> (makro 3/3 + taker)':'<b class="up">normal</b>'}${L.weakBuckets.length?` · jam lemah B: ${L.weakBuckets.map(k=>`${String(k*4).padStart(2,'0')}–${String(k*4+4).padStart(2,'0')}`).join(', ')} WIB diblok`:''}</div>
+    <div class="mhr num">${bk.map((s,k)=>`<div title="Setup B jam ${k*4}-${k*4+4} WIB" style="color:${!s.n?'var(--ink-3)':s.wr>=.55?'var(--up)':s.wr<.4?'var(--down)':'var(--warn)'}">${String(k*4).padStart(2,'0')}–${String(k*4+4).padStart(2,'0')}<br>${s.n?Math.round(s.wr*100)+'% · '+s.n:'—'}</div>`).join('')}</div></div>
+    <div class="mesec"><h4><span>Backtest 365 hari · data 1 menit · biaya 15 poin/trade</span><span class="muted">in-sample 8 bln / out-of-sample 4 bln</span></h4>
+    <table class="mtab num"><tr><th>Strategi</th><th>Trade</th><th>Win</th><th>PF</th><th>Rata2</th><th>Total</th><th>Max DD</th><th></th></tr>
+    ${BT.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}%</td><td class="${r[3]>=1.2?'up':r[3]<1?'down':''}">${r[3].toFixed(2)}</td><td class="${r[4]>=0?'up':'down'}">${sg(r[4])}</td><td class="${r[5]>=0?'up':'down'}">${sg(r[5])}</td><td>${f0(r[6])}</td><td class="${r[7].includes('+')?'up':'down'}">${r[7]}</td></tr>`).join('')}</table>
+    <div class="muted" style="font-size:10px">TP tetap 100 poin tanpa filter kalah karena spread ±15 poin memakan 15% target. Pullback B: TP = 1.2× ATR dibatasi 100–300 poin. A: TP 300 / SL 450 / maks 2 jam. Hasil masa lalu bukan jaminan.</div></div>`;
+  setH($('meC4'),h4);
+  const lb=$('meHead'); if(lb) lb.textContent=`${g?(g.dir>0?'BUY ':'SELL ')+g.name:'TUNGGU'} · BTC ${f1(px)} · ${ME.lock?'kunci ON':'kunci OFF'}`;
+}
+function renderNews(){
+  const el=$('meNews'); if(!el) return;
+  setH(el,NEWS.items.length?NEWS.items.slice(0,18).map(x=>`<div>${x.score>=4?'<span class="hot">HOT</span>':''}<span class="muted">${new Date(x.t).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'})} · ${esc(x.src)}</span><br><a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a></div>`).join(''):'<div class="muted">Memuat berita…</div>');
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('#meLock,#meBell,#meTest,#meNotif'); if(!b) return;
+  if(b.id==='meLock'){ ME.lock=!ME.lock; ST.set('me-lock',ME.lock); }
+  if(b.id==='meBell'){ CFG.bell=!CFG.bell; ST.set('me-bell',CFG.bell); }
+  if(b.id==='meTest'){ const o=CFG.bell; CFG.bell=true; hot({title:'TES LONCENG — beginilah alarm saat ada berita panas (Fed, ETF, hack, likuidasi massal, shock harga).',src:'Tes',link:null,score:9,t:Date.now()}); CFG.bell=o; }
+  if(b.id==='meNotif'&&window.Notification) Notification.requestPermission().then(render);
+  render(); });
+
+/* ---- loop ---- */
+async function refresh15(){ try{ merge(D.c,await kl('15m',3)); const k=D.c[D.c.length-2]; const key=k.time;
+    if(key!==D.key){ D.key=key; D.I=calc(closed()); scan(); } evaluate(); }catch(e){} }
+async function refreshHTF(){ try{ const [a,b,d]=await Promise.all([kl('1h',3),kl('4h',3),kl('1d',3)]); merge(D.h1,a); merge(D.h4,b); merge(D.d1,d);
+    D.H1=htfFn(D.h1,3600); D.H4=htfFn(D.h4,14400); D.D1=htfFn(D.d1,86400); }catch(e){} }
+async function refresh1m(){ try{ const m=await kl('1m',70); D.m1=m; D.px=m[m.length-1].close; injection(); }catch(e){} }
+async function boot(){
+  ME.boot=Date.now();
+  try{ let a=await kl('15m',1000); for(let p=0;p<2;p++){ const b=await kl('15m',1000,a[0].time*1000-1); a=b.concat(a); } D.c=a;
+    [D.h1,D.h4,D.d1]=await Promise.all([kl('1h',1000),kl('4h',1000),kl('1d',400)]);
+    D.H1=htfFn(D.h1,3600); D.H4=htfFn(D.h4,14400); D.D1=htfFn(D.d1,86400);
+  }catch(e){ ME.waitWhy='gagal memuat data Binance (cek koneksi)'; const h=$('meC1'); if(h) h.innerHTML='<div class="warn">Gagal memuat data Binance untuk Macro Engine. Mencoba lagi dalam 30 detik…</div>'; setTimeout(boot,30000); return; }
+  learn(); D.key=D.c[D.c.length-2].time; D.I=calc(closed()); scan(); await refresh1m(); evaluate(); renderNews();
+  setInterval(refresh15,5000); setInterval(refresh1m,5000); setInterval(refreshHTF,60000); setInterval(render,1000);
+  pollNews(); setInterval(pollNews,25000);
+}
+boot();
 })();
 </script>
 
