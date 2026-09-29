@@ -481,7 +481,7 @@ tr.active td{background:rgba(234,108,196,.08)}
   .frame{max-width:none;align-items:start;
     grid-template-columns:minmax(320px,1fr) minmax(0,1.75fr) minmax(340px,1.05fr);
     grid-template-rows:auto auto auto auto auto auto auto auto auto auto 1fr auto auto auto auto;
-    grid-template-areas:"hdr hdr hdr" "act act act" "me me me" "mom mom mom" "desk desk desk" "liq liq liq" "mq mq mq" "cyc cyc cyc" "cards main ana" "cards strip ana" "cards graph ana" "quant quant quant" "floor floor floor" "foot foot foot" "note note note"}
+    grid-template-areas:"hdr hdr hdr" "top top top" "act act act" "me me me" "mom mom mom" "desk desk desk" "liq liq liq" "mq mq mq" "cyc cyc cyc" "cards strip ana" "cards graph ana" "quant quant quant" "floor floor floor" "foot foot foot" "note note note"}
   .a-act{grid-area:act} .a-me{grid-area:me} .a-mom{grid-area:mom} .a-desk{grid-area:desk} .a-hdr{grid-area:hdr} .a-liq{grid-area:liq} .a-mq{grid-area:mq} .a-cyc{grid-area:cyc} .a-cards{grid-area:cards}
   .a-main{grid-area:main} .a-strip{grid-area:strip} .a-graph{grid-area:graph} .a-ana{grid-area:ana}
   .a-quant{grid-area:quant} .a-floor{grid-area:floor} .a-foot{grid-area:foot} .a-note{grid-area:note}
@@ -587,6 +587,48 @@ tr.active td{background:rgba(234,108,196,.08)}
 .apw.mini .apl{display:none}
 @media (max-width:699px){ .apw{bottom:calc(env(safe-area-inset-bottom,0px) + 118px);right:8px;width:300px} .apw .apl{max-height:150px} }
 </style>
+<style id="techTop">
+.a-top{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
+.a-top>*{min-width:0}
+.a-top .a-main{grid-area:auto}
+.a-tech{display:flex;flex-direction:column}
+.a-tech .tabody{padding:10px 12px;display:grid;gap:10px;align-content:start;font-size:11px}
+.ta-sig{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.ta-sig .v{font-family:var(--display);font-size:30px;line-height:1;letter-spacing:.02em}
+.ta-sig .sc{text-align:right;color:var(--ink-2);font-size:10.5px;line-height:1.5}
+.ta-bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.ta-bar i{display:block;height:100%;border-radius:3px}
+.ta-sec{display:grid;gap:4px}
+.ta-sec>.lbl{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding-bottom:3px}
+.ta-kv{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:3px 8px;align-items:baseline}
+.ta-kv>span{color:var(--ink-3)}
+.ta-kv>b{text-align:right;font-size:12px}
+.ta-kv>small{text-align:right;color:var(--ink-3);min-width:62px}
+.ta-st{padding:6px 8px;border-radius:6px;background:var(--panel-2);border-left:3px solid var(--ink-3);line-height:1.45}
+.ta-ind{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border-radius:6px;overflow:hidden}
+.ta-ind>div{background:var(--panel-2);padding:4px 7px;display:grid;gap:1px}
+.ta-ind span{color:var(--ink-3);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
+.ta-ind b{font-size:12px}
+.ta-ind small{color:var(--ink-2);font-size:9.5px}
+.ta-lad{display:grid;gap:1px}
+.ta-lad>div{display:grid;grid-template-columns:8px minmax(0,1fr) auto 66px;gap:6px;align-items:center;padding:2px 4px;border-radius:3px}
+.ta-lad i{width:8px;height:8px;border-radius:2px}
+.ta-lad small{text-align:right;color:var(--ink-3)}
+.ta-lad .now{background:rgba(255,255,255,.08);font-weight:800}
+.ta-ck{display:flex;flex-wrap:wrap;gap:4px}
+.ta-ck span{padding:1px 6px;border-radius:3px;background:var(--panel-2);font-size:10px}
+.ta-read{display:grid;gap:3px;line-height:1.45;color:var(--ink-2)}
+.ta-read div::before{content:"› ";color:var(--ink-3)}
+.ta-foot{color:var(--ink-3);font-size:9.5px;border-top:1px dashed var(--line-2);padding-top:6px}
+@media (min-width:1100px){
+  .a-top{grid-template-columns:minmax(0,1fr) minmax(340px,31%)}
+  .a-top .main{grid-template-columns:1fr}
+  .a-top .side{border-left:0;border-top:1px solid var(--line);flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:14px 22px}
+  .a-top .side>*{flex:1 1 150px} .a-top .side .stats{flex:2 1 260px} .a-top .side .verdict{flex:2 1 220px}
+  .a-tech .tabody{flex:1 1 0;min-height:0;overflow:auto;contain:size}
+}
+@media (min-width:1400px){ .a-top{grid-area:top} }
+</style>
 </head>
 <body>
 <div class="floatcol">
@@ -662,6 +704,56 @@ tr.active td{background:rgba(234,108,196,.08)}
     </div>
     <div class="clockbox num"><b id="clk">--:--:--</b><span id="lat">UTC · — ms</span></div>
   </header>
+
+  <!-- TOP: main chart + technical analysis -->
+  <div class="a-top">
+  <!-- MAIN CHART -->
+  <section class="panel a-main">
+    <div class="ph"><span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span id="mainTitle">BTC/USDT · 15M · BINANCE SPOT</span><button class="btn sm" id="chartReset" type="button" title="Reset zoom to 100%, latest candle on the right and auto price scale (or double-click the chart)">⟲ RESET 100%</button><span class="num" id="zoomPct" style="font-size:10px;letter-spacing:.1em;color:var(--ink-3)">ZOOM —</span></span><span class="r" id="mainRight">—</span></div>
+    <div class="main">
+      <div id="chart">
+        <div class="legend">
+          <span><i style="background:var(--ema9)"></i>EMA 9</span>
+          <span><i style="background:var(--ema21)"></i>EMA 21</span>
+          <span><i style="background:var(--ema50)"></i>EMA 50</span>
+          <span><i style="background:var(--vwap)"></i>VWAP</span>
+          <span><i style="background:#ffd166"></i>POC · VA 24H</span>
+          <span><i style="background:var(--vwap);opacity:.5"></i>VWAP ±2σ</span>
+        </div>
+      </div>
+      <aside class="side">
+        <div>
+          <div class="lbl">Last price</div>
+          <div class="big num" id="price">—</div>
+          <div class="num" id="chg">—</div>
+        </div>
+        <div class="stats num">
+          <div><span class="lbl">24H High</span><b id="h24">—</b></div>
+          <div><span class="lbl">24H Low</span><b id="l24">—</b></div>
+          <div><span class="lbl">24H Vol</span><b id="v24">—</b></div>
+          <div><span class="lbl">ATR 14</span><b id="atrV">—</b></div>
+        </div>
+        <div class="verdict">
+          <div class="lbl">Current signal</div>
+          <div class="v" id="verdict">—</div>
+          <div class="bar"><span id="meter" style="width:0%"></span></div>
+          <div class="num muted" id="score">score —</div>
+        </div>
+        <div>
+          <div class="lbl">Candle closes in</div>
+          <div class="countdown num" id="cd">--:--</div>
+          <div class="muted" id="session">—</div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- TECHNICAL ANALYSIS (right of main chart) -->
+  <section class="panel a-tech" aria-label="Technical analysis of the main chart">
+    <div class="ph"><span>◆ Technical Analysis · <span id="taTf">15M</span></span><span class="r num" id="taHead">—</span></div>
+    <div class="tabody num" id="taBody"><div class="muted" style="padding:12px">Waiting for first analysis…</div></div>
+  </section>
+  </div>
 
   <!-- MARKET ACTIVITY STATUS -->
   <section class="panel a-act" aria-label="Market activity status and trading recommendation">
@@ -800,47 +892,6 @@ tr.active td{background:rgba(234,108,196,.08)}
   <section class="panel a-cyc">
     <div class="ph"><span>Execution cycle · <span class="num" id="cycN">#0</span></span><span class="r num" id="cycR">RTT —</span></div>
     <div class="cycle" id="cycle"></div>
-  </section>
-
-  <!-- MAIN CHART -->
-  <section class="panel a-main">
-    <div class="ph"><span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span id="mainTitle">BTC/USDT · 15M · BINANCE SPOT</span><button class="btn sm" id="chartReset" type="button" title="Reset zoom to 100%, latest candle on the right and auto price scale (or double-click the chart)">⟲ RESET 100%</button><span class="num" id="zoomPct" style="font-size:10px;letter-spacing:.1em;color:var(--ink-3)">ZOOM —</span></span><span class="r" id="mainRight">—</span></div>
-    <div class="main">
-      <div id="chart">
-        <div class="legend">
-          <span><i style="background:var(--ema9)"></i>EMA 9</span>
-          <span><i style="background:var(--ema21)"></i>EMA 21</span>
-          <span><i style="background:var(--ema50)"></i>EMA 50</span>
-          <span><i style="background:var(--vwap)"></i>VWAP</span>
-          <span><i style="background:#ffd166"></i>POC · VA 24H</span>
-          <span><i style="background:var(--vwap);opacity:.5"></i>VWAP ±2σ</span>
-        </div>
-      </div>
-      <aside class="side">
-        <div>
-          <div class="lbl">Last price</div>
-          <div class="big num" id="price">—</div>
-          <div class="num" id="chg">—</div>
-        </div>
-        <div class="stats num">
-          <div><span class="lbl">24H High</span><b id="h24">—</b></div>
-          <div><span class="lbl">24H Low</span><b id="l24">—</b></div>
-          <div><span class="lbl">24H Vol</span><b id="v24">—</b></div>
-          <div><span class="lbl">ATR 14</span><b id="atrV">—</b></div>
-        </div>
-        <div class="verdict">
-          <div class="lbl">Current signal</div>
-          <div class="v" id="verdict">—</div>
-          <div class="bar"><span id="meter" style="width:0%"></span></div>
-          <div class="num muted" id="score">score —</div>
-        </div>
-        <div>
-          <div class="lbl">Candle closes in</div>
-          <div class="countdown num" id="cd">--:--</div>
-          <div class="muted" id="session">—</div>
-        </div>
-      </aside>
-    </div>
   </section>
 
   <!-- ANALYSIS -->
@@ -2045,7 +2096,9 @@ async function liqInit(){
 }
 
 /* ---------- decision desk ---------- */
-const D={log:(store.get('scalp-decisions-v2')||[]).filter(e=>e.status!=='INFO'||String(e.verdict).startsWith('BLOCKED')).slice(0,500), pending:null, cool:0, lastBlock:null};
+// setups blocked while Sniper-only (Bandar / lock) come from the main engine, which has no edge → not logged or shown
+const snOnlyCfg=()=>BANDAR.on||!!store.get('sn-lock');
+const D={log:(store.get('scalp-decisions-v2')||[]).filter(e=>e.status!=='INFO'||(String(e.verdict).startsWith('BLOCKED')&&!snOnlyCfg())).slice(0,500), pending:null, cool:0, lastBlock:null};
 D.open=D.log.find(x=>x.status==='OPEN'&&!x.fast)||null;
 D.sinceT=D.open?D.open.t:Date.now();
 const SHORT={trend:'EMA',vwap:'VWAP',rsi:'RSI',macd:'MACD',vol:'Volume',htf:'Higher TF',atr:'ATR',book:'Book',tape:'Tape',liqMag:'Magnet liq',liqFlow:'Liq 15m',
@@ -2096,13 +2149,17 @@ function decide(A){
     if(A.lean!==side && A.score>=.6 && !A.hardDrop) return confirmStep('EXIT',()=>closeOpen(px,'EXIT'));
     D.pending=null; return;
   }
-  if(A.verdict.startsWith('BLOCKED')){
+  if(A.verdict.startsWith('BLOCKED')&&!lockM){
     const cid=Math.floor(now/TF_MS[S.tf])+'|'+A.gates.veto;
     if(D.lastBlock!==cid){ D.lastBlock=cid; D.log.unshift({id:now,t:now,act:'WAIT',price:px,score:A.score,verdict:`${A.verdict} · ${A.gates.veto}`,tf:S.tf,why:whyStr(A),chain:chainStr(A),status:'INFO'}); saveD(); }
   }
   if(!want||now<D.cool){ D.pending=null; return; }
   confirmStep(want,()=>enter(A,want));
 }
+/* short, human reason for a gate-blocked setup (verdict = "BLOCKED SHORT · <veto>") */
+function blockLbl(v){ v=String(v||''); const i=v.indexOf(' · '), why=i>=0?v.slice(i+3):v, side=/LONG/.test(v)?'LONG':/SHORT/.test(v)?'SHORT':'';
+  const m=[[/^Sniper/,'Sniper-only mode'],[/end of candle/,'candle ending'],[/data release/,'news release'],[/^Horizon/,'low horizon'],[/^anomaly/,'tick anomaly'],[/sweep/,'sweep risk'],[/reversal/,'reversal unconfirmed']].find(x=>x[0].test(why));
+  return {side, short:m?m[1]:why.slice(0,22), why}; }
 const ST_COL={BE:'var(--up)',OPEN:'var(--amb)',TP:'var(--up)',SL:'var(--down)',EXP:'var(--ink-2)',FLIP:'var(--hub)',EXIT:'var(--cluster)',INFO:'var(--ink-3)'};
 function renderDesk(){
   const A=S.A; if(!A) return;
@@ -2166,7 +2223,7 @@ function renderDesk(){
   $('dTick').textContent=D.log.slice(0,8).map(e=>`${hhmmss(e.t)} ${e.act} ${fmt(e.price,1)}${e.status==='OPEN'?' (open)':e.status==='INFO'?` · ${e.verdict}`:` → ${e.status} ${sgn(e.r,2,'R')}`}`).join('   ▪   ')||'No decisions yet.';
   $('miniHd').textContent=`${D.log.length} entries`;
   $('deskMini').innerHTML=D.log.slice(0,60).map(e=>{ const r=e.status==='OPEN'?(px-e.price)*e.dir/e.risk:e.r;
-    return `<div><span class="muted">${hhmmss(e.t)}</span><span class="act ${e.act}">${e.fast?'⚡':''}${e.act}</span><span>${fmt(e.price,1)}</span><span style="color:${ST_COL[e.status]}">${e.act==='WAIT'?'blocked':`${e.status} ${sgn(r,2,'R')}`}</span></div>`; }).join('')||'<div class="muted">No decisions yet.</div>';
+    return `<div><span class="muted">${hhmmss(e.t)}</span><span class="act ${e.act}">${e.fast?'⚡':''}${e.act}</span><span>${fmt(e.price,1)}</span><span style="color:${ST_COL[e.status]}"${e.act==='WAIT'?` title="${blockLbl(e.verdict).side} setup blocked: ${blockLbl(e.verdict).why.replace(/"/g,'')}"`:''}>${e.act==='WAIT'?`${blockLbl(e.verdict).side} · ${blockLbl(e.verdict).short}`:`${e.status} ${sgn(r,2,'R')}`}</span></div>`; }).join('')||'<div class="muted">No decisions yet.</div>';
 }
 setInterval(renderDesk,1000);
 
@@ -3238,6 +3295,109 @@ setInterval(xvLoadK,20000); setInterval(xvLoadGate,30000); setInterval(xvLoadCb,
 setInterval(()=>{ XV.walls=xvWalls(); },3000);
 setInterval(xvJEval,1000); setInterval(xvRender,1000);
 
+
+/* ---------- technical analysis panel (right of main chart) ---------- */
+function taRender(){
+  const A=S.A, el=$('taBody'); if(!A||!el) return;
+  const c=S.candles, I=calc(c), n=c.length-1, X=A.X, L=A.lean==='LONG', d=L?1:-1;
+  const px=S.trades[0]?.p||S.tick.BTCUSDT?.c||X.close, e9=I.e9[n], e21=I.e21[n], e50=I.e50[n];
+  const G=A.gates, R=xvRegime(c), B=xvVwapBands(), P=XV.prof, sr=S.sr, mg=LQ.mag, tfU=S.tf.toUpperCase();
+  const col=L?C.up:C.down, vc=A.verdict.startsWith('SETUP')?col:A.verdict.startsWith('BLOCKED')?C.down:A.verdict.startsWith('WATCH')?C.warn:C.ink3;
+  const pts=v=>sgn(v,1), dpx=p=>p==null?'':pts(p-px), side=L?'BUY':'SELL';
+  const risk=Math.abs(A.entry-A.sl), rr2=risk?Math.abs(A.tp2-A.entry)/risk:0;
+  const acct=+$('acct').value||0, rp=G.risk, size=risk?acct*rp/100/risk:0;
+  $('taTf').textContent=tfU; $('taHead').textContent=`${A.lean} · ${(A.score*100).toFixed(0)}/100`; $('taHead').style.color=vc;
+  // status of the plan
+  let stt, sc;
+  if(snLockOn()){ const sg=window.ME_STATE.sig; stt=sg&&sg.live?`<b style="color:${sg.dir>0?C.up:C.down}">SNIPER ${sg.dir>0?'BUY':'SELL'}</b> · ${sg.name} is live, follow the Sniper Scalp panel for its entry, TP & SL.`:`<b style="color:${C.ink3}">REFERENCE ONLY</b> · Sniper-only mode: entries come only from validated Sniper Scalp setups (none live now). Levels below are for reading the chart.`; sc=sg&&sg.live?(sg.dir>0?C.up:C.down):C.ink3; }
+  else if(A.verdict.startsWith('SETUP')){ stt=`<b style="color:${col}">OPEN ${side} NOW</b> at market ≈ ${fmt(px,1)} · all quality gates passed.`; sc=col; }
+  else if(A.verdict.startsWith('BLOCKED')){ stt=`<b class="down">DO NOT ENTER</b> · blocked: ${G.veto}.`; sc=C.down; }
+  else if(A.verdict.startsWith('WATCH')){ stt=`<b class="warn">WAIT</b> · ${A.lean} bias forming (score ${(A.score*100).toFixed(0)} / need ${(G.thr*100).toFixed(0)}). Enter only when the signal turns SETUP ${A.lean}.`; sc=C.warn; }
+  else { stt=`<b style="color:${C.ink3}">NO TRADE</b> · signals are mixed (score ${(A.score*100).toFixed(0)}). Stay flat.`; sc=C.ink3; }
+  const kv=(k,v,s,cl)=>`<span>${k}</span><b${cl?` style="color:${cl}"`:''}>${v}</b><small>${s||''}</small>`;
+  const plan=`<div class="ta-sec"><div class="lbl"><span>Trade plan · signal ${tfU}</span><span>${side} · ${A.lean}</span></div>
+    <div class="ta-st" style="border-left-color:${sc}">${stt}</div>
+    <div class="ta-kv">
+      ${kv('Open position (entry)',fmt(A.entry,1),dpx(A.entry),C.ink)}
+      ${kv('Stop loss · 1.5 ATR',fmt(A.sl,1),pts(A.sl-A.entry)+' pts',L?C.down:C.up)}
+      ${kv('Take profit 1 · 1R',fmt(A.tp1,1),pts(A.tp1-A.entry)+' pts',L?C.up:C.down)}
+      ${kv(`Take profit 2 · ${A.tpNote==='2R'?'2R':'liq magnet'}`,fmt(A.tp2,1),pts(A.tp2-A.entry)+' pts',L?C.up:C.down)}
+      ${kv('Risk : reward','1 : 1 / 1 : '+rr2.toFixed(1),`${fmt(risk,0)} pts risk`)}
+      ${kv('Position size',`${size.toFixed(4)} BTC`,`risk ${rp.toFixed(2)}% · $${fmt(acct*rp/100)}`)}
+    </div>
+    <div class="muted" style="line-height:1.45">Manage: close 50% at TP1 and move the stop to break-even (${fmt(A.entry,1)}); let the rest run to TP2. Invalid if price trades ${L?'below':'above'} ${fmt(A.sl,1)}.</div></div>`;
+  // agent pending order
+  const p=AG.plan, agTf=AG.cfg.tf.toUpperCase();
+  const ag=p&&p.ok?`<div class="ta-sec"><div class="lbl"><span>Agent pending order · ${agTf}</span><span style="color:${p.d>0?C.up:C.down}">${p.type}</span></div>
+    <div class="ta-kv">
+      ${kv('Entry',fmt(p.entry,1),dpx(p.entry),C.ink)}
+      ${kv('Stop loss',fmt(p.sl,1),pts(p.sl-p.entry)+' pts',p.d>0?C.down:C.up)}
+      ${kv('TP1 · '+p.tp1src,fmt(p.tp1,1),`R:R 1:${p.rr1.toFixed(1)}`,p.d>0?C.up:C.down)}
+      ${kv('TP2 · '+p.tp2src,fmt(p.tp2,1),`R:R 1:${p.rr2.toFixed(1)}`,p.d>0?C.up:C.down)}
+      ${kv('Valid until',hhmmss(p.until),'cancel after')}
+    </div></div>`
+    :`<div class="ta-sec"><div class="lbl"><span>Agent pending order · ${agTf}</span><span>NONE</span></div><div class="muted">${p?.why||'No validated limit/stop order right now.'}</div></div>`;
+  // indicators
+  const rel=v=>v==null?'':`<small class="${px>=v?'up':'down'}">price ${px>=v?'above':'below'} · ${pts(px-v)}</small>`;
+  const ind=`<div class="ta-sec"><div class="lbl"><span>Indicators</span><span>trend ${X.trend}</span></div><div class="ta-ind">
+    <div><span>EMA 9</span><b>${fmt(e9,1)}</b>${rel(e9)}</div>
+    <div><span>EMA 21</span><b>${fmt(e21,1)}</b>${rel(e21)}</div>
+    <div><span>EMA 50</span><b>${fmt(e50,1)}</b>${rel(e50)}</div>
+    <div><span>VWAP</span><b>${fmt(X.vw,1)}</b>${rel(X.vw)}</div>
+    <div><span>RSI 14</span><b class="${X.r>=50?'up':'down'}">${fmt(X.r,1)}</b><small>${X.r>70?'overbought':X.r<30?'oversold':X.r>=50?'bullish zone':'bearish zone'}</small></div>
+    <div><span>MACD hist</span><b class="${X.h>=0?'up':'down'}">${sgn(X.h,1)}</b><small>${X.h>=X.hp?'rising':'falling'} momentum</small></div>
+    <div><span>ATR 14</span><b>${fmt(X.atr,1)}</b><small>${fmt(X.ap,2)}% of price</small></div>
+    <div><span>Volume</span><b class="${X.vr>=1.2?'up':X.vr<.8?'down':''}">${fmt(X.vr,2)}×</b><small>vs 20-candle avg</small></div>
+    <div><span>Regime</span><b>${R?R.kind:'—'}</b><small>${R?`ADX ${fmt(R.adx,0)} · chop ${fmt(R.chop,0)}`:'loading…'}</small></div>
+    <div><span>VWAP z-score</span><b>${B?sgn(B.z,2)+'σ':'—'}</b><small>${B?(Math.abs(B.z)>=2?'stretched, mean-revert risk':Math.abs(B.z)>=1?'extended':'fair value'):'loading…'}</small></div>
+  </div></div>`;
+  // key levels ladder
+  const lv=[];
+  const add=(nm,p,c)=>{ if(p!=null&&isFinite(p)) lv.push({nm,p,c}); };
+  if(B){ add('VWAP +2σ',B.u2,C.vwap); add('VWAP −2σ',B.d2,C.vwap); }
+  if(P){ add('VAH · value area high',P.vah,'#c9a54a'); add('POC · point of control',P.poc,'#ffd166'); add('VAL · value area low',P.val,'#c9a54a'); }
+  if(sr){ add(`R1 resistance · ${sr.R1.n} touch`,sr.R1.p,'#ff9b8f'); add(`S1 support · ${sr.S1.n} touch`,sr.S1.p,'#8ff0b8'); if(sr.R2) add('R2 resistance',sr.R2.p,'#ff9b8f'); if(sr.S2) add('S2 support',sr.S2.p,'#8ff0b8'); }
+  if(mg){ if(mg.up) add(`Liquidation ↑ $${fmtK(mg.up.usd)}`,mg.up.p,'#a371f7'); if(mg.dn) add(`Liquidation ↓ $${fmtK(mg.dn.usd)}`,mg.dn.p,'#a371f7'); }
+  add('EMA 50',e50,C.e50);
+  add('Stop loss',A.sl,C.down); add('TP1',A.tp1,C.up); add('TP2',A.tp2,C.up);
+  lv.sort((a,b)=>b.p-a.p);
+  let lad='', put=false;
+  for(const x of lv){ if(!put&&x.p<px){ lad+=`<div class="now"><i style="background:#fff"></i><span>NOW · last price</span><b>${fmt(px,1)}</b><small>${tfU}</small></div>`; put=true; }
+    lad+=`<div><i style="background:${x.c}"></i><span>${x.nm}</span><b>${fmt(x.p,1)}</b><small class="${x.p>px?'up':'down'}">${pts(x.p-px)}</small></div>`; }
+  if(!put) lad+=`<div class="now"><i style="background:#fff"></i><span>NOW · last price</span><b>${fmt(px,1)}</b><small>${tfU}</small></div>`;
+  const res=lv.filter(x=>x.p>px&&!/Stop|TP/.test(x.nm)).pop(), sup=lv.find(x=>x.p<px&&!/Stop|TP/.test(x.nm));
+  const levels=`<div class="ta-sec"><div class="lbl"><span>Key levels</span><span>${sr?sr.status:'—'}</span></div><div class="ta-lad">${lad}</div></div>`;
+  // checklist summary
+  const cnt={PASS:0,WAIT:0,DROP:0}; for(const k of A.checks) cnt[k.state]=(cnt[k.state]||0)+1;
+  const top=(s,cl)=>A.checks.filter(k=>k.state===s).sort((a,b)=>b.w-a.w).slice(0,5).map(k=>`<span style="color:${cl}">${k.name.replace(' ⇄','')}</span>`).join('');
+  const ck=`<div class="ta-sec"><div class="lbl"><span>Checklist ${A.checks.length} items</span><span><b class="up">${cnt.PASS} PASS</b> · <b class="warn">${cnt.WAIT} WAIT</b> · <b class="down">${cnt.DROP} DROP</b></span></div>
+    <div class="ta-ck">${top('PASS',C.up)}</div><div class="ta-ck">${top('DROP',C.down)}</div></div>`;
+  // plain-language reading
+  const rd=[];
+  const below=[e9,e21,e50,X.vw].filter(v=>px<v).length;
+  rd.push(below>=3?`Price is below most EMAs and VWAP → bearish structure on ${tfU}.`:below<=1?`Price is above most EMAs and VWAP → bullish structure on ${tfU}.`:`Price is tangled in the EMAs/VWAP → no clean structure on ${tfU}.`);
+  rd.push(`EMA stack is ${X.trend==='UP'?'bullish (9 > 21 > 50)':X.trend==='DOWN'?'bearish (9 < 21 < 50)':'mixed'}${X.htfTrend?` · higher TF ${HTF[S.tf]?.toUpperCase()} trend ${X.htfTrend.toLowerCase()}`:''}.`);
+  if(res) rd.push(`Nearest resistance: ${res.nm.split(' ·')[0]} ${fmt(res.p,1)} (${pts(res.p-px)}).`);
+  if(sup) rd.push(`Nearest support: ${sup.nm.split(' ·')[0]} ${fmt(sup.p,1)} (${pts(sup.p-px)}).`);
+  if(P) rd.push(px>P.vah?`Trading above the 24h value area → acceptance higher or a pullback to VAH ${fmt(P.vah,0)}.`:px<P.val?`Trading below the 24h value area → sellers in control unless price reclaims VAL ${fmt(P.val,0)}.`:`Inside the 24h value area (${fmt(P.val,0)}–${fmt(P.vah,0)}) → rotation toward POC ${fmt(P.poc,0)} is likely.`);
+  rd.push(`RSI ${fmt(X.r,0)} and MACD ${X.h>=0?'positive':'negative'} & ${X.h>=X.hp?'rising':'falling'} → momentum ${(X.h>=X.hp)===(X.r>=50)?(X.r>=50?'favours buyers':'favours sellers'):'is diverging, be patient'}.`);
+  if(G.veto) rd.push(`Gate veto: ${G.veto}.`);
+  const read=`<div class="ta-sec"><div class="lbl"><span>Reading</span><span>${hhmmss(Date.now())}</span></div><div class="ta-read">${rd.map(x=>`<div>${x}</div>`).join('')}</div></div>`;
+  const head=`<div><div class="ta-sig"><div><div class="lbl">Signal · ${tfU}</div><div class="v" style="color:${vc}">${A.verdict}</div></div>
+    <div class="sc">score <b style="color:${vc}">${(A.score*100).toFixed(0)}</b>/100<br>entry threshold ${(G.thr*100).toFixed(0)}</div></div>
+    <div class="ta-bar" style="margin-top:6px"><i style="width:${(A.score*100).toFixed(0)}%;background:${vc}"></i></div></div>`;
+  setH(el, head+plan+ag+levels+ind+ck+read+`<div class="ta-foot">Levels follow the main chart (${tfU}) and refresh every second. Educational analysis only, not financial advice. Always use a stop loss.</div>`);
+}
+setInterval(()=>{ try{ taRender(); }catch(e){} },1000);
+/* keep the technical panel clear of the fixed right widget column (clock / widgets) */
+function taPad(){
+  const top=document.querySelector('.a-top'), fc=document.querySelector('.floatcol'); if(!top) return;
+  let pad=0;
+  if(innerWidth>=1100&&fc&&fc.getClientRects().length){ const f=fc.getBoundingClientRect(), t=top.getBoundingClientRect();
+    if(f.width>0&&f.height>0) pad=Math.max(0,Math.round(t.right-f.left+8)); }
+  if((parseFloat(top.style.paddingRight)||0)!==pad) top.style.paddingRight=pad?pad+'px':'';
+}
+setInterval(taPad,1000); addEventListener('resize',taPad);
 
 /* ---------- boot ---------- */
 (async()=>{
