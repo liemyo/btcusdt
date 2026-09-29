@@ -1026,6 +1026,7 @@ const TF_MS = {'1m':6e4,'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5};
 const HTF = {'15m':'1h','1h':'4h'};
 const ATR_MIN = {'15m':0.12,'1h':0.25};
 const TZ = -new Date().getTimezoneOffset() * 60;
+const isLight = () => document.documentElement.getAttribute('data-theme')==='light';
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const C = {up:css('--up'),down:css('--down'),warn:css('--warn'),e9:css('--ema9'),e21:css('--ema21'),e50:css('--ema50'),vwap:css('--vwap'),
   ink:css('--ink'),ink2:css('--ink-2'),ink3:css('--ink-3'),line:css('--line'),hub:css('--hub'),cluster:css('--cluster'),collide:css('--collide'),frame:css('--frame')};
@@ -1571,7 +1572,7 @@ function renderMC(){
   const mxb=Math.max(...bins), padB=18, X=v=>(v-lo)/(hi-lo)*w;
   g.strokeStyle=C.line; g.beginPath(); for(let i=1;i<4;i++){ g.moveTo(0,(h-padB)*i/4); g.lineTo(w,(h-padB)*i/4); } g.stroke();
   bins.forEach((n,i)=>{ const x0=i*(w/B), bh=n/mxb*(h-padB-24), v=lo+(i+.5)*bw;
-    g.fillStyle = v<M.p5 ? C.warn : v<0 ? C.down : '#e6e9ef'; g.fillRect(x0+1,h-padB-bh,w/B-2,bh); });
+    g.fillStyle = v<M.p5 ? C.warn : v<0 ? C.down : (isLight()?'#3b4456':'#e6e9ef'); g.fillRect(x0+1,h-padB-bh,w/B-2,bh); });
   const vline=(v,col,lab)=>{ if(v<lo||v>hi) return; g.strokeStyle=col; g.setLineDash([3,3]); g.beginPath(); g.moveTo(X(v),14); g.lineTo(X(v),h-padB); g.stroke(); g.setLineDash([]); g.fillStyle=col; g.font='10px JetBrains Mono'; g.fillText(lab,Math.min(X(v)+3,w-60),12); };
   vline(0,C.ink3,'0%'); vline(M.p5,C.warn,'P5');
   g.fillStyle=C.ink3; g.font='10px JetBrains Mono'; g.fillText(sgn(lo,0,'%'),2,h-4); const t=sgn(hi,0,'%'); g.fillText(t,w-g.measureText(t).width-2,h-4);
@@ -2672,6 +2673,7 @@ function applyTheme(t){
   const bg=light?'#ffffff':'#07090d', gr=light?'#eef1f6':'#11151d', bd=light?'#c3cbd9':'#1a1f2b', tx=light?'#4b5466':'#7d8696';
   for(const ch of [chart,rchart]) ch.applyOptions({layout:{background:{type:'solid',color:bg},textColor:tx},grid:{vertLines:{color:gr},horzLines:{color:gr}},rightPriceScale:{borderColor:bd},timeScale:{borderColor:bd}});
   store.set('btcusdt-theme',light?'light':'dark'); S.dirty=true; S.full=true;
+  for(const f of [renderMC,renderConv,drawLqBars,gzDrawSpark]) try{ f(); }catch(e){} // redraw canvases in the new palette
 }
 $('thmBtn').addEventListener('click',()=>applyTheme(document.documentElement.getAttribute('data-theme')==='light'?'dark':'light'));
 applyTheme(store.get('btcusdt-theme')==='light'?'light':'dark');
@@ -2804,7 +2806,7 @@ function gzDrawSpark(){
     g.save(); g.beginPath(); g.rect(0,clip[0],w,clip[1]-clip[0]); g.clip();
     g.beginPath(); g.moveTo(X(0),Y(50)); H.forEach((v,i)=>g.lineTo(X(i),Y(v))); g.lineTo(X(H.length-1),Y(50)); g.closePath(); g.fillStyle=col; g.fill(); g.restore(); }
   g.beginPath(); H.forEach((v,i)=>i?g.lineTo(X(i),Y(v)):g.moveTo(X(i),Y(v))); g.strokeStyle='#ea6cc4'; g.lineWidth=1.5; g.stroke();
-  const lv=H[H.length-1]; g.beginPath(); g.arc(X(H.length-1),Y(lv),2.5,0,7); g.fillStyle='#fff'; g.fill();
+  const lv=H[H.length-1]; g.beginPath(); g.arc(X(H.length-1),Y(lv),2.5,0,7); g.fillStyle=isLight()?'#10213f':'#fff'; g.fill();
   g.fillStyle=C.ink3; g.font='9px JetBrains Mono'; g.fillText('10 min',2,9);
 }
 function gzTick(){
