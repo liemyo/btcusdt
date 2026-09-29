@@ -2853,7 +2853,8 @@ function wSetMini(mini){
   if(!mini) gzDrawSpark();
 }
 function wMode(m,init){
-  const hide=m==='hide'; document.querySelector('.floatcol').hidden=hide; $('agent').hidden=hide; $('apw').hidden=hide;
+  const hide=m==='hide'; document.querySelector('.floatcol').hidden=hide; $('agent').hidden=hide; $('apw').hidden=hide; $('wibclk').hidden=hide;
+  const mu=document.getElementById('muTg'); if(mu) mu.hidden=hide; // music toggle is created later in the page; it also checks the saved mode itself
   if(!init){ if(m==='max'){ wSetMini(false); agSetOpen(true); apSetMini(false); } else if(m==='min'){ wSetMini(true); agSetOpen(false); apSetMini(true); } }
   document.querySelectorAll('#wdock button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.w===m));
   store.set('scalp-wmode',m);
@@ -3791,6 +3792,7 @@ html.gated #muTg{display:none!important}
 <script>
 (()=>{
   const VID='a8_tPrslIZg', KEY='btcusdt-music', btn=document.getElementById('muTg'), ic=document.getElementById('muIc'), lb=document.getElementById('muLb');
+  try{ if(localStorage.getItem('scalp-wmode')==='"hide"') btn.hidden=true; }catch(e){} // respect the dock's "hide all widgets" mode
   let p=null, ready=false, err=false, want=true; try{ want=localStorage.getItem(KEY)!=='pause'; }catch(e){}
   const playing=()=>ready&&[1,3].includes(p.getPlayerState());
   const ui=()=>{ const on=playing(); btn.classList.toggle('on',on); ic.textContent=on?'❚❚':'▶'; btn.setAttribute('aria-pressed',on);
@@ -3872,8 +3874,8 @@ html.gated #muTg{display:none!important}
 }
 </style>
 <style id="widgetScale">
-/* ===== floating widgets at 80% size, positioned symmetrically by layoutWidgets() ===== */
-.wibclk,.floatcol,.apw,.agent,.wdock,#muTg{zoom:.8}
+/* ===== floating widgets at 64% size (80% of the previous 80%), positioned symmetrically by layoutWidgets() ===== */
+.wibclk,.floatcol,.apw,.agent,.wdock,#muTg{zoom:.64}
 /* one column width for the whole right side so left edges line up */
 .wibclk,.floatcol,.apw{width:280px!important}
 /* bottom row items share one height: agent pill · music · dock */
@@ -3881,6 +3883,9 @@ html.gated #muTg{display:none!important}
 .agpill{box-sizing:border-box;height:46px;display:inline-flex;align-items:center}
 #muTg{box-sizing:border-box;height:46px!important}
 @media (max-width:699px){ .wibclk,.floatcol,.apw{width:190px!important} }
+/* header & activity panel only reserve the space the smaller widget column actually uses */
+@media (min-width:700px){ header.top{padding-right:200px!important} .actg{padding-right:200px!important} }
+@media (max-width:699px){ header.top{padding-right:136px!important} }
 </style>
 </body>
 </html>
