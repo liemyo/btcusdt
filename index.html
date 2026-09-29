@@ -4378,5 +4378,16 @@ html.gated #muTg{display:none!important}
 @media (min-width:700px){ header.top{padding-right:200px!important} .actg{padding-right:200px!important} }
 @media (max-width:699px){ header.top{padding-right:136px!important} }
 </style>
+<style id="fullFrame">
+/* main frame fills the whole window (edge to edge) on phone and desktop */
+html,body{min-height:100%}
+body{padding:0!important}
+.frame{max-width:none!important;width:100%;margin:0!important;min-height:100vh;min-height:100dvh;border-radius:0!important;
+  padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+@media (max-width:699px){ .frame{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))} }
+/* widgets float above the paper: they never reserve space or move page content */
+html body header.top{padding-right:6px!important}
+html body .actg{padding-right:14px!important}
+</style>
 </body>
 </html>
