@@ -618,6 +618,11 @@ tr.active td{background:rgba(234,108,196,.08)}
 @media (max-width:1100px){ .a-whale .whg{grid-template-columns:1fr 1fr} .a-whale .whc:first-child{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line)} }
 @media (max-width:760px){ .a-whale .whg{grid-template-columns:1fr} .a-whale .whc{border-right:0;border-bottom:1px solid var(--line)} .a-whale .whact{font-size:28px} .a-whale .whm{grid-template-columns:96px minmax(0,1fr) 58px} .a-whale .whrad>div{grid-template-columns:64px 1fr auto} .a-whale .whrad>div>span:nth-child(3){display:none} }
 </style>
+<style id="tfBar">
+.tfbar{display:inline-flex;gap:4px;flex-wrap:wrap}
+.tfbar .btn.tf{min-width:0;padding-inline:9px}
+@media (max-width:699px){ .tfbar{gap:3px} .tfbar .btn.tf{padding-inline:6px} }
+</style>
 <style id="techTop">
 .a-top{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
 .a-top>*{min-width:0}
@@ -734,8 +739,9 @@ tr.active td{background:rgba(234,108,196,.08)}
     <div class="brand"><div class="logo">₿</div><h1>SCALPBOT · BTCUSDT</h1></div>
     <div class="strap" id="strap">Connecting to Binance…</div>
     <div class="controls">
-      <button class="btn tf" data-tf="15m" aria-pressed="true" id="tf15">15M</button>
-      <button class="btn tf" data-tf="1h" aria-pressed="false" id="tf1h">1H</button>
+      <span class="tfbar" role="group" aria-label="Timeframe for chart, analysis, desk, agent and widgets" title="Chart, checklist, Technical Analysis, Decision Desk, backtest, S/R, agent & widgets follow this timeframe. Sniper / Whale / Breakout setups keep their validated timeframes (1M · 5M · 15M).">
+      <button class="btn tf" data-tf="1m" aria-pressed="false">1M</button><button class="btn tf" data-tf="5m" aria-pressed="false">5M</button><button class="btn tf" data-tf="15m" aria-pressed="true" id="tf15">15M</button><button class="btn tf" data-tf="1h" aria-pressed="false" id="tf1h">1H</button><button class="btn tf" data-tf="4h" aria-pressed="false">4H</button><button class="btn tf" data-tf="1d" aria-pressed="false">1D</button>
+      </span>
       <button class="btn" id="soundBtn" aria-pressed="false">ALERT: OFF</button>
       <a class="btn" href="https://my.exness.com/webtrading" target="_blank" rel="noopener">EXNESS ↗</a>
     </div>
@@ -1094,9 +1100,9 @@ const WSS = ['wss://data-stream.binance.vision', 'wss://stream.binance.com:9443'
 const TFS = ['1m','5m','15m','1h','4h','1d'];
 const ASSETS = ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','DOGEUSDT','ADAUSDT','DOTUSDT'];
 const RTF = ['5m','15m','1h'];
-const TF_MS = {'1m':6e4,'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5};
-const HTF = {'15m':'1h','1h':'4h'};
-const ATR_MIN = {'15m':0.12,'1h':0.25};
+const TF_MS = {'1m':6e4,'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5,'1w':6048e5};
+const HTF = {'1m':'15m','5m':'1h','15m':'1h','1h':'4h','4h':'1d','1d':'1w'};
+const ATR_MIN = {'1m':0.03,'5m':0.07,'15m':0.12,'1h':0.25,'4h':0.5,'1d':1.2};
 const TZ = -new Date().getTimezoneOffset() * 60;
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const C = {up:css('--up'),down:css('--down'),warn:css('--warn'),e9:css('--ema9'),e21:css('--ema21'),e50:css('--ema50'),vwap:css('--vwap'),
@@ -1871,6 +1877,7 @@ let mtfFirst=true;
 window.__SNBT_CB=()=>{ if(S.candles.length>=150) runQuant(); };
 async function refreshMTF(){
   for(const tf of TFS){ try{ if(tf!==S.tf){ const c=await loadKlines(tf,tf===HTF[S.tf]?1000:200); S.mtf[tf]={candles:c,eval:evaluate(c)}; } }catch(e){} }
+  if(HTF[S.tf]==='1w'){ try{ const c=await loadKlines('1w',300); S.mtf['1w']={candles:c,eval:evaluate(c)}; }catch(e){} }
   renderScan(); if(mtfFirst){ mtfFirst=false; runQuant(); } else renderRob();
   S.dirty=true;
 }
@@ -1912,9 +1919,16 @@ document.querySelectorAll('.tf').forEach(b=>b.addEventListener('click',async()=>
   document.querySelectorAll('.tf').forEach(x=>x.setAttribute('aria-pressed',x===b));
   $('mainTitle').textContent=`BTC/USDT · ${S.tf.toUpperCase()} · BINANCE SPOT`;
   store.set('scalp-tf',S.tf);
-  try{ const h=HTF[S.tf]; const c=await loadKlines(h,1000); S.mtf[h]={candles:c,eval:evaluate(c)}; }catch(e){}
+  try{ const h=HTF[S.tf]; const c=await loadKlines(h,h==='1w'?300:1000); S.mtf[h]={candles:c,eval:evaluate(c)}; }catch(e){}
+  syncTF(S.tf);
   await loadMain(); connect(); renderScan();
 }));
+/* one timeframe for chart + analysis + desk + agent + S/R + price widget (Sniper/Whale/Breakout keep validated TFs) */
+function syncTF(tf){
+  try{ if(AG.cfg.tf!==tf){ AG.cfg.tf=tf; saveAG(); document.querySelectorAll('#agTfChips button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tf===tf)); AG.stable=null; AG.cand=null; AG.plan=null; agentTick(); } }catch(e){}
+  try{ if(PXTF.includes(tf)){ SR.tf=tf; store.set('scalp-srtf',tf); document.querySelectorAll('#srChips button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tf===tf)); renderSR();
+    PX.tf=tf; store.set('scalp-pxtf',tf); document.querySelectorAll('#pxChips button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tf===tf)); renderPxw(); } }catch(e){}
+}
 let actx;
 function beep(f){ try{ actx=actx||new AudioContext(); const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=f; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.15,actx.currentTime); g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.5); o.start(); o.stop(actx.currentTime+.5);}catch(e){} }
 $('soundBtn').addEventListener('click',()=>{ S.sound=!S.sound; $('soundBtn').setAttribute('aria-pressed',S.sound); $('soundBtn').textContent=`ALERT: ${S.sound?'ON':'OFF'}`; if(S.sound) beep(660); });
@@ -2469,7 +2483,7 @@ function drawMom(){
 setInterval(momCompute,500);
 
 /* ---------- sticky price widget ---------- */
-const PXTF=['5m','15m','1h','4h','1d'];
+const PXTF=['1m','5m','15m','1h','4h','1d'];
 const PX={tf:PXTF.includes(store.get('scalp-pxtf'))?store.get('scalp-pxtf'):'5m', last:null};
 $('pxChips').innerHTML=PXTF.map(tf=>`<button type="button" id="pxb-${tf}" data-tf="${tf}" aria-pressed="${tf===PX.tf}">${tf.toUpperCase()}</button>`).join('');
 $('pxChips').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; PX.tf=b.dataset.tf; store.set('scalp-pxtf',PX.tf);
@@ -2553,7 +2567,7 @@ const AGK={cfg:'scalp-agent-cfg'};
 const AG={cfg:Object.assign({open:innerWidth>=700,tf:'15m'},store.get(AGK.cfg)||{}), cmd:null, stable:null, cand:null, plan:null};
 const saveAG=()=>store.set(AGK.cfg,{open:AG.cfg.open,tf:AG.cfg.tf});
 const setH=(el,h)=>{ if(el._h!==h){ el.innerHTML=h; el._h=h; } };
-const AG_TFS=['5m','15m','1h'], AG_HTF={'5m':'15m','15m':'1h','1h':'4h'};
+const AG_TFS=['1m','5m','15m','1h','4h','1d'], AG_HTF={'1m':'15m','5m':'15m','15m':'1h','1h':'4h','4h':'1d','1d':'1d'};
 if(!AG_TFS.includes(AG.cfg.tf)) AG.cfg.tf='15m';
 
 /* per-timeframe features (candles + live price) */
@@ -3435,13 +3449,14 @@ function taRender(){
   const head=`<div><div class="ta-sig"><div><div class="lbl">Signal · ${tfU}</div><div class="v" style="color:${vc}">${A.verdict}</div></div>
     <div class="sc">score <b style="color:${vc}">${(A.score*100).toFixed(0)}</b>/100<br>entry threshold ${(G.thr*100).toFixed(0)}</div></div>
     <div class="ta-bar" style="margin-top:6px"><i style="width:${(A.score*100).toFixed(0)}%;background:${vc}"></i></div></div>`;
-  setH(el, head+plan+ag+levels+ind+ck+read+`<div class="ta-foot">Levels follow the main chart (${tfU}) and refresh every second. Educational analysis only, not financial advice. Always use a stop loss.</div>`);
+  setH(el, head+plan+ag+levels+ind+ck+read+`<div class="ta-foot">Levels follow the main chart (${tfU}) and refresh every second. Sniper / Whale / Breakout setups keep their validated timeframes. Educational analysis only, not financial advice. Always use a stop loss.</div>`);
 }
 setInterval(()=>{ try{ taRender(); }catch(e){} },1000);
 
 /* ---------- boot ---------- */
 (async()=>{
-  const saved=store.get('scalp-tf'); if(saved&&HTF[saved]){ S.tf=saved; document.querySelectorAll('.tf').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tf===saved)); $('mainTitle').textContent=`BTC/USDT · ${S.tf.toUpperCase()} · BINANCE SPOT`; }
+  const saved=store.get('scalp-tf'); if(saved&&TFS.includes(saved)){ S.tf=saved; document.querySelectorAll('.tf').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tf===saved)); $('mainTitle').textContent=`BTC/USDT · ${S.tf.toUpperCase()} · BINANCE SPOT`; }
+  try{ syncTF(S.tf); }catch(e){}
   renderScan(); renderMarquee(); renderPaper();
   requestAnimationFrame(graphLoop); requestAnimationFrame(qLoop);
   if(reduce){ setInterval(()=>{ stepGraph(); stepQx(performance.now()); },1000); }
@@ -3521,10 +3536,12 @@ const SET={
     desc:'5M whale footprint: volume ≥8× the 5-hour average, average trade size ≥1.4× the 20-hour average (big players, not retail), taker ≥60% in the candle direction, body ≥0.8 ATR → FOLLOW the whales at the next open · SL at 50% of the whale candle (min 0.5 ATR) · TP 3R · 2-hour time stop. Volume ≥12× = strong whale (PF 1.46)'},
   B1M:{name:'BREAKOUT 1M',grade:'C',tf:'1M',tp:300,sl:150,bars:240,win:60,pri:0.5,bt:[459,41,1.2],
     desc:'1M pre-breakout: price within 25 pts of the 12-hour high/low, with the 4H trend, taker ≥56% toward the level over 5 min, last 30 min compressed (range ≤12× 1M ATR60) → STOP order 5 pts beyond the level, valid 60 min · TP +300 / SL −150 · 4-hour time stop'},
+  B4H:{name:'BREAKOUT 1M · 4H LEVEL',grade:'D',tf:'1M',tp:300,sl:150,bars:240,win:60,pri:0.4,bt:[1915,35,0.9],
+    desc:'Aggressive 1M breakout of the 4-hour high/low (4H trend may be flat, not against) · same compression/taker rules · STOP 5 pts beyond · TP +300 / SL −150. 400-day test PF 0.90 (loses on average): display only, never sent to Desk/Agent'},
   BO:{name:'TREND BREAKOUT 4H',grade:'C',tf:'5M',tp:450,sl:563,bars:48,win:6,pri:1,bt:[198,58,1.24],
     desc:'5M close breaks the 2-hour high/low + volume ≥1.5× with the 1H AND 4H trend, session 14–04 WIB → LIMIT retest · TP 450 / SL 563'},
 };
-const ORDER=['REV','LIQ','FLW','WHL','ABS','PB','BO','B1M'];
+const ORDER=['REV','LIQ','FLW','WHL','ABS','PB','BO','B1M','B4H'];
 
 /* ---- indicators ---- */
 function ema(v,n){ const k=2/(n+1),o=new Array(v.length).fill(null); let s=0;
@@ -3568,6 +3585,7 @@ function feat(c,A,i){ const k=c[i]; let v=0; const sz=[]; for(let j=i-20;j<i;j++
   const rg=k.high-k.low, szm=mean(sz), szs=std(sz)||1e-9;
   return {k,a:A[i-1],rg,vr:k.volume/(v/20),tb:k.volume?k.tbv/k.volume:.5,pos:rg?(k.close-k.low)/rg:.5,wz:(k.volume/Math.max(1,k.n)-szm)/szs,ht:trend1h(k.time+300),d:k.close>=k.open?1:-1}; }
 
+const sendable=t=>{ const g=SET[t]?.grade; return g==='A'||g==='B'||(g==='C'&&ME.aggr); };
 const barSec=t=>SET[t]&&SET[t].tf==='15M'?900:SET[t]&&SET[t].tf==='1M'?60:300;
 /* ---- AI memory ---- */
 const MK='sn-mem-v2';
@@ -3629,15 +3647,15 @@ function detWHL(c,A,i){ const w=whFeat(c,A,i); if(!w||w.vr<8||w.szr<1.4||Math.ab
   return {dir:w.d,kind:'MARKET',tp:3*sl,sl,strong,why:`${strong?'STRONG ':''}whale ${w.d>0?'PUMP ↑ buying':'DUMP ↓ selling'} · volume ${w.vr.toFixed(1)}× · avg trade size ${w.szr.toFixed(1)}× · taker ${Math.round(w.tbs*100)}% · body ${Math.abs(w.body).toFixed(1)} ATR → follow the whales`,
     ck:[['volume ≥8×',1],['avg trade size ≥1.4× (big players)',1],['taker ≥60% aligned',1],['body ≥0.8 ATR',1]]}; }
 /* 1M pre-breakout (400 days, strict fills + 5-pt slippage + 15-pt cost: 459 trades, WR 41%, PF 1.20; train 1.27 / test 1.12; every quarter ≥ 1.15) */
-function b1mState(c,A60,i){ if(i<760||!A60[i]) return null; let h=-1e9,l=1e9; for(let j=i-720;j<i;j++){ if(c[j].high>h) h=c[j].high; if(c[j].low<l) l=c[j].low; }
+function b1mState(c,A60,i,W=720,flat=false){ if(i<760||!A60[i]) return null; let h=-1e9,l=1e9; for(let j=i-W;j<i;j++){ if(c[j].high>h) h=c[j].high; if(c[j].low<l) l=c[j].low; }
   const px=c[i].close, dUp=h-px, dDn=px-l, d=dUp<=dDn?1:-1, lvl=d>0?h:l, dist=d>0?dUp:dDn;
   let v=0,tb=0; for(let j=i-4;j<=i;j++){ v+=c[j].volume; tb+=c[j].tbv; } const sh=v?tb/v:.5, tk=d>0?sh:1-sh;
   let hh=-1e9,ll=1e9; for(let j=i-29;j<=i;j++){ hh=Math.max(hh,c[j].high); ll=Math.min(ll,c[j].low); } const cmp=(hh-ll)/A60[i];
   const tr=h4dir(c[i].time+60);
-  return {d,lvl,dist,tk,cmp,tr,h,l,ok:[dist>0&&dist<=25,tr===d,tk>=.56,cmp<=12]}; }
-function detB1M(c,A60,i){ const b=b1mState(c,A60,i); if(!b||!b.ok.every(Boolean)) return null; const stop=b.lvl+b.d*5;
-  return {dir:b.d,kind:'STOP',lvl:stop,why:`price ${f0(b.dist)} pts from the 12h ${b.d>0?'high':'low'} ${f0(b.lvl)} · 4H trend ${b.d>0?'up':'down'} · taker ${Math.round(b.tk*100)}% · compression ${b.cmp.toFixed(1)}× ATR → ${b.d>0?'BUY':'SELL'} STOP ${f0(stop)}`,
-    ck:[['≤25 pts from 12h level',1],['with 4H trend',1],['taker ≥56% toward level',1],['30-min compression',1]]}; }
+  return {d,lvl,dist,tk,cmp,tr,h,l,W,ok:[dist>0&&dist<=25,flat?tr!==-d:tr===d,tk>=.56,cmp<=12]}; }
+function detB1M(c,A60,i,W=720,flat=false){ const b=b1mState(c,A60,i,W,flat); if(!b||!b.ok.every(Boolean)) return null; const stop=b.lvl+b.d*5;
+  return {dir:b.d,kind:'STOP',lvl:stop,why:`price ${f0(b.dist)} pts from the ${W/60}h ${b.d>0?'high':'low'} ${f0(b.lvl)} · 4H trend ${b.tr>0?'up':b.tr<0?'down':'flat'} · taker ${Math.round(b.tk*100)}% · compression ${b.cmp.toFixed(1)}× ATR → ${b.d>0?'BUY':'SELL'} STOP ${f0(stop)}`,
+    ck:[[`≤25 pts from ${W/60}h level`,1],[flat?'4H trend not against':'with 4H trend',1],['taker ≥56% toward level',1],['30-min compression',1]]}; }
 /* history simulation (own candles, SL assumed hit first) */
 function simHist(c,i,s,tp,sl,bars,win){
   let j=i+1, e=null; if(j>=c.length) return {res:null};
@@ -3660,13 +3678,13 @@ function scanHist(){
       if(c[i].time+dur>=boot-60) continue; // live signals are recorded by the live engine
       MEM.trades.push({id,type,dir:s.dir,t:c[i].time,tp,sl,src:'hist',...r}); have.add(id); } };
   const c5=cl5(), c15=cl15();
-  run('REV',c5,300,40,(c,A,i)=>detREV(c,A,i),D.A5); run('LIQ',c5,300,40,(c,A,i)=>detLIQ(c,A,i),D.A5); run('BO',c5,300,40,(c,A,i)=>detBO(c,A,i),D.A5); run('WHL',c5,300,300,(c,A,i)=>detWHL(c,A,i),D.A5); if(D.w1&&D.w1.length>800){ const c1=D.w1.slice(0,-1); run('B1M',c1,60,760,(c,A,i)=>detB1M(c,A,i),atr(c1,60)); } 
+  run('REV',c5,300,40,(c,A,i)=>detREV(c,A,i),D.A5); run('LIQ',c5,300,40,(c,A,i)=>detLIQ(c,A,i),D.A5); run('BO',c5,300,40,(c,A,i)=>detBO(c,A,i),D.A5); run('WHL',c5,300,300,(c,A,i)=>detWHL(c,A,i),D.A5); if(D.w1&&D.w1.length>800){ const c1=D.w1.slice(0,-1); const A1=atr(c1,60); run('B1M',c1,60,760,(c,A,i)=>detB1M(c,A,i),A1); run('B4H',c1,60,760,(c,A,i)=>detB1M(c,A,i,240,true),A1); } 
   run('FLW',c15,900,300,(c,I,i)=>detFLW(c,I,i),D.I15); run('PB',c15,900,300,(c,I,i)=>detPB(c,I,i),D.I15); run('ABS',c15,900,300,(c,I,i)=>detABS(c,I,i),D.I15);
   learn(); saveMem();
   window.__SNBT_CB&&window.__SNBT_CB();
 }
 // Sniper backtest results for the Strategy · Backtest panel (only setups actually sent to Desk/Agent)
-window.__SNBT=()=>MEM.trades.filter(x=>SET[x.type]&&(SET[x.type].grade!=='C'||ME.aggr)&&x.res&&x.res!=='EXP'&&x.res!=='CANCEL'&&x.pts!=null&&x.sl).map(x=>({...x,hold:SET[x.type].bars*barSec(x.type)}));
+window.__SNBT=()=>MEM.trades.filter(x=>SET[x.type]&&sendable(x.type)&&x.res&&x.res!=='EXP'&&x.res!=='CANCEL'&&x.pts!=null&&x.sl).map(x=>({...x,hold:SET[x.type].bars*barSec(x.type)}));
 
 /* ---- engine live ---- */
 const ME=window.ME_STATE={ready:false,lock:ST.get('sn-lock',false),aggr:ST.get('sn-aggr',false),sig:null,waitWhy:'loading data…',bias:0,boot:Date.now()};
@@ -3682,10 +3700,10 @@ function addSig(type,s,barT,dur){
     expires:s.kind!=='MARKET'?start+cfg.win*barSec(type):now+300,bars:cfg.bars,why:s.why,ck:s.ck,status:s.kind!=='MARKET'?'PENDING':'LIVE',ref:s.ref};
   if(g.kind==='MARKET'){ g.entry=px; g.filledT=now; }
   if(type==='REV'){ for(const o of SIGS) if(o.dir!==g.dir&&(o.status==='PENDING'||o.status==='LIVE'||o.status==='OPEN')){ o.status='CANCEL'; o.note='cancelled by fast reversal'; o.res=o.res||'CANCEL'; } }
-  if(cfg.grade==='C'&&!ME.aggr) g.note='grade C: shown as an idea, not sent to Desk/Agent';
+  if(!sendable(type)) g.note=`grade ${cfg.grade}: shown as an idea, not sent to Desk/Agent`;
   SIGS.unshift(g); if(SIGS.length>30) SIGS.length=30;
   MEM.trades.push({id,type,dir:g.dir,t:barT,tp,sl,src:'live',res:null}); saveMem();
-  if(cfg.grade!=='C'||ME.aggr||type==='B1M') alarm('signal',`${g.dir>0?'BUY':'SELL'} ${g.kind} · ${g.name}`,`${g.kind!=='MARKET'?g.kind[0]+g.kind.slice(1).toLowerCase()+' '+f0(g.lvl):'Market ±'+f0(px)} · TP +${tp} · SL −${sl} poin`);
+  if(sendable(type)||type==='B1M'||type==='B4H') alarm('signal',`${g.dir>0?'BUY':'SELL'} ${g.kind} · ${g.name}`,`${g.kind!=='MARKET'?g.kind[0]+g.kind.slice(1).toLowerCase()+' '+f0(g.lvl):'Market ±'+f0(px)} · TP +${tp} · SL −${sl} poin`);
 }
 function manage(){
   const px=livePx(), now=Date.now()/1000, m1=D.m1[D.m1.length-1]; if(!px) return;
@@ -3701,7 +3719,7 @@ function manage(){
     if(g.res&&!g.saved){ g.saved=true; const x=MEM.trades.find(y=>y.id===g.id); if(x){ x.res=g.res; x.pts=g.pts||0; x.entry=g.entry; } learn(); saveMem(); }
   }
   // main signal for Desk/Agent: priority REV > LIQ > FLW > ABS > PB > (BO if aggressive)
-  const act=SIGS.filter(g=>(g.status==='LIVE'||g.status==='PENDING')&&(SET[g.type].grade!=='C'||ME.aggr)).sort((a,b)=>SET[b.type].pri-SET[a.type].pri);
+  const act=SIGS.filter(g=>(g.status==='LIVE'||g.status==='PENDING')&&sendable(g.type)).sort((a,b)=>SET[b.type].pri-SET[a.type].pri);
   const top=act[0]||null;
   ME.sig=top?{id:top.id,type:top.type,name:top.name,dir:top.dir,live:top.status==='LIVE',pending:top.status==='PENDING',lvl:top.lvl,entry:top.entry??top.lvl,
     tpPts:top.tpPts,slPts:top.slPts,until:(top.filledT||top.expires)+top.bars*barSec(top.type),expires:top.expires,why:top.why,
@@ -3800,7 +3818,7 @@ function render(){
   const now=Date.now()/1000, px=livePx(), acct=+($('acct')?.value)||1000, rp=+($('riskPct')?.value)||1;
   const cur=SIGS.find(g=>g.status==='LIVE'||g.status==='PENDING'||g.status==='OPEN');
   let h;
-  if(cur){ const c=col(cur.dir), lot=Math.max(.01,acct*rp/100/cur.slPts), e=cur.entry??cur.lvl, isC=cur.grade==='C'&&!ME.aggr;
+  if(cur){ const c=col(cur.dir), lot=Math.max(.01,acct*rp/100/cur.slPts), e=cur.entry??cur.lvl, isC=!sendable(cur.type);
     const stt=cur.status==='PENDING'?`PLACE ${cur.dir>0?'BUY':'SELL'} LIMIT · valid ${Math.max(0,Math.ceil((cur.expires-now)/60))} min`:cur.status==='LIVE'?'ENTER NOW':'POSITION RUNNING';
     h=`<div class="snbig"><span class="lbl">${esc(cur.name)} · grade ${cur.grade} · ${SET[cur.type].tf}</span><span class="tag ${cur.status==='LIVE'?'PASS':'WAIT'}">${cur.status}</span></div>
       <div class="snbig"><div class="snact" style="color:${c}">${cur.dir>0?'BUY':'SELL'}${cur.kind!=='MARKET'&&cur.status==='PENDING'?' '+cur.kind:''}</div><b style="color:${c};font-size:12px">${stt}</b></div>
@@ -3867,7 +3885,8 @@ async function tick5(){ try{ const [a,b]=await Promise.all([kl('5m',3),kl('15m',
     const k5=D.c5[D.c5.length-2].time, k15=D.c15[D.c15.length-2].time;
     if(k5!==D.k5){ D.k5=k5; onClose5(); } if(k15!==D.k15){ D.k15=k15; onClose15(); scanHist(); } }catch(e){} }
 async function tick1(){ try{ D.m1=await kl('1m',8); D.px=D.m1[D.m1.length-1].close; if(D.w1){ merge(D.w1,D.m1); const k1=D.w1[D.w1.length-2]?.time; if(k1&&k1!==D.k1){ D.k1=k1; onClose1(); } } shock(); }catch(e){} }
-function onClose1(){ const c=D.w1.slice(0,-1), n=c.length-1; D.A60=atr(c,60); const s=detB1M(c,D.A60,n); if(s) addSig('B1M',s,c[n].time,60); }
+function onClose1(){ const c=D.w1.slice(0,-1), n=c.length-1; D.A60=atr(c,60); const s=detB1M(c,D.A60,n); if(s) addSig('B1M',s,c[n].time,60);
+  if(ST.get('b1m-mode','12h')==='4h'){ const s4=detB1M(c,D.A60,n,240,true); if(s4) addSig('B4H',s4,c[n].time,60); } }
 async function tickH(){ try{ const [a,b,d]=await Promise.all([kl('1h',3),kl('4h',3),kl('1d',3)]); merge(D.h1,a); merge(D.h4,b); merge(D.d1,d);
     D.H1=htfFn(D.h1,3600); D.H4=htfFn(D.h4,14400); D.D1=htfFn(D.d1,86400); }catch(e){} }
 /* ---- WHALE PUMP/DUMP DETECTOR panel (below the chart) ---- */
@@ -3941,10 +3960,12 @@ function renderWhale(){
 /* ---- BREAKOUT 1M panel (below the chart) ---- */
 function renderB1M(){
   const box=$('boBody'); if(!box||!D.w1||D.w1.length<800||!D.A60) return;
-  const c=D.w1.slice(0,-1), n=c.length-1, b=b1mState(c,D.A60,n), px=livePx(); if(!b) return;
-  const g=SIGS.find(x=>x.type==='B1M'&&(x.status==='PENDING'||x.status==='LIVE'||x.status==='OPEN'));
+  if(!box._bm){ box._bm=1; box.addEventListener('click',e=>{ const b=e.target.closest('[data-bomode]'); if(!b) return; ST.set('b1m-mode',b.dataset.bomode); box._h=null; renderB1M(); }); }
+  const mode=ST.get('b1m-mode','12h'), T=mode==='4h'?'B4H':'B1M', W=mode==='4h'?240:720;
+  const c=D.w1.slice(0,-1), n=c.length-1, b=b1mState(c,D.A60,n,W,mode==='4h'), px=livePx(); if(!b) return;
+  const g=SIGS.find(x=>x.type===T&&(x.status==='PENDING'||x.status==='LIVE'||x.status==='OPEN'));
   const up=b.h-px, dn=px-b.l, d=g?g.dir:b.d, lvl=d>0?b.h:b.l, dist=d>0?up:dn, col=d>0?'var(--up)':'var(--down)';
-  const names=['≤25 pts from the 12h '+(b.d>0?'high':'low'),'4H trend '+(b.d>0?'up':'down'),'taker ≥56% toward level','30-min compression ≤12× ATR'];
+  const hL=W/60+'h', names=['≤25 pts from the '+hL+' '+(b.d>0?'high':'low'),mode==='4h'?'4H trend not '+(b.d>0?'down':'up'):'4H trend '+(b.d>0?'up':'down'),'taker ≥56% toward level','30-min compression ≤12× ATR'];
   const vals=[`${f0(b.dist)} pts`,b.tr>0?'up':b.tr<0?'down':'flat',`${Math.round(b.tk*100)}%`,`${b.cmp.toFixed(1)}×`];
   const met=b.ok.filter(Boolean).length;
   let act,ac,ord;
@@ -3954,18 +3975,19 @@ function renderB1M(){
     ord=box3(e,e-g.dir*g.slPts,e+g.dir*g.tpPts,g.status==='PENDING'?'Stop entry':'Entry')+`<div class="muted">${g.status==='PENDING'?`Order fills when price trades ${f0(e)} (${sg(e-px)} pts away) · cancels at ${hm(g.expires)}`:`P/L now ${sg(mv)} pts · time stop ${hm(g.filledT+g.bars*60)}`}</div>`; }
   else { const st=lvl+d*5; act=met===4?'ARMING…':met===3?'ALMOST READY':'WATCHING'; ac=met>=3?'var(--warn)':'var(--ink-3)';
     ord=box3(st,st-d*150,st+d*300,`${d>0?'Buy':'Sell'} stop (preview)`)+`<div class="muted">Preview only. The order is placed automatically when all 4 conditions pass on a closed 1M candle (${met}/4 now).</div>`; }
-  const hist=MEM.trades.filter(x=>x.type==='B1M'&&x.res!=='EXP').slice(-6).reverse(), st=L.B1M?.all||{n:0};
-  $('boHead').textContent=`${act} · ${d>0?'12h high':'12h low'} ${f0(lvl)} (${f0(dist)} pts)`; $('boHead').style.color=ac;
+  const hist=MEM.trades.filter(x=>x.type===T&&x.res!=='EXP').slice(-6).reverse(), st=L[T]?.all||{n:0};
+  $('boHead').textContent=`${mode==='4h'?'4H MODE · ':''}${act} · ${hL} ${d>0?'high':'low'} ${f0(lvl)} (${f0(dist)} pts)`; $('boHead').style.color=ac;
   setH(box,`<div class="whc"><div class="lbl">Action · 1M pre-breakout</div><div class="whact" style="color:${ac}">${act}</div>${ord}
-      <div class="whst"><span>400-day backtest <b>459 trades · WR 41% · PF 1.20</b></span><span>last ${Math.round(c.length/1440*10)/10} days <b>${st.n?`${st.n} · WR ${Math.round(st.wr*100)}% · ${sg(st.tot)} pts`:'no trades'}</b></span></div>
-      <div class="muted" style="font-size:10px">Thin edge (≈ +20 pts/trade after costs). Grade C: shown & alarmed here; sent to Desk/Agent only in AGGRESSIVE mode.</div></div>
+      <div class="snbtn" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-bomode="12h" aria-pressed="${mode==='12h'}">LEVEL 12H · validated</button><button class="btn sm" type="button" data-bomode="4h" aria-pressed="${mode==='4h'}">LEVEL 4H · aggressive</button></div>
+      <div class="whst">${mode==='4h'?'<span>400-day backtest <b class="down">1,915 trades · WR 35% · PF 0.90 (loses on average)</b></span>':'<span>400-day backtest <b>459 trades · WR 41% · PF 1.20</b></span>'}<span>last ${Math.round(c.length/1440*10)/10} days <b>${st.n?`${st.n} · WR ${Math.round(st.wr*100)}% · ${sg(st.tot)} pts`:'no trades'}</b></span></div>
+      <div class="muted" style="font-size:10px">${mode==='4h'?'4H mode catches more breakouts (like fast 4-hour-high rallies) but fakeouts outweigh them over 400 days. Display & alarm only, never sent to Desk/Agent.':'Thin edge (≈ +20 pts/trade after costs). Grade C: shown & alarmed here; sent to Desk/Agent only in AGGRESSIVE mode.'}</div></div>
     <div class="whc"><div class="lbl">Levels · live distance</div>
-      <div class="whbc"><span>12h high</span><div class="trk bc"><i style="width:${clamp(100-up/150*100,0,100).toFixed(0)}%;background:${up<=25?'var(--up)':'var(--ink-3)'}"></i></div><b>${f0(b.h)} · ${f0(up)}</b></div>
-      <div class="whbc"><span>12h low</span><div class="trk bc"><i style="width:${clamp(100-dn/150*100,0,100).toFixed(0)}%;background:${dn<=25?'var(--down)':'var(--ink-3)'}"></i></div><b>${f0(b.l)} · ${f0(dn)}</b></div>
+      <div class="whbc"><span>${hL} high</span><div class="trk bc"><i style="width:${clamp(100-up/150*100,0,100).toFixed(0)}%;background:${up<=25?'var(--up)':'var(--ink-3)'}"></i></div><b>${f0(b.h)} · ${f0(up)}</b></div>
+      <div class="whbc"><span>${hL} low</span><div class="trk bc"><i style="width:${clamp(100-dn/150*100,0,100).toFixed(0)}%;background:${dn<=25?'var(--down)':'var(--ink-3)'}"></i></div><b>${f0(b.l)} · ${f0(dn)}</b></div>
       <div class="lbl" style="margin-top:4px">Conditions · last closed 1M candle (${met}/4)</div>
       <div class="whrad">${names.map((nm,k)=>`<div><span style="color:${b.ok[k]?'var(--up)':'var(--ink-3)'}">${b.ok[k]?'✓':'·'}</span><span>${nm}</span><b>${vals[k]}</b><span></span></div>`).join('')}</div></div>
     <div class="whc"><div class="lbl">Recent 1M breakout signals</div><div class="whrad">${hist.map(x=>`<div><span class="muted">${new Date(x.t*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})} ${hm(x.t)}</span><b style="color:${x.dir>0?'var(--up)':'var(--down)'}">${x.dir>0?'BUY STOP':'SELL STOP'}</b><span>${x.res||'running'}</span><span class="${(x.pts||0)>=0?'up':'down'}">${x.pts!=null?sg(x.pts)+' pts':'—'}</span></div>`).join('')||'<div class="muted">No 1M breakout signals in the loaded history yet.</div>'}</div>
-      <div class="muted" style="font-size:10px">Rules: 12-hour high/low · STOP 5 pts beyond · TP +300 / SL −150 · order valid 60 min · 4-hour time stop.</div></div>`);
+      <div class="muted" style="font-size:10px">Rules: ${hL} high/low · STOP 5 pts beyond · TP +300 / SL −150 · order valid 60 min · 4-hour time stop.</div></div>`);
 }
 async function boot(){
   try{ [D.c5,D.c15]=await Promise.all([klN('5m',8),klN('15m',9)]); [D.h1,D.h4,D.d1]=await Promise.all([kl('1h',1000),kl('4h',1000),kl('1d',400)]);
