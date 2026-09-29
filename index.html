@@ -2652,7 +2652,7 @@ function apLog(stage,msg,cls='',minGap=0){
   AP.last[stage]=msg; AP.lastT[stage]=now; AP.list.unshift({t:now,s:stage,m:msg,c:cls}); if(AP.list.length>150) AP.list.length=150;
   store.set(APK,AP.list); apRender(true);
 }
-function apSetMini(m){ AP.mini=m; $('apw').classList.toggle('mini',m); $('apTg').textContent=m?'+':'–'; $('apTop').setAttribute('aria-expanded',!m); store.set('agent-process-mini',m);  if(typeof fitCol==='function') fitCol(); }
+function apSetMini(m){ AP.mini=m; $('apw').classList.toggle('mini',m); $('apTg').textContent=m?'+':'–'; $('apTop').setAttribute('aria-expanded',!m); store.set('agent-process-mini',m); if(window.__wlReady) fitCol(); }
 $('apTop').addEventListener('click',()=>apSetMini(!AP.mini));
 $('apTop').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); apSetMini(!AP.mini); } });
 apSetMini(AP.mini); apRender(false);
@@ -2861,12 +2861,36 @@ function wMode(m,init){
 $('wdock').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) wMode(b.dataset.w); });
 if(store.get('scalp-wmode')==='hide') wMode('hide',true);
 if(innerWidth<700&&store.get('scalp-mobile-init')==null){ wSetMini(true); apSetMini(true); store.set('scalp-mobile-init',1); }
-/* keep the top-right widget column above the bottom-right stack (process log / music / dock) so corners never overlap */
-function fitCol(){ const col=document.querySelector('.floatcol'); if(!col||col.hidden) return;
-  const stack=['apw','muTg','wdock'].map(id=>$(id)).filter(e=>e&&!e.hidden&&e.getClientRects().length>0).map(e=>e.getBoundingClientRect().top);
-  const top=col.getBoundingClientRect().top, lim=(stack.length?Math.min(...stack):innerHeight)-8-top;
-  col.style.setProperty('max-height',Math.max(120,lim)+'px','important'); }
-addEventListener('resize',fitCol); setInterval(fitCol,1000); fitCol();
+/* precise, symmetric corner layout for all floating widgets (measured, so it works at any zoom/size)
+   top-right: clock → widget column · bottom-right: dock, music to its left, process log above · bottom-left: agent pill */
+var WL={k:null};
+function wlK(){ // how many screen px one CSS px of offset moves a zoomed fixed element (differs between browsers)
+  const d=$('wdock'); if(!d||!d.getClientRects().length) return 1; const z=getComputedStyle(d).zoom;
+  if(WL.k&&WL.z===z) return WL.k; WL.z=z;
+  const old=d.style.right; d.style.setProperty('right','100px','important'); const r=document.documentElement.clientWidth-d.getBoundingClientRect().right;
+  d.style.setProperty('right',old||'0px','important'); if(!old) d.style.removeProperty('right'); WL.k=r>1?r/100:1; return WL.k; }
+function fitCol(){ try{ fitColRun(); }catch(e){} }
+function fitColRun(){
+  const vis=e=>e&&!e.hidden&&e.getClientRects().length>0, k=wlK(), m=innerWidth<700?8:12, g=innerWidth<700?8:10;
+  const put=(e,prop,px)=>e.style.setProperty(prop,(px/k)+'px','important');
+  const clk=$('wibclk'), col=document.querySelector('.floatcol'), ap=$('apw'), mu=$('muTg'), dk=$('wdock'), ag=$('agent'), pill=document.querySelector('.agpill');
+  const safeB=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sbpx'))||0;
+  // bottom-right: dock in the corner, music beside it (centred on the same row), process log above both
+  let rowTop=innerHeight, dh=0, dw=0;
+  if(vis(dk)){ put(dk,'right',m); put(dk,'bottom',m+safeB); const r=dk.getBoundingClientRect(); dh=r.height; dw=r.width; rowTop=r.top; }
+  if(vis(mu)){ const mh=mu.getBoundingClientRect().height; put(mu,'right',m+dw+(dw?g:0)); put(mu,'bottom',m+safeB+Math.max(0,(dh-mh)/2)); rowTop=Math.min(rowTop,mu.getBoundingClientRect().top); }
+  if(vis(ap)){ put(ap,'right',m); put(ap,'bottom',innerHeight-rowTop+g); }
+  // bottom-left: agent pill mirrored on the same row as the dock
+  if(ag&&pill&&vis(pill)){ put(ag,'left',m); const ph=pill.getBoundingClientRect().height; put(ag,'bottom',m+safeB+Math.max(0,(dh-ph)/2)); }
+  // top-right: clock in the corner, widget column directly under it, never reaching the bottom stack
+  let colTop=m;
+  if(vis(clk)){ put(clk,'right',m); put(clk,'top',m); colTop=clk.getBoundingClientRect().bottom+g; }
+  if(col&&!col.hidden){ put(col,'right',m); put(col,'top',colTop);
+    const lowest=vis(ap)?ap.getBoundingClientRect().top:rowTop, cz=col.getBoundingClientRect().height/(col.offsetHeight||1)||1;
+    col.style.setProperty('max-height',Math.max(90,(lowest-g-colTop))/cz+'px','important'); }
+}
+window.__wlReady=true; addEventListener('resize',()=>{ WL.k=null; fitCol(); }); setInterval(fitCol,1000); fitCol();
+document.addEventListener('gate-unlocked',()=>setTimeout(fitCol,50));
 
 
 /* ---------- VALIDATOR: extra instruments for deeper validation ----------
@@ -3809,7 +3833,8 @@ html.gated #muTg{display:none!important}
 /* panel text fills its window instead of being truncated with "…" */
 .stage i{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 .dtick{white-space:normal;overflow-wrap:anywhere}
-.apw .apnow{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;padding-top:5px;padding-bottom:5px;max-height:calc(2.7em + 10px);box-sizing:border-box}
+.apw .apnow{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;padding:0!important;margin:6px 10px;max-height:2.7em;border-bottom:0}
+.apw .apl{border-top:1px solid rgba(94,196,255,.2)}
 .a-me .snlog div{grid-template-columns:40px 42px minmax(0,1fr) auto}
 .a-me .snlog div>*{min-width:0;overflow-wrap:anywhere}
 .a-me .snst td:first-child,.a-me .snst th{white-space:normal}
@@ -3845,6 +3870,17 @@ html.gated #muTg{display:none!important}
   .apw .apr{grid-template-columns:52px minmax(0,1fr);row-gap:1px} .apw .apr .dt{display:none}
   .a-me .snst{font-size:9.5px} .a-me .snst td,.a-me .snst th{padding:2px 3px}
 }
+</style>
+<style id="widgetScale">
+/* ===== floating widgets at 80% size, positioned symmetrically by layoutWidgets() ===== */
+.wibclk,.floatcol,.apw,.agent,.wdock,#muTg{zoom:.8}
+/* one column width for the whole right side so left edges line up */
+.wibclk,.floatcol,.apw{width:280px!important}
+/* bottom row items share one height: agent pill · music · dock */
+.wdock{box-sizing:border-box;height:46px;align-items:center}
+.agpill{box-sizing:border-box;height:46px;display:inline-flex;align-items:center}
+#muTg{box-sizing:border-box;height:46px!important}
+@media (max-width:699px){ .wibclk,.floatcol,.apw{width:190px!important} }
 </style>
 </body>
 </html>
