@@ -3702,10 +3702,10 @@ boot();
     </label>
     <button class="ggo" type="submit">OPEN DASHBOARD →</button>
     <div class="gmsg" id="gMsg" role="status" aria-live="polite"></div>
-    <div class="gfoot">Don't have a password? <a href="https://wa.me/6282299774825?text=Hallo%20Admin%2C%20saya%20mau%20mengakses%20full%20dashboard%20BTCUSDT%20di%20https%3A%2F%2Fliemyo.github.io%2Fbtcusdt%20bagaimana%20cara%20membuka%20passwordnya%2C%20Terima%20kasih%20%F0%9F%99%8F%F0%9F%8F%BB" target="_blank" rel="noopener">Contact the admin on WhatsApp</a></div>
+    <div class="gfoot">Don't have a password? <a href="https://wa.me/6282299774825?text=Hallo%20Admin%2C%20saya%20mau%20mengakses%20full%20instrument%20profesional%20BTCUSDT%20di%20https%3A%2F%2Fliemyo.github.io%2Fbtcusdt%20bagaimana%20cara%20membuka%20passwordnya%2C%20Terima%20kasih" target="_blank" rel="noopener">Contact the admin on WhatsApp</a></div>
   </form>
 </div>
-<a id="waFab" href="https://wa.me/6282299774825?text=Hallo%20Admin%2C%20saya%20mau%20mengakses%20full%20dashboard%20BTCUSDT%20di%20https%3A%2F%2Fliemyo.github.io%2Fbtcusdt%20bagaimana%20cara%20membuka%20passwordnya%2C%20Terima%20kasih%20%F0%9F%99%8F%F0%9F%8F%BB" target="_blank" rel="noopener" aria-label="Contact via WhatsApp">
+<a id="waFab" href="https://wa.me/6282299774825?text=Hallo%20Admin%2C%20saya%20mau%20mengakses%20full%20instrument%20profesional%20BTCUSDT%20di%20https%3A%2F%2Fliemyo.github.io%2Fbtcusdt%20bagaimana%20cara%20membuka%20passwordnya%2C%20Terima%20kasih" target="_blank" rel="noopener" aria-label="Contact via WhatsApp">
   <span>Chat WhatsApp</span>
   <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3.6A12.3 12.3 0 0 0 5.4 22.1L3.8 28.4l6.5-1.7A12.3 12.3 0 1 0 16 3.6z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path transform="translate(9.4 9.2) scale(.56)" fill="#fff" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
 </a>
@@ -3715,6 +3715,7 @@ boot();
   const gate=document.getElementById('gate'), card=document.getElementById('gCard'), inp=document.getElementById('gPass'), msg=document.getElementById('gMsg'), fab=document.getElementById('waFab');
   let ok=false; try{ ok=sessionStorage.getItem(KEY)===H; }catch(e){}
   if(ok){ gate.remove(); fab.remove(); return; }
+  document.documentElement.classList.add('gated'); // music toggle stays hidden & silent until unlock
   const sha=async s=>{ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); };
   const others=()=>[...document.body.children].filter(el=>el!==gate&&el!==fab&&el.id!=='muTg'&&el.id!=='muBox'&&el.tagName!=='SCRIPT'&&el.tagName!=='STYLE');
   /* floating ₿ coins as decoration */
@@ -3729,6 +3730,7 @@ boot();
   card.addEventListener('submit',async e=>{ e.preventDefault();
     let h=''; try{ h=await sha(inp.value.trim()); }catch(err){}
     if(h===H){ msg.className='gmsg ok'; msg.textContent='✓ Access granted. Happy trading!'; try{ sessionStorage.setItem(KEY,H); }catch(err){}
+      document.documentElement.classList.remove('gated'); document.dispatchEvent(new Event('gate-unlocked'));
       setTimeout(()=>{ gate.classList.add('bye'); fab.classList.remove('show'); others().forEach(el=>el.inert=false); clearInterval(pxT); setTimeout(()=>{ gate.remove(); fab.remove(); },1000); },700); }
     else { msg.className='gmsg'; msg.textContent=inp.value?'✗ Wrong password, try again.':'Please enter the password.'; card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); inp.select(); } });
 })();
@@ -3751,6 +3753,7 @@ boot();
 #muBox{position:fixed;left:-9999px;top:0;width:200px;height:200px;opacity:0;pointer-events:none}
 @media (max-width:699px){ #muTg{right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 118px);padding:0 8px 0 5px} #muTg .lb{display:none} }
 @media (prefers-reduced-motion:reduce){ #muTg.on .bars i{animation:none;height:8px} }
+html.gated #muTg{display:none!important}
 </style>
 <button id="muTg" type="button" aria-pressed="false" aria-label="Play music" title="Play music"><span class="ic" id="muIc">▶</span><span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="lb" id="muLb">MUSIC</span></button>
 <div id="muBox" aria-hidden="true"><div id="muP"></div></div>
@@ -3762,11 +3765,13 @@ boot();
   const ui=()=>{ const on=playing(); btn.classList.toggle('on',on); ic.textContent=on?'❚❚':'▶'; btn.setAttribute('aria-pressed',on);
     const t=err?'Music unavailable':on?'Pause music':'Play music'; btn.setAttribute('aria-label',t); btn.title=t; };
   const save=v=>{ try{ localStorage.setItem(KEY,v); }catch(e){} };
-  const play=()=>{ if(!ready||err) return; try{ p.setPlaybackQuality('small'); p.unMute(); p.setVolume(60); p.playVideo(); }catch(e){} };
+  const gated=()=>document.documentElement.classList.contains('gated');
+  const play=()=>{ if(!ready||err||gated()) return; try{ p.setPlaybackQuality('small'); p.unMute(); p.setVolume(60); p.playVideo(); }catch(e){} };
   btn.addEventListener('click',()=>{ if(err) return; if(playing()){ want=false; save('pause'); p.pauseVideo(); } else { want=true; save('play'); play(); } setTimeout(ui,150); });
   /* browsers block audible autoplay until user interaction: music starts on the first click/keypress on the page */
   const kick=e=>{ if(e.target.closest&&e.target.closest('#muTg')) return; if(want&&ready&&!playing()) play(); };
   ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,kick,{capture:true,passive:true}));
+  document.addEventListener('gate-unlocked',()=>{ if(want&&ready&&!playing()) play(); setTimeout(ui,300); });
   window.onYouTubeIframeAPIReady=()=>{
     p=new YT.Player('muP',{width:200,height:200,videoId:VID,playerVars:{autoplay:1,playsinline:1,controls:0,rel:0,loop:1,playlist:VID},
       events:{
