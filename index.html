@@ -961,6 +961,12 @@ const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
 const Phi = z => { const t=1/(1+.2316419*Math.abs(z)), d=.3989423*Math.exp(-z*z/2), p=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); return z>0?1-p:p; };
 const store = { get(k){ try{ return JSON.parse(localStorage.getItem(k)) }catch(e){ return null } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} } };
 
+/* ---------- MODE BANDAR: lawan kerumunan ritel pada modul yang terbukti rugi (backtest 400 hari) ---------- */
+const BANDAR = window.BANDAR = { on: store.get('bandar-mode') ?? true };
+const CROWD = new Set(['tape','cvd','taker','whale']); // aliran order ritel: di 5m/15m arahnya berbalik → suara kontra
+const flipSt = s => s==='PASS'?'DROP':s==='DROP'?'PASS':s;
+const bandarShort = () => BANDAR.on && ['1m','5m','15m'].includes(S.tf); // mesin utama tanpa edge di TF ini
+const snLockOn = () => { const MS=window.ME_STATE; return !!(MS&&MS.ready&&(MS.lock||bandarShort())); };
 const S = { tf:'15m', candles:[], mtf:{}, book:null, trades:[], flow:[], whales:[], log:[], last:null, sound:false, ws:null, wsIdx:0,
   dirty:true, full:true, tick:{}, rob:{}, bt:null, mc:null, mk:null, weights:{}, A:null, cycle:0, rtt:null, boot:performance.now(), firstData:null,
   paper: store.get('scalp-paper') || {open:null, closed:[]} };
@@ -1259,7 +1265,9 @@ function analyse(){
         if(toLv<.3*sr.atr){ stt='DROP'; d=`too close to ${L?'resistance':'support'} ${fmt(L?sr.R1.p:sr.S1.p,0)}`; }
         else if(fromLv<.5*sr.atr){ stt='PASS'; d=`bounce off ${L?'support':'resistance'} ${fmt(L?sr.S1.p:sr.R1.p,0)}`; }
         else d=`R1 ${fmt(sr.R1.p,0)} · S1 ${fmt(sr.S1.p,0)}`; }
+      if(BANDAR.on&&(sr.kind==='BO_UP'||sr.kind==='BO_DN')){ stt=flipSt(stt); d+=' · bandar: breakout chase = retail trap'; }
       checks.push({key:'sr',name:'Support/Resistance',w:.75,state:stt,detail:d}); S.sr=sr; } }
+  if(BANDAR.on) for(const ck of checks) if(CROWD.has(ck.key)&&ck.state!=='WAIT'){ ck.state=flipSt(ck.state); ck.name+=' ⇄'; ck.detail+=' · bandar: contra-crowd'; }
   xvChecks(checks,L,X,c,I); // instrumen validasi lanjutan
   const sw=checks.reduce((a,x)=>a+x.w,0), score=checks.reduce((a,x)=>a+x.w*sv(x.state),0)/sw;
   const hardDrop = st.trend==='DROP' || st.htf==='DROP';
@@ -1340,7 +1348,8 @@ function gatesFor(A){
   const hr=M.hunt;
   if(hr&&hr.score>=70&&((A.lean==='LONG'&&hr.dir<0)||(A.lean==='SHORT'&&hr.dir>0))){ veto=veto||'sweep risk'; g.push({k:'Sweep forecast',s:'DROP',d:`${hr.dir>0?'↑':'↓'} ${fmt(hr.p,0)} · score ${hr.score}`}); }
   else g.push({k:'Sweep forecast',s:'PASS',d:hr?`${hr.dir>0?'↑':'↓'} score ${hr.score}`:'—'});
-  { const ME=window.ME_STATE; if(ME&&ME.ready&&ME.lock){ const d=A.lean==='LONG'?1:-1, s=ME.sig;
+  if(BANDAR.on) g.push({k:'Bandar mode',s:bandarShort()?'WAIT':'PASS',d:bandarShort()?`main engine has no edge on ${S.tf.toUpperCase()} (PF 0.83–0.95, reversed too) → entries from Sniper only`:'main engine allowed on 1H+ (backtest PF 1.12)'});
+  { const ME=window.ME_STATE; if(snLockOn()){ const d=A.lean==='LONG'?1:-1, s=ME.sig;
     if(s&&s.live&&s.dir===d) g.push({k:'Sniper',s:'PASS',d:`${s.name} ${d>0?'BUY':'SELL'} backtest-validated`});
     else { veto=veto||'Sniper: no validated setup yet'; g.push({k:'Sniper',s:'DROP',d:s&&s.live?`active signal ${s.dir>0?'BUY':'SELL'} (opposite)`:ME.waitWhy}); } } }
   ({thr,riskMult,veto}=xvGates(g,A,thr,riskMult,veto)); // gerbang waktu, regime, aktivitas, stabilitas, akurasi live
@@ -1995,7 +2004,7 @@ function enter(A,act){
   const tp2=A.tpNote==='2R'?px+dir*2*risk:A.tp2;
   const e={id:now,t:now,act,price:px,score:A.score,verdict:A.verdict,tf:S.tf,why:whyStr(A),chain:chainStr(A),dir,risk,sl:px-dir*risk,tp1:px+dir*risk,tp2,tpNote:A.tpNote,
     until:now+16*TF_MS[S.tf],status:'OPEN',riskPct:G.risk,riskUsd:(+$('acct').value||0)*G.risk/100};
-  const MS=window.ME_STATE, ms=MS&&MS.ready&&MS.lock?MS.sig:null;
+  const MS=window.ME_STATE, ms=snLockOn()?MS.sig:null;
   if(ms&&ms.live&&ms.dir===dir){ Object.assign(e,{risk:ms.slPts,sl:px-dir*ms.slPts,tp1:px+dir*ms.tpPts/2,tp2:px+dir*ms.tpPts,tpNote:`${ms.name} +${ms.tpPts}`,
     until:ms.until*1000,why:ms.why,chain:`SNIPER · ${ms.chain} · TP ${ms.tpPts} / SL ${ms.slPts} poin`,verdict:`SNIPER ${ms.name}`}); e.riskUsd=(+$('acct').value||0)*G.risk/100; D.meUsed=ms.id; }
   D.open=e; D.log.unshift(e); if(D.log.length>500) D.log.length=500; D.sinceT=now; saveD();
@@ -2022,7 +2031,7 @@ function confirmStep(key,fn){
 }
 function decide(A){
   const now=Date.now(), o=D.open, px=S.tick.BTCUSDT?.c||A.entry;
-  const MS=window.ME_STATE, lockM=MS&&MS.ready&&MS.lock;
+  const MS=window.ME_STATE, lockM=snLockOn();
   let want=A.verdict==='SETUP LONG'?'BUY':A.verdict==='SETUP SHORT'?'SELL':null;
   if(lockM) want=MS.sig&&MS.sig.live&&MS.sig.id!==D.meUsed?(MS.sig.dir>0?'BUY':'SELL'):null; // hanya sinyal Sniper
   if(o&&lockM){ D.pending=null; return; } // posisi dikelola TP/SL/waktu, tanpa flip/exit dari skor lama
@@ -2057,7 +2066,7 @@ function renderDesk(){
     h+=`<div class="dpos"><div style="display:flex;justify-content:space-between;gap:8px"><b class="${o.dir>0?'up':'down'}">${o.dir>0?'LONG':'SHORT'} @ ${fmt(o.price,1)}</b><b class="${ur>=0?'up':'down'}">${sgn(ur,2,'R')} · ${ur>=0?'+':'-'}$${fmt(Math.abs(ur*ru),2)}</b></div>
       <div class="prog"><i style="left:${pos}%"></i></div>
       <div class="muted">SL ${fmt(o.sl,1)} · TP1 ${fmt(o.tp1,1)}${o.tp1hit?' ✓':''} · TP2 ${fmt(o.tp2,1)}${o.tpNote&&o.tpNote!=='2R'?` (${o.tpNote})`:''} · risk ${o.riskPct!=null?o.riskPct.toFixed(2)+'%':'—'} · until ${new Date(o.until).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'})}</div></div>`;
-  } else h+=`<div class="dpos muted">No position. ${window.ME_STATE&&window.ME_STATE.lock?'SNIPER LOCK ON: entries only from Sniper Scalp signals (fast reversal, liquidation sniper, 15M flush, macro pullback). TP/SL in points.':'Entry only when score ≥ threshold, no veto, and it holds for 5 seconds. Sniper signals and the ⚡ per-second scalper can also enter.'}</div>`;
+  } else h+=`<div class="dpos muted">No position. ${snLockOn()?(bandarShort()&&!window.ME_STATE.lock?'BANDAR MODE on '+S.tf.toUpperCase()+': ':'')+'SNIPER LOCK ON: entries only from Sniper Scalp signals (fast reversal, liquidation sniper, 15M flush, macro pullback). TP/SL in points.':'Entry only when score ≥ threshold, no veto, and it holds for 5 seconds. Sniper signals and the ⚡ per-second scalper can also enter.'}</div>`;
   h+=`<div class="lbl" style="margin-top:2px">Decision chain</div><div style="display:grid;gap:4px;font-size:11px">`+
     groupScores(A).map(g=>`<div style="display:grid;grid-template-columns:92px 1fr 64px;gap:6px;align-items:center"><span>${g.name}</span><div class="bar"><span style="width:${(g.v*100).toFixed(0)}%;background:${g.v>=.65?C.up:g.v>=.45?C.warn:C.down}"></span></div><span class="muted" style="text-align:right">${g.pass}✓ ${g.drop}✗</span></div>`).join('')+
     `</div><div class="why">${G.g.map(x=>`<span class="${x.s==='PASS'?'up':x.s==='DROP'?'down':'warn'}" title="${x.d}">${x.s==='PASS'?'✓':x.s==='DROP'?'⛔':'!'} ${x.k}: ${x.d}</span>`).join('')}</div>
@@ -2198,6 +2207,7 @@ function decideFast(){
   if(!block&&cand&&cand.type!=='REVERSAL'&&M.hunt&&M.hunt.score>=70&&M.hunt.dir===-cand.dir&&M.hunt.dATR<3) block=`wait for sweep ${M.hunt.dir>0?'↑':'↓'} ${fmt(M.hunt.p,0)}`;
   const pend=M.anomalies.find(a=>a.status==='WATCH'&&now-a.t<20000);
   if(!block&&cand&&cand.type==='MOMENTUM'&&pend) block=`anomaly ${AN_TXT[pend.type]} not yet validated`;
+  if(!block&&cand&&BANDAR.on) block='Bandar mode: ⚡ scalper off (backtest PF 0.56, reversed 0.69: spread > edge)';
   if(!block&&cand){ const MS=window.ME_STATE; if(MS&&MS.ready&&MS.lock) block='Sniper lock: ⚡ per-second scalper did not pass backtest'; }
   if(cand&&cand.type==='REVERSAL'&&revGate(cand.dir)) revMark(cand.dir,cand.why);
   M.sig=cand?{...cand,block}:null;
@@ -2471,7 +2481,8 @@ function agVotes(F,d){
   if(A) add('Engine',(A.lean==='LONG'?1:-1)*d*clamp((A.score-.5)*4,0,1),1.2,`${A.verdict} · score ${(A.score*100).toFixed(0)}`);
   const g=gzCompute(true); if(g) add('Meter',clamp((g.score-50)/25,-1,1)*d,1.2,`${Math.round(g.score)} · ${g.bull} bull / ${g.bear} bear`);
   const rs=[stTrend(F),stBreakout(F),stReversal(F),stMomentum(F)];
-  for(const r of rs) add(r.name,r.dir?r.dir*d:r.prep&&r.prep.dir?.4*r.prep.dir*d:0,r.name==='Momentum'?.6:1,r.dir?`signal ${dTxt(r.dir)}`:r.wait||'—');
+  for(const r of rs){ const cx=BANDAR.on&&(r.name==='Breakout'||r.name==='Momentum'), v=r.dir?r.dir*d:r.prep&&r.prep.dir?.4*r.prep.dir*d:0;
+    add(r.name,cx?-v:v,r.name==='Momentum'?.6:1,(r.dir?`signal ${dTxt(r.dir)}`:r.wait||'—')+(cx?' · ⇄ bandar: vote reversed':'')); }
   const tv=t=>t==='UP'?1:t==='DOWN'?-1:0;
   add(`Trend ${F.tf.toUpperCase()}`,tv(F.trend)*d,.8,`EMA ${F.trend.toLowerCase()}`);
   add(`Trend ${F.H.toUpperCase()}`,tv(F.htf)*d,.6,F.htf.toLowerCase());
@@ -2528,7 +2539,7 @@ function agentDecide(){
   const A=S.A, F=tfFeat(AG.cfg.tf), T=trend15(); if(!A||!F) return null;
   const tfU=AG.cfg.tf.toUpperCase(), o={tf:tfU,px:F.px,atr:F.atr,T};
   if(!T) return {...o,act:'WAIT',d:0,conf:0,why:'15M trend still loading',V:[],plan:null};
-  { const ME=window.ME_STATE; if(ME&&ME.ready&&ME.lock){ const s=ME.sig, dd=s?s.dir:(ME.bias||T.dir||1), {V}=agVotes(F,dd);
+  { const ME=window.ME_STATE; if(snLockOn()){ const s=ME.sig, dd=s?s.dir:(ME.bias||T.dir||1), {V}=agVotes(F,dd);
     const agree=V.filter(x=>x.v>=.25).length, against=V.filter(x=>x.v<=-.25).length;
     if(s&&s.live){ const px=F.px, m={ok:true,type:s.dir>0?'BUY MARKET':'SELL MARKET',entry:px,sl:px-s.dir*s.slPts,tp1:px+s.dir*s.tpPts/2,tp2:px+s.dir*s.tpPts,risk:s.slPts,rr1:s.tpPts/2/s.slPts,rr2:s.tpPts/s.slPts};
       return {...o,act:dTxt(s.dir),d:s.dir,conf:s.conf,agree,against,V,why:`SNIPER · ${s.name}: ${s.why}`,blocks:[],plan:{ok:false,d:s.dir,why:'Sniper market signal active'},mplan:m}; }
@@ -2543,7 +2554,7 @@ function agentDecide(){
   const pa=M.anomalies.find(a=>a.status==='WATCH'&&Date.now()-a.t<20000); if(pa) blocks.push(`anomaly ${AN_TXT[pa.type]} not yet validated`);
   if(M.hunt&&M.hunt.score>=70&&M.hunt.dir===-d&&M.hunt.dATR<3) blocks.push(`likely liquidation sweep ${M.hunt.dir>0?'↑':'↓'} to ${fmt(M.hunt.p,0)} first`);
   if(A.gates.veto&&!String(A.gates.veto).startsWith('reversal')) blocks.push(`veto engine: ${A.gates.veto}`);
-  const trig=rs.find(r=>r.dir===d);
+  const trig=rs.find(r=>r.dir===d&&!(BANDAR.on&&(r.name==='Breakout'||r.name==='Momentum')));
   let market=!!trig&&conf>=.65&&against<=1&&!blocks.length, mplan=null;
   if(market){ mplan=sniperPlan(F,d,true); if(!mplan.ok){ blocks.push(`market entry invalid: ${mplan.why}`); market=false; } }
   const Q=xvQuality({conf,against,d});
@@ -3175,10 +3186,10 @@ const SET={
     desc:'15M cascade ≥2× ATR, volume ≥3×, against macro bias → follow the liquidation'},
   PB:{name:'MACRO PULLBACK',grade:'C',tf:'15M',tp:null,sl:null,bars:16,pri:2,bt:[301,56.1,1.01],
     desc:'1D/4H/1H macro aligned, 15M trend aligned (no 20-candle rule), EMA21 pullback + trigger'},
-  BO:{name:'SNIPER BREAKOUT',grade:'C',tf:'5M',tp:300,sl:450,bars:24,win:6,pri:1,bt:[906,57.1,0.97],
-    desc:'5M close breaks the 2-hour high/low + volume ≥1.5× with the 1H trend, session 14–04 WIB → LIMIT retest of the broken level'},
+  ABS:{name:'BANDAR ABSORPTION',grade:'C',tf:'15M',tp:null,sl:null,bars:12,pri:1,bt:[423,41,1.12],
+    desc:'15M volume ≥2×, range ≥1 ATR, aggressive takers on one side but the candle closes on the other side (retail absorbed by big money) → trade with the absorber · TP 2×ATR / SL 1×ATR'},
 };
-const ORDER=['REV','LIQ','FLW','PB','BO'];
+const ORDER=['REV','LIQ','FLW','PB','ABS'];
 
 /* ---- indikator ---- */
 function ema(v,n){ const k=2/(n+1),o=new Array(v.length).fill(null); let s=0;
@@ -3225,6 +3236,7 @@ function feat(c,A,i){ const k=c[i]; let v=0; const sz=[]; for(let j=i-20;j<i;j++
 const MK='sn-mem-v1';
 const MEM=ST.get(MK,null)||{v:1,trades:[],first:Date.now()};
 MEM.trades.forEach(x=>{ if(x.res==='WAKTU') x.res='TIME'; if(x.res==='BATAL') x.res='CANCEL'; });
+MEM.trades=MEM.trades.filter(x=>x.type!=='BO'); // breakout diganti BANDAR ABSORPTION
 const saveMem=()=>{ MEM.trades.sort((a,b)=>a.t-b.t); if(MEM.trades.length>1500) MEM.trades.splice(0,MEM.trades.length-1500); ST.set(MK,MEM); };
 function statsOf(list){ const r=list.filter(x=>x.res&&x.res!=='EXP'&&x.res!=='CANCEL'); const n=r.length; if(!n) return {n:0};
   const p=r.map(x=>x.pts), w=p.filter(x=>x>0), gw=w.reduce((a,b)=>a+b,0), gl=-p.filter(x=>x<=0).reduce((a,b)=>a+b,0);
@@ -3265,6 +3277,12 @@ function detPB(c,I,i){ const k=c[i], T=k.time+900, m=macroAt(T), h=new Date(T*10
   const tp=Math.round(clamp(1.2*I.atr[i],100,300)), sl=Math.round(Math.max(tp,1.2*I.atr[i]));
   return {dir:d,kind:'MARKET',tp,sl,why:`macro ${d>0?'up':'down'} ${m.sum>0?'+':''}${m.sum} · 15M trend ${Math.abs(I.run[i])} candles · EMA21 pullback + trigger · RSI ${r.toFixed(0)}`,ck:[['macro aligned',1],['15M trend aligned',1],['EMA21 pullback',1],['trigger',1],['RSI/MACD/VWAP/volume',1]]}; }
 
+/* bandar: taker agresif satu sisi tapi candle tutup di sisi lawan = order ritel diserap bandar (400 hari: PF 1.12, dibalik PF 0.89) */
+function detABS(c,I,i){ const k=c[i], a=I.atr[i-1], rg=k.high-k.low; if(!a||!rg||rg<a) return null; let v=0; for(let j=i-20;j<i;j++) v+=c[j].volume; const vr=k.volume/(v/20); if(vr<2) return null;
+  const tb=k.volume?k.tbv/k.volume:.5, pos=(k.close-k.low)/rg, d=tb>=.52&&pos<=.35?-1:tb<=.48&&pos>=.65?1:0; if(!d) return null;
+  const tp=Math.round(2*I.atr[i]), sl=Math.round(I.atr[i]);
+  return {dir:d,kind:'MARKET',tp,sl,why:`${d<0?'aggressive buying':'aggressive selling'} ${Math.round((d<0?tb:1-tb)*100)}% absorbed · vol ${vr.toFixed(1)}× · close ${d<0?'weak':'strong'} (${Math.round(pos*100)}% of range) → ${d>0?'BUY':'SELL'} with the absorber`,
+    ck:[['volume ≥2× & range ≥1 ATR',1],['aggressive takers one side',1],['close on the opposite side',1]]}; }
 /* simulasi riwayat (candle sendiri, SL dianggap kena dulu) */
 function simHist(c,i,s,tp,sl,bars,win){
   let j=i+1, e=null; if(j>=c.length) return {res:null};
@@ -3286,8 +3304,8 @@ function scanHist(){
       if(c[i].time+dur>=boot-60) continue; // sinyal live dicatat oleh engine live
       MEM.trades.push({id,type,dir:s.dir,t:c[i].time,tp,sl,src:'hist',...r}); have.add(id); } };
   const c5=cl5(), c15=cl15();
-  run('REV',c5,300,40,(c,A,i)=>detREV(c,A,i),D.A5); run('LIQ',c5,300,40,(c,A,i)=>detLIQ(c,A,i),D.A5); run('BO',c5,300,40,(c,A,i)=>detBO(c,A,i),D.A5);
-  run('FLW',c15,900,300,(c,I,i)=>detFLW(c,I,i),D.I15); run('PB',c15,900,300,(c,I,i)=>detPB(c,I,i),D.I15);
+  run('REV',c5,300,40,(c,A,i)=>detREV(c,A,i),D.A5); run('LIQ',c5,300,40,(c,A,i)=>detLIQ(c,A,i),D.A5); 
+  run('FLW',c15,900,300,(c,I,i)=>detFLW(c,I,i),D.I15); run('PB',c15,900,300,(c,I,i)=>detPB(c,I,i),D.I15); run('ABS',c15,900,300,(c,I,i)=>detABS(c,I,i),D.I15);
   learn(); saveMem();
 }
 
@@ -3319,7 +3337,7 @@ function manage(){
     if(g.status==='LIVE'&&now-g.filledT>(g.kind==='LIMIT'?90:300)) g.status='OPEN';
     if(g.status==='LIVE'&&g.kind==='MARKET'&&(px-g.entry)*g.dir>.4*g.tpPts) g.status='OPEN';
     if(g.status==='LIVE'||g.status==='OPEN'){ const mv=(px-g.entry)*g.dir; g.pl=mv;
-      if(mv>=g.tpPts) g.res='TP'; else if(mv<=-g.slPts) g.res='SL'; else if(now>=g.filledT+g.bars*(g.type==='FLW'||g.type==='PB'?900:300)) g.res='TIME';
+      if(mv>=g.tpPts) g.res='TP'; else if(mv<=-g.slPts) g.res='SL'; else if(now>=g.filledT+g.bars*(g.type==='FLW'||g.type==='PB'||g.type==='ABS'?900:300)) g.res='TIME';
       if(g.res){ g.status=g.res; g.pts=g.res==='TP'?g.tpPts-COST:g.res==='SL'?-g.slPts-COST:mv-COST; g.endT=now; } }
     if(g.res&&!g.saved){ g.saved=true; const x=MEM.trades.find(y=>y.id===g.id); if(x){ x.res=g.res; x.pts=g.pts||0; x.entry=g.entry; } learn(); saveMem(); }
   }
@@ -3327,7 +3345,7 @@ function manage(){
   const act=SIGS.filter(g=>(g.status==='LIVE'||g.status==='PENDING')&&(SET[g.type].grade!=='C'||ME.aggr)).sort((a,b)=>SET[b.type].pri-SET[a.type].pri);
   const top=act[0]||null;
   ME.sig=top?{id:top.id,type:top.type,name:top.name,dir:top.dir,live:top.status==='LIVE',pending:top.status==='PENDING',lvl:top.lvl,entry:top.entry??top.lvl,
-    tpPts:top.tpPts,slPts:top.slPts,until:(top.filledT||top.expires)+top.bars*(top.type==='FLW'||top.type==='PB'?900:300),expires:top.expires,why:top.why,
+    tpPts:top.tpPts,slPts:top.slPts,until:(top.filledT||top.expires)+top.bars*(top.type==='FLW'||top.type==='PB'||top.type==='ABS'?900:300),expires:top.expires,why:top.why,
     chain:`${top.name} (grade ${top.grade}) · ${top.ck.map(x=>'✓'+x[0]).join(' ')}`,conf:top.grade==='A'?.8:top.grade==='B'?.7:.55}:null;
 }
 
@@ -3438,10 +3456,11 @@ function render(){
     h=`<div class="snbig"><span class="lbl">Sniper scalp · 5 integrated setups</span><span class="tag WAIT">WAITING</span></div>
       <div class="snact" style="color:var(--warn)">WAIT</div>
       <div style="font-size:11px">No setup has qualified yet. ${esc(near.join(' · '))}</div>
-      <div class="muted" style="font-size:10.5px">Target 100–300 pts/trade. Signals appear on big liquidations (sniper/reversal), 15M flushes, macro pullbacks${ME.aggr?' or 5M breakouts':''}.</div>`;
+      <div class="muted" style="font-size:10.5px">Target 100–300 pts/trade. Signals appear on big liquidations (sniper/reversal), 15M flushes, macro pullbacks${ME.aggr?' or 15M bandar absorption':''}.</div>`;
   }
   ME.waitWhy=cur?'':'no sniper setup has qualified yet';
   h+=`<div class="snbtn"><button class="btn sm" type="button" id="snLock" aria-pressed="${ME.lock}" title="ON: Agent, Decision Desk and ⚡ scalper only enter on these signals. OFF: all modules may enter.">LOCK: ${ME.lock?'ON':'OFF'}</button>
+    <button class="btn sm" type="button" id="snBandar" aria-pressed="${!!window.BANDAR?.on}" title="ON: crowd-flow modules (tape, CVD, taker, whale, breakout, momentum) vote AGAINST retail; main engine enters only on 1H+; ⚡ scalper off; on 1M–15M entries come from Sniper only">BANDAR: ${window.BANDAR?.on?'ON':'OFF'}</button>
     <button class="btn sm" type="button" id="snAggr" aria-pressed="${ME.aggr}" title="Include grade C setups (more frequent, thin edge)">AGGRESSIVE: ${ME.aggr?'ON':'OFF'}</button>
     <button class="btn sm" type="button" id="snBell" aria-pressed="${CFG.bell}">🔔 ${CFG.bell?'ON':'OFF'}</button><button class="btn sm" type="button" id="snTest">Test bell</button>
     ${window.Notification&&Notification.permission==='default'?'<button class="btn sm" type="button" id="snNotif">Notifications</button>':''}</div>`;
@@ -3462,11 +3481,12 @@ function render(){
     <div class="lbl" style="margin-top:4px">🧠 AI memory · backtest vs experience</div>
     <table class="snst num"><tr><th>Setup</th><th>BT win/PF</th><th>Memory N</th><th>Win</th><th>PF</th><th>Status</th></tr>
     ${ORDER.map(k=>{ const s=SET[k], m=L[k]?.all||{n:0}; return `<tr><td>${s.name} <span class="muted">${s.grade}</span></td><td>${s.bt[1]}% / ${s.bt[2]}</td><td>${m.n}</td><td>${m.n?Math.round(m.wr*100)+'%':'—'}</td><td class="${m.n?(m.pf>=1?'up':'down'):''}">${m.n?m.pf.toFixed(2):'—'}</td><td class="${L[k]?.strict?'warn':'up'}">${L[k]?.strict?'STRICT':'normal'}</td></tr>`; }).join('')}</table>
-    <div class="muted" style="font-size:10px">365-day backtest on 1-minute data, 15-point cost. Grade A combined: ~0.9 signals/day. Grade C (breakout ~2.5/day PF 0.97; pullback without the 20-candle rule ~0.8/day PF 1.01) only reaches Desk/Agent in AGGRESSIVE mode. Memory is stored in the browser and tightens any setup whose last 20 results have PF&lt;1.</div>`;
+    <div class="muted" style="font-size:10px">365-day backtest on 1-minute data, 15-point cost. Grade A combined: ~0.9 signals/day. Grade C (bandar absorption 15M ~1/day PF 1.12, reversed 0.89 — replaced the losing breakout) only reaches Desk/Agent in AGGRESSIVE mode. Memory is stored in the browser and tightens any setup whose last 20 results have PF&lt;1.</div>`;
   setH($('snC3'),h3);
   const hd=$('snHead'); if(hd) hd.textContent=`${cur?(cur.dir>0?'BUY ':'SELL ')+cur.name+' · '+cur.status:'WAIT'} · BTC ${f1(px)} · pressure ${IND.score!=null?(IND.score>0?'+':'')+IND.score:'—'}`;
 }
-document.addEventListener('click',e=>{ const b=e.target.closest('#snLock,#snAggr,#snBell,#snTest,#snNotif'); if(!b) return;
+document.addEventListener('click',e=>{ const b=e.target.closest('#snLock,#snAggr,#snBell,#snTest,#snNotif,#snBandar'); if(!b) return;
+  if(b.id==='snBandar'&&window.BANDAR){ BANDAR.on=!BANDAR.on; ST.set('bandar-mode',BANDAR.on); }
   if(b.id==='snLock'){ ME.lock=!ME.lock; ST.set('sn-lock',ME.lock); }
   if(b.id==='snAggr'){ ME.aggr=!ME.aggr; ST.set('sn-aggr',ME.aggr); }
   if(b.id==='snBell'){ CFG.bell=!CFG.bell; ST.set('me-bell',CFG.bell); }
@@ -3478,10 +3498,11 @@ document.addEventListener('click',e=>{ const b=e.target.closest('#snLock,#snAggr
 function onClose5(){ const c=cl5(), n=c.length-1; D.A5=atr(c);
   const r=detREV(c,D.A5,n); if(r) addSig('REV',r,c[n].time,300);
   const q=detLIQ(c,D.A5,n); if(q) addSig('LIQ',q,c[n].time,300);
-  const b=detBO(c,D.A5,n); if(b) addSig('BO',b,c[n].time,300); }
+}
 function onClose15(){ const c=cl15(), n=c.length-1; D.I15=calc15(c);
   const a=detFLW(c,D.I15,n); if(a) addSig('FLW',a,c[n].time,900);
-  const p=detPB(c,D.I15,n); if(p) addSig('PB',p,c[n].time,900); }
+  const p=detPB(c,D.I15,n); if(p) addSig('PB',p,c[n].time,900);
+  const ab=detABS(c,D.I15,n); if(ab) addSig('ABS',ab,c[n].time,900); }
 async function tick5(){ try{ const [a,b]=await Promise.all([kl('5m',3),kl('15m',3)]); merge(D.c5,a); merge(D.c15,b);
     const k5=D.c5[D.c5.length-2].time, k15=D.c15[D.c15.length-2].time;
     if(k5!==D.k5){ D.k5=k5; onClose5(); } if(k15!==D.k15){ D.k15=k15; onClose15(); scanHist(); } }catch(e){} }
