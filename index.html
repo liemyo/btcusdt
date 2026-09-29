@@ -608,6 +608,9 @@ tr.active td{background:rgba(234,108,196,.08)}
 .a-whale .whrad>div{display:grid;grid-template-columns:78px 96px minmax(0,1fr) auto;gap:6px;align-items:baseline}
 .a-whale .whrad>div>*{min-width:0;overflow-wrap:anywhere}
 .a-whale .whrad>div.muted{display:block}
+.a-whale .whbc{display:grid;grid-template-columns:70px minmax(0,1fr) 78px;gap:6px;align-items:center;font-size:10.5px}
+.a-whale .whbc>span{color:var(--ink-2)} .a-whale .whbc>b{text-align:right;font-size:12px}
+.a-whale .trk.bc{height:10px} .a-whale .trk.bc em{position:absolute;top:-1px;bottom:-1px;width:1px;background:var(--ink-2)}
 .a-whale{grid-area:auto}
 @media (min-width:1400px){ .a-whale{grid-area:whale} }
 @media (max-width:1100px){ .a-whale .whg{grid-template-columns:1fr 1fr} .a-whale .whc:first-child{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line)} }
@@ -3853,10 +3856,25 @@ function whRadar1m(){ const c=D.w1; if(!c||c.length<250) return null; const A=at
   return w; }
 function whBar(lbl,val,need,txt,col){ const p=clamp(val/need*100,0,100), ok=val>=need;
   return `<div class="whm"><span>${lbl}</span><div class="trk"><i style="width:${p.toFixed(0)}%;background:${ok?col:'var(--ink-3)'}"></i></div><b style="color:${ok?col:'var(--ink-2)'}">${txt}</b></div>`; }
+/* big-candle alarm: alert only (400-day test: entering on a developing 100–300 pt candle has no edge, PF ~0.6–0.85) */
+const BC={log:ST.get('bc-log',[]),fired:{}};
+function bcTick(px){ const now=Date.now()/1000, rows=[];
+  for(const [tf,sec,arr] of [['1M',60,D.m1],['5M',300,D.c5]]){ const b=Math.floor(now/sec)*sec, L=arr[arr.length-1]; if(!L) continue;
+    const open=L.time===b?L.open:L.time+sec===b?L.close:null; if(open==null) continue;
+    const mv=px-open, a=Math.abs(mv), lvl=a>=300?300:a>=200?200:a>=100?100:0; rows.push({tf,sec,b,mv,open,left:b+sec-now});
+    const key=tf+b; if(lvl&&(BC.fired[key]||0)<lvl){ const first=!BC.fired[key]; BC.fired[key]=lvl; const d=mv>0?1:-1;
+      if(first) BC.log.unshift({t:b,tf,d,pts:a,max:a,conf:null}); else { const e=BC.log.find(x=>x.t===b&&x.tf===tf); if(e){ e.max=Math.max(e.max,a); } }
+      BC.log.length=Math.min(BC.log.length,20); ST.set('bc-log',BC.log);
+      if(lvl>=(tf==='1M'?100:150)||!first){ bell('flush'); speak(`Big candle ${d>0?'up':'down'}, ${lvl} points. Wait for confirmation.`); notify(`BIG CANDLE ${d>0?'▲':'▼'} ${lvl}+ pts (${tf})`,'Alert only — wait for a Whale / Sniper setup before entering'); } } }
+  // confirmation: a validated setup on the same 5M candle (or the one right after) → show it; otherwise skip
+  for(const e of BC.log){ if(e.conf) continue; const end=e.t+(e.tf==='1M'?60:300);
+    const g=SIGS.find(x=>['WHL','LIQ','REV','FLW','ABS'].includes(x.type)&&x.barT>=Math.floor(e.t/300)*300-300&&x.barT<=end+300);
+    if(g) e.conf={name:g.name,dir:g.dir,type:g.type}; else if(now>end+660) e.conf={name:'no validated setup',dir:0}; }
+  return rows; }
 function renderWhale(){
   const box=$('whBody'); if(!box||!D.A5) return;
   const c=D.c5, n=c.length-1, px=livePx(); if(n<250) return;
-  const A=D.A5.concat([D.A5[D.A5.length-1]]), w=whFeat(c,A,n), m1=whRadar1m();
+  const A=D.A5.concat([D.A5[D.A5.length-1]]), w=whFeat(c,A,n), m1=whRadar1m(), bcr=bcTick(px);
   const SD=window.__SD, now=Date.now(); let wb=0,ws=0,big=[]; if(SD) for(const t of SD.S.whales){ if(now-t.t>3e5) break; const u=t.p*t.q; if(t.buy) wb+=u; else ws+=u; big.push(t); }
   let ll=0,ls=0; if(SD) for(const e of SD.LQ.events){ if(now-e.t>9e5) break; if(e.side==='long') ll+=e.usd; else ls+=e.usd; }
   const fl=SD?SD.flowStats(3e5):null;
@@ -3889,7 +3907,11 @@ function renderWhale(){
       <div class="whst"><span>400-day backtest <b>214 trades · WR 34.6% · PF 1.31</b></span><span>strong (vol ≥12×) <b>PF 1.46</b></span><span>last ${Math.round(c.length*5/1440)} days <b>${st.n?`${st.n} · WR ${Math.round(st.wr*100)}% · PF ${st.pf.toFixed(2)}`:'no trades'}</b></span><span>live <b>${lv.n?`${lv.n} · ${sg(lv.tot)} pts`:'—'}</b></span></div>
       <div class="muted" style="font-size:10px">Low win rate, big winners: most trades lose ~1R, winners pay 3R. Sent to Desk/Agent as a validated Sniper setup (grade B).</div>
     </div>
-    <div class="whc"><div class="lbl">Live footprint · current 5M candle ${w?(w.d>0?'▲':'▼'):''}</div>${gauges}<div class="lbl" style="margin-top:4px">Whale tape · order flow</div>${tape}</div>
+    <div class="whc"><div class="lbl">Big candle alarm · 100 / 200 / 300 pts (alert only)</div>${bcr.map(r=>{ const a=Math.abs(r.mv), c2=a>=100?(r.mv>0?'var(--up)':'var(--down)'):'var(--ink-3)';
+        return `<div class="whbc"><span>${r.tf} candle</span><div class="trk bc"><i style="width:${Math.min(100,a/3).toFixed(0)}%;background:${c2}"></i><em style="left:33.3%"></em><em style="left:66.6%"></em></div><b style="color:${c2}">${r.mv>=0?'+':'−'}${f0(a)} pts</b></div>`; }).join('')}
+      <div class="whrad">${BC.log.slice(0,4).map(e=>`<div><span class="muted">${hm(e.t)} ${e.tf}</span><b style="color:${e.d>0?'var(--up)':'var(--down)'}">${e.d>0?'▲':'▼'} ${f0(e.max)} pts</b><span>${e.conf?(e.conf.dir?`<b style="color:${e.conf.dir>0?'var(--up)':'var(--down)'}">✓ ${e.conf.dir>0?'BUY':'SELL'} · ${esc(e.conf.name)}</b>`:'<span class="muted">✕ no setup · skip</span>'):'<span class="warn">waiting for confirmation…</span>'}</span><span></span></div>`).join('')||'<div class="muted">No 100+ pt candles yet. The bell rings the moment one forms.</div>'}</div>
+      <div class="muted" style="font-size:10px">Tested 400 days: jumping in on a big candle loses (PF 0.6–0.85). Enter only when a ✓ validated setup appears.</div>
+      <div class="lbl" style="margin-top:4px">Live footprint · current 5M candle ${w?(w.d>0?'▲':'▼'):''}</div>${gauges}<div class="lbl" style="margin-top:4px">Whale tape · order flow</div>${tape}</div>
     <div class="whc"><div class="lbl">1M early warning · bursts (radar, not a trade signal)</div>${rad}${m1?`<div class="muted" style="font-size:10px">last 1M: vol ${m1.vr.toFixed(1)}× · size ${m1.szr.toFixed(2)}× · taker ${Math.round(m1.tbs*100)}% ${m1.d>0?'buy':'sell'}</div>`:''}
       <div class="lbl" style="margin-top:4px">Recent whale signals · 5M</div>${hl}</div>`);
 }
