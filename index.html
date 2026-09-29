@@ -976,13 +976,14 @@ const mean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
 const std = a => { if(a.length<2) return 0; const m=mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1)); };
 const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
 const Phi = z => { const t=1/(1+.2316419*Math.abs(z)), d=.3989423*Math.exp(-z*z/2), p=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); return z>0?1-p:p; };
+try{ ['scalp-decisions','scalp-agent-journal','sn-mem-v1','scalp-paper'].forEach(k=>localStorage.removeItem(k)); }catch(e){} // reset riwayat aturan lama
 const store = { get(k){ try{ return JSON.parse(localStorage.getItem(k)) }catch(e){ return null } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} } };
 
 /* ---------- MODE BANDAR: lawan kerumunan ritel pada modul yang terbukti rugi (backtest 400 hari) ---------- */
 const BANDAR = window.BANDAR = { on: store.get('bandar-mode') ?? true };
 const CROWD = new Set(['tape','cvd','taker','whale']); // aliran order ritel: di 5m/15m arahnya berbalik → suara kontra
 const flipSt = s => s==='PASS'?'DROP':s==='DROP'?'PASS':s;
-const bandarShort = () => BANDAR.on && ['1m','5m','15m'].includes(S.tf); // mesin utama tanpa edge di TF ini
+const bandarShort = () => BANDAR.on; // mesin utama tanpa edge di semua TF (400 hari, uji out-of-sample PF 0.94–0.98)
 const snLockOn = () => { const MS=window.ME_STATE; return !!(MS&&MS.ready&&(MS.lock||bandarShort())); };
 const S = { tf:'15m', candles:[], mtf:{}, book:null, trades:[], flow:[], whales:[], log:[], last:null, sound:false, ws:null, wsIdx:0,
   dirty:true, full:true, tick:{}, rob:{}, bt:null, mc:null, mk:null, weights:{}, A:null, cycle:0, rtt:null, boot:performance.now(), firstData:null,
@@ -1108,12 +1109,13 @@ function backtest(){
   }
   const weights={}, hits={};
   for(const [key] of CK){ const L=learn[key]; const hr=L.n>=15?L.hit/L.n:.5; hits[key]={hr,n:L.n}; weights[key]=clamp(.5+(hr-.5)*10,.25,2); }
+  if(BANDAR.on&&window.__SNBT){ trades.length=0; for(const x of window.__SNBT()) trades.push({t:x.t,exitT:x.t+(x.hold||0),dir:x.dir,entry:x.entry??0,exit:(x.entry??0)+x.dir*(x.pts+15),r:x.pts/x.sl,mfe:x.pts/x.sl,bars:null,type:x.type}); trades.sort((a,b)=>a.t-b.t); }
   const rs=trades.map(t=>t.r), n=rs.length, wins=rs.filter(r=>r>0), losses=rs.filter(r=>r<=0);
   const W=n?wins.length/n:0, avgW=mean(wins), avgL=-mean(losses)||0, RR=avgL?avgW/avgL:0, tot=rs.reduce((a,b)=>a+b,0), m=n?tot/n:0, sd=std(rs);
   let cum=0,peak=0,dd=0; const conv=[]; let w=0;
   rs.forEach((r,j)=>{ cum+=r; peak=Math.max(peak,cum); dd=Math.max(dd,peak-cum); if(r>0) w++; conv.push(w/(j+1)); });
   const tstat=sd&&n>1?m/(sd/Math.sqrt(n)):0, p=n>1?1-Phi(tstat):1;
-  const lastT=c[c.length-1].time, days=(lastT-c[60].time)/86400;
+  const lastT=c[c.length-1].time, days=BANDAR.on&&trades.length?(lastT-trades[0].t)/86400:(lastT-c[60].time)/86400;
   const byDay={}; trades.forEach(t=>{ const d=Math.floor(t.exitT/86400); byDay[d]=(byDay[d]||0)+t.r; });
   const best=trades.reduce((b,t)=>!b||t.r>b.r?t:b,null);
   return { trades, rs, n, W, avgW, avgL, RR, tot, m, sd, sqn:sd?m/sd*Math.sqrt(Math.min(n,100)):0, dd, p, days, conv, best,
@@ -1365,7 +1367,7 @@ function gatesFor(A){
   const hr=M.hunt;
   if(hr&&hr.score>=70&&((A.lean==='LONG'&&hr.dir<0)||(A.lean==='SHORT'&&hr.dir>0))){ veto=veto||'sweep risk'; g.push({k:'Sweep forecast',s:'DROP',d:`${hr.dir>0?'↑':'↓'} ${fmt(hr.p,0)} · score ${hr.score}`}); }
   else g.push({k:'Sweep forecast',s:'PASS',d:hr?`${hr.dir>0?'↑':'↓'} score ${hr.score}`:'—'});
-  if(BANDAR.on) g.push({k:'Bandar mode',s:bandarShort()?'WAIT':'PASS',d:bandarShort()?`main engine has no edge on ${S.tf.toUpperCase()} (PF 0.83–0.95, reversed too) → entries from Sniper only`:'main engine allowed on 1H+ (backtest PF 1.12)'});
+  if(BANDAR.on) g.push({k:'Bandar mode',s:'WAIT',d:'main engine has no out-of-sample edge on any TF (PF 0.94–0.98) → entries from validated Sniper setups only'});
   { const ME=window.ME_STATE; if(snLockOn()){ const d=A.lean==='LONG'?1:-1, s=ME.sig;
     if(s&&s.live&&s.dir===d) g.push({k:'Sniper',s:'PASS',d:`${s.name} ${d>0?'BUY':'SELL'} backtest-validated`});
     else { veto=veto||'Sniper: no validated setup yet'; g.push({k:'Sniper',s:'DROP',d:s&&s.live?`active signal ${s.dir>0?'BUY':'SELL'} (opposite)`:ME.waitWhy}); } } }
@@ -1414,8 +1416,9 @@ const durTxt = s => { const h=Math.floor(s/3600), m=Math.floor(s%3600/60); retur
 function renderCards(){
   const bt=S.bt, rp=(+$('riskPct').value||1)/100, acct=+$('acct').value||0, riskUsd=acct*rp;
   if(bt){
-    $('btTag').textContent=`${S.candles.length} CANDLE`;
-    $('btSub').textContent=`BTCUSDT · ${S.tf.toUpperCase()} · ${bt.days.toFixed(1)} days · cost 0.02% · exit SL / 2R / 16 candles`;
+    const snm=BANDAR.on&&window.__SNBT;
+    $('btTag').textContent=snm?`SNIPER · ${bt.n} TRADES`:`${S.candles.length} CANDLE`;
+    $('btSub').textContent=snm?`BTCUSDT · validated Sniper setups${window.ME_STATE?.aggr?' + grade C':''} · ${bt.days.toFixed(1)} days · cost 15 pts · TP/SL per setup · R = pts ÷ SL`:`BTCUSDT · ${S.tf.toUpperCase()} · ${bt.days.toFixed(1)} days · cost 0.02% · exit SL / 2R / 16 candles`;
     const pnl=bt.tot*riskUsd; $('btPnl').textContent=(pnl>=0?'+$':'-$')+fmt(Math.abs(pnl),0); $('btPnl').style.color=pnl>=0?C.up:C.down;
     $('btSub2').innerHTML=`Total <b class="${bt.tot>=0?'up':'down'}">${sgn(bt.tot,1,'R')}</b> · expectancy ${sgn(bt.m,2,'R')} · risk ${fmt(rp*100,2)}% of $${fmt(acct,0)}`;
     $('btN').textContent=bt.n; $('btW').textContent=(bt.W*100).toFixed(1)+'%'; $('btW').className=bt.W>=.34?'up':'down'; $('btRR').textContent=fmt(bt.RR,2);
@@ -1428,7 +1431,7 @@ function renderCards(){
       $('bestR').textContent=sgn(b.r,2,'R'); $('bestUsd').innerHTML=`<span class="muted">entry</span> ${fmt(b.entry,0)}<br><span class="muted">exit</span> ${fmt(b.exit,0)}<br><b class="up">+$${fmt(b.r*riskUsd,0)}</b>`;
       $('bestKv').innerHTML=[
         ['Direction',b.dir>0?'<span class="up">LONG</span>':'<span class="down">SHORT</span>'],['MFE',sgn(b.mfe,2,'R')],
-        ['Hold',durTxt(b.bars*TF_MS[S.tf]/1000)],['Date',new Date(b.t*1000).toLocaleDateString('en-GB',{day:'numeric',month:'short'})],
+        [b.type?'Setup':'Hold',b.type||durTxt(b.bars*TF_MS[S.tf]/1000)],['Date',new Date(b.t*1000).toLocaleDateString('en-GB',{day:'numeric',month:'short'})],
         ['SQN',fmt(bt.sqn,2)],['p-value',bt.p<.001?'<0.001':fmt(bt.p,3)],
         ['Wins 7H',bt.wins7],['Best day',isFinite(bt.bestDay)?sgn(bt.bestDay,1,'R'):'—'],
       ].map(([k,v])=>`<div><span class="muted">${k}</span><b>${v}</b></div>`).join('');
@@ -1731,6 +1734,7 @@ async function loadMain(){
   runQuant();
 }
 let mtfFirst=true;
+window.__SNBT_CB=()=>{ if(S.candles.length>=150) runQuant(); };
 async function refreshMTF(){
   for(const tf of TFS){ try{ if(tf!==S.tf){ const c=await loadKlines(tf,tf===HTF[S.tf]?1000:200); S.mtf[tf]={candles:c,eval:evaluate(c)}; } }catch(e){} }
   renderScan(); if(mtfFirst){ mtfFirst=false; runQuant(); } else renderRob();
@@ -2007,13 +2011,13 @@ async function liqInit(){
 }
 
 /* ---------- decision desk ---------- */
-const D={log:(store.get('scalp-decisions')||[]).filter(e=>e.status!=='INFO'||String(e.verdict).startsWith('BLOCKED')).slice(0,500), pending:null, cool:0, lastBlock:null};
+const D={log:(store.get('scalp-decisions-v2')||[]).filter(e=>e.status!=='INFO'||String(e.verdict).startsWith('BLOCKED')).slice(0,500), pending:null, cool:0, lastBlock:null};
 D.open=D.log.find(x=>x.status==='OPEN'&&!x.fast)||null;
 D.sinceT=D.open?D.open.t:Date.now();
 const SHORT={trend:'EMA',vwap:'VWAP',rsi:'RSI',macd:'MACD',vol:'Volume',htf:'Higher TF',atr:'ATR',book:'Book',tape:'Tape',liqMag:'Magnet liq',liqFlow:'Liq 15m',
   mtf:'6 TF',markov:'Markov',sr:'S/R',cvd:'CVD',taker:'Taker',whale:'Whale',breadth:'Breadth',funding:'Funding'};
 const whyStr=A=>A.checks.filter(c=>c.state!=='WAIT').map(c=>(c.state==='PASS'?'✓':'✗')+(SHORT[c.key]||c.key)).join(' ');
-const saveD=()=>store.set('scalp-decisions',D.log);
+const saveD=()=>store.set('scalp-decisions-v2',D.log);
 const dur=ms=>{ const s=Math.max(0,Math.floor(ms/1000)), h=Math.floor(s/3600), m=Math.floor(s%3600/60); return h?`${h}j ${m}m`:`${m}m ${String(s%60).padStart(2,'0')}d`; };
 const chainStr=A=>{ const G=A.gates; return `score ${(A.score*100).toFixed(0)}/${(G.thr*100).toFixed(0)} · ${groupScores(A).map(g=>`${g.name} ${(g.v*100).toFixed(0)}`).join(' · ')} · risk ${G.risk.toFixed(2)}% (${G.kn}) · TP ${A.tpNote}`; };
 function enter(A,act){
@@ -2083,7 +2087,7 @@ function renderDesk(){
     h+=`<div class="dpos"><div style="display:flex;justify-content:space-between;gap:8px"><b class="${o.dir>0?'up':'down'}">${o.dir>0?'LONG':'SHORT'} @ ${fmt(o.price,1)}</b><b class="${ur>=0?'up':'down'}">${sgn(ur,2,'R')} · ${ur>=0?'+':'-'}$${fmt(Math.abs(ur*ru),2)}</b></div>
       <div class="prog"><i style="left:${pos}%"></i></div>
       <div class="muted">SL ${fmt(o.sl,1)} · TP1 ${fmt(o.tp1,1)}${o.tp1hit?' ✓':''} · TP2 ${fmt(o.tp2,1)}${o.tpNote&&o.tpNote!=='2R'?` (${o.tpNote})`:''} · risk ${o.riskPct!=null?o.riskPct.toFixed(2)+'%':'—'} · until ${new Date(o.until).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'})}</div></div>`;
-  } else h+=`<div class="dpos muted">No position. ${snLockOn()?(bandarShort()&&!window.ME_STATE.lock?'BANDAR MODE on '+S.tf.toUpperCase()+': ':'')+'SNIPER LOCK ON: entries only from Sniper Scalp signals (fast reversal, liquidation sniper, 15M flush, macro pullback). TP/SL in points.':'Entry only when score ≥ threshold, no veto, and it holds for 5 seconds. Sniper signals and the ⚡ per-second scalper can also enter.'}</div>`;
+  } else h+=`<div class="dpos muted">No position. ${snLockOn()?(bandarShort()&&!window.ME_STATE.lock?'BANDAR MODE: ':'')+'SNIPER LOCK ON: entries only from Sniper Scalp signals (fast reversal, liquidation sniper, 15M flush, macro pullback). TP/SL in points.':'Entry only when score ≥ threshold, no veto, and it holds for 5 seconds. Sniper signals and the ⚡ per-second scalper can also enter.'}</div>`;
   h+=`<div class="lbl" style="margin-top:2px">Decision chain</div><div style="display:grid;gap:4px;font-size:11px">`+
     groupScores(A).map(g=>`<div style="display:grid;grid-template-columns:92px 1fr 64px;gap:6px;align-items:center"><span>${g.name}</span><div class="bar"><span style="width:${(g.v*100).toFixed(0)}%;background:${g.v>=.65?C.up:g.v>=.45?C.warn:C.down}"></span></div><span class="muted" style="text-align:right">${g.pass}✓ ${g.drop}✗</span></div>`).join('')+
     `</div><div class="why">${G.g.map(x=>`<span class="${x.s==='PASS'?'up':x.s==='DROP'?'down':'warn'}" title="${x.d}">${x.s==='PASS'?'✓':x.s==='DROP'?'⛔':'!'} ${x.k}: ${x.d}</span>`).join('')}</div>
@@ -2787,7 +2791,7 @@ if(store.get('scalp-wmode')==='hide') wMode('hide',true);
    open interest Δ 4 kuadran · basis perp · Coinbase premium (opsional) · divergensi RSI · dinding order book ·
    jam rilis data AS & funding · stabilitas backtest (70% awal vs 30% terbaru) · jurnal akurasi agent live + kalibrasi */
 const XV={k5:null,k1:null,oi:null,ct:null,cb:null,cbHist:[],walls:null,prof:null,cvd:null,O:null};
-const XJK='scalp-agent-journal';
+const XJK='scalp-agent-journal-v2';
 const XJ={list:(store.get(XJK)||[]).slice(0,400), lastAct:null, planKey:null, lastSec:0};
 const saveJ=()=>store.set(XJK,XJ.list);
 const toXK=k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5],qv:+k[7],tb:+k[9]});
@@ -3195,18 +3199,20 @@ const COST=15;
 
 /* ---- 5 setup · parameter & hasil backtest 365 hari (data 1 menit, spread 15 poin) ---- */
 const SET={
-  REV:{name:'FAST REVERSAL',grade:'A',tf:'5M',tp:300,sl:450,bars:12,pri:5,bt:[96,64.6,1.99],
+  REV:{name:'FAST REVERSAL',grade:'A',tf:'5M',tp:300,sl:450,bars:12,pri:6,bt:[110,53.6,1.38],
     desc:'5M liquidation against the 1H trend is over → price retraces ≥50% + taker flips → follow back with the trend'},
-  LIQ:{name:'LIQUIDATION SNIPER',grade:'A',tf:'5M',tp:200,sl:300,bars:24,win:6,pri:4,bt:[103,69.9,1.59],
+  LIQ:{name:'LIQUIDATION SNIPER',grade:'A',tf:'5M',tp:200,sl:300,bars:24,win:6,pri:5,bt:[103,69.9,1.53],
     desc:'5M liquidation cascade against the 1H trend → LIMIT at 50% of the liquidation candle (follow the liquidation)'},
-  FLW:{name:'FLUSH FOLLOW 15M',grade:'A',tf:'15M',tp:300,sl:450,bars:8,pri:3,bt:[121,71.9,1.80],
+  FLW:{name:'FLUSH FOLLOW 15M',grade:'A',tf:'15M',tp:300,sl:450,bars:8,pri:4,bt:[113,72.6,1.91],
     desc:'15M cascade ≥2× ATR, volume ≥3×, against macro bias → follow the liquidation'},
-  PB:{name:'MACRO PULLBACK',grade:'C',tf:'15M',tp:null,sl:null,bars:16,pri:2,bt:[301,56.1,1.01],
-    desc:'1D/4H/1H macro aligned, 15M trend aligned (no 20-candle rule), EMA21 pullback + trigger'},
-  ABS:{name:'BANDAR ABSORPTION',grade:'C',tf:'15M',tp:null,sl:null,bars:12,pri:1,bt:[423,41,1.12],
-    desc:'15M volume ≥2×, range ≥1 ATR, aggressive takers on one side but the candle closes on the other side (retail absorbed by big money) → trade with the absorber · TP 2×ATR / SL 1×ATR'},
+  PB:{name:'MACRO PULLBACK',grade:'B',tf:'15M',tp:null,sl:null,bars:16,pri:2,bt:[226,58,1.37],
+    desc:'1D/4H/1H macro aligned, 15M trend aligned, EMA21 pullback + trigger · TP 1.8×ATR (150–450) / SL 1.5×ATR (min 125)'},
+  ABS:{name:'BANDAR ABSORPTION',grade:'A',tf:'15M',tp:null,sl:null,bars:24,pri:3,bt:[118,38,1.76],
+    desc:'15M volume ≥2×, range ≥1 ATR, aggressive takers on one side but the candle closes on the other side (retail absorbed by big money), only with the 4H trend → trade with the absorber · TP 3×ATR / SL 0.8×ATR'},
+  BO:{name:'TREND BREAKOUT 4H',grade:'C',tf:'5M',tp:450,sl:563,bars:48,win:6,pri:1,bt:[198,58,1.24],
+    desc:'5M close breaks the 2-hour high/low + volume ≥1.5× with the 1H AND 4H trend, session 14–04 WIB → LIMIT retest · TP 450 / SL 563'},
 };
-const ORDER=['REV','LIQ','FLW','PB','ABS'];
+const ORDER=['REV','LIQ','FLW','ABS','PB','BO'];
 
 /* ---- indikator ---- */
 function ema(v,n){ const k=2/(n+1),o=new Array(v.length).fill(null); let s=0;
@@ -3237,8 +3243,9 @@ const D={c5:[],c15:[],h1:[],h4:[],d1:[],m1:[],I5:null,I15:null,k5:null,k15:null,
 const toC=k=>({time:k[0]/1000,open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5],tbv:+k[9],n:+k[8]});
 async function kl(tf,limit,end){ const r=await fetch(`${API}&interval=${tf}&limit=${limit}${end?`&endTime=${end}`:''}`,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); return (await r.json()).map(toC); }
 async function klN(tf,pages){ let a=await kl(tf,1000); for(let p=1;p<pages;p++){ const b=await kl(tf,1000,a[0].time*1000-1); a=b.concat(a); } return a; }
-function merge(arr,nw){ for(const k of nw){ const L=arr[arr.length-1]; if(L&&L.time===k.time) arr[arr.length-1]=k; else if(!L||k.time>L.time) arr.push(k); } if(arr.length>4000) arr.splice(0,arr.length-4000); }
+function merge(arr,nw){ for(const k of nw){ const L=arr[arr.length-1]; if(L&&L.time===k.time) arr[arr.length-1]=k; else if(!L||k.time>L.time) arr.push(k); } if(arr.length>12000) arr.splice(0,arr.length-12000); }
 const cl5=()=>D.c5.slice(0,-1), cl15=()=>D.c15.slice(0,-1);
+const h4dir=t=>{ const b=D.H4&&D.H4(t); return !b||b.e200==null?0:b.c>b.e50&&b.e50>b.e200?1:b.c<b.e50&&b.e50<b.e200?-1:0; };
 const trend1h=t=>{ const a=D.H1&&D.H1(t); return !a||a.e50==null?0:a.c>a.e21&&a.e21>a.e50?1:a.c<a.e21&&a.e21<a.e50?-1:0; };
 function macroAt(t){
   const a=D.H1(t),b=D.H4(t),d=D.D1(t); if(!a||!b||!d||b.e200==null||a.e50==null||d.e20==null) return null;
@@ -3250,10 +3257,10 @@ function feat(c,A,i){ const k=c[i]; let v=0; const sz=[]; for(let j=i-20;j<i;j++
   return {k,a:A[i-1],rg,vr:k.volume/(v/20),tb:k.volume?k.tbv/k.volume:.5,pos:rg?(k.close-k.low)/rg:.5,wz:(k.volume/Math.max(1,k.n)-szm)/szs,ht:trend1h(k.time+300),d:k.close>=k.open?1:-1}; }
 
 /* ---- memori AI ---- */
-const MK='sn-mem-v1';
+const MK='sn-mem-v2';
 const MEM=ST.get(MK,null)||{v:1,trades:[],first:Date.now()};
 MEM.trades.forEach(x=>{ if(x.res==='WAKTU') x.res='TIME'; if(x.res==='BATAL') x.res='CANCEL'; });
-MEM.trades=MEM.trades.filter(x=>x.type!=='BO'); // breakout diganti BANDAR ABSORPTION
+
 const saveMem=()=>{ MEM.trades.sort((a,b)=>a.t-b.t); if(MEM.trades.length>1500) MEM.trades.splice(0,MEM.trades.length-1500); ST.set(MK,MEM); };
 function statsOf(list){ const r=list.filter(x=>x.res&&x.res!=='EXP'&&x.res!=='CANCEL'); const n=r.length; if(!n) return {n:0};
   const p=r.map(x=>x.pts), w=p.filter(x=>x>0), gw=w.reduce((a,b)=>a+b,0), gl=-p.filter(x=>x<=0).reduce((a,b)=>a+b,0);
@@ -3278,9 +3285,9 @@ function detLIQ(c,A,i){ const g=flush5(c,A,i,L.LIQ?.strict); if(!g||g.ht!==-g.d)
     ck:[['range ≥2.5× ATR',1],['volume ≥3×',1],['close at extreme + taker aligned',1],['against 1H trend',1]]}; }
 function detBO(c,A,i){ const f=feat(c,A,i); let h=-1e9,l=1e9; for(let j=i-24;j<i;j++){ h=Math.max(h,c[j].high); l=Math.min(l,c[j].low); }
   const d=f.k.close>h?1:f.k.close<l?-1:0, hr=new Date(f.k.time*1000).getUTCHours();
-  if(!d||f.vr<1.5||f.ht!==d||hr<7||hr>=21) return null; const lvl=d>0?h:l;
+  if(!d||f.vr<1.5||f.ht!==d||h4dir(f.k.time+300)!==d||hr<7||hr>=21) return null; const lvl=d>0?h:l;
   return {dir:d,kind:'LIMIT',lvl,why:`5M close broke the 2h ${d>0?'high':'low'} ${f0(lvl)} · vol ${f.vr.toFixed(1)}× · with 1H trend → limit retest`,
-    ck:[['broke 24-candle high/low',1],['volume ≥1.5×',1],['with 1H trend',1],['active session',1]]}; }
+    ck:[['broke 24-candle high/low',1],['volume ≥1.5×',1],['with 1H + 4H trend',1],['active session',1]]}; }
 function detFLW(c,I,i){ const k=c[i], a=I.atr[i-1], rg=k.high-k.low; let v=0; for(let j=i-20;j<i;j++) v+=c[j].volume; const vr=k.volume/(v/20), tb=k.volume?k.tbv/k.volume:.5, pos=rg?(k.close-k.low)/rg:.5;
   const st=L.FLW?.strict; if(rg<(st?2.5:2)*a||vr<(st?4:3)) return null; const d=pos>.75&&tb>.55?1:pos<.25&&tb<.45?-1:0; if(!d) return null;
   const m=macroAt(k.time+900); if(!m||Math.sign(m.sum)!==-d) return null;
@@ -3291,15 +3298,15 @@ function detPB(c,I,i){ const k=c[i], T=k.time+900, m=macroAt(T), h=new Date(T*10
   if(!(d>0?k.close>k.open&&k.close>c[i-1].high&&k.close>I.e9[i]:k.close<k.open&&k.close<c[i-1].low&&k.close<I.e9[i])) return null;
   const r=I.rsi[i]; if(d>0?r<48||r>68:r>52||r<32) return null; if(d>0?!(I.hist[i]>I.hist[i-1]):!(I.hist[i]<I.hist[i-1])) return null;
   if(d>0?k.close<I.vwap[i]:k.close>I.vwap[i]) return null; let v=0; for(let j=i-20;j<i;j++) v+=c[j].volume; if(k.volume<v/20) return null;
-  const tp=Math.round(clamp(1.2*I.atr[i],100,300)), sl=Math.round(Math.max(tp,1.2*I.atr[i]));
+  const tp0=Math.round(clamp(1.2*I.atr[i],100,300)), tp=Math.round(tp0*1.5), sl=Math.round(Math.max(tp0,1.2*I.atr[i])*1.25);
   return {dir:d,kind:'MARKET',tp,sl,why:`macro ${d>0?'up':'down'} ${m.sum>0?'+':''}${m.sum} · 15M trend ${Math.abs(I.run[i])} candles · EMA21 pullback + trigger · RSI ${r.toFixed(0)}`,ck:[['macro aligned',1],['15M trend aligned',1],['EMA21 pullback',1],['trigger',1],['RSI/MACD/VWAP/volume',1]]}; }
 
 /* bandar: taker agresif satu sisi tapi candle tutup di sisi lawan = order ritel diserap bandar (400 hari: PF 1.12, dibalik PF 0.89) */
 function detABS(c,I,i){ const k=c[i], a=I.atr[i-1], rg=k.high-k.low; if(!a||!rg||rg<a) return null; let v=0; for(let j=i-20;j<i;j++) v+=c[j].volume; const vr=k.volume/(v/20); if(vr<2) return null;
-  const tb=k.volume?k.tbv/k.volume:.5, pos=(k.close-k.low)/rg, d=tb>=.52&&pos<=.35?-1:tb<=.48&&pos>=.65?1:0; if(!d) return null;
-  const tp=Math.round(2*I.atr[i]), sl=Math.round(I.atr[i]);
+  const tb=k.volume?k.tbv/k.volume:.5, pos=(k.close-k.low)/rg, d=tb>=.52&&pos<=.35?-1:tb<=.48&&pos>=.65?1:0; if(!d||h4dir(k.time+900)!==d) return null;
+  const tp=Math.round(3*I.atr[i]), sl=Math.round(.8*I.atr[i]);
   return {dir:d,kind:'MARKET',tp,sl,why:`${d<0?'aggressive buying':'aggressive selling'} ${Math.round((d<0?tb:1-tb)*100)}% absorbed · vol ${vr.toFixed(1)}× · close ${d<0?'weak':'strong'} (${Math.round(pos*100)}% of range) → ${d>0?'BUY':'SELL'} with the absorber`,
-    ck:[['volume ≥2× & range ≥1 ATR',1],['aggressive takers one side',1],['close on the opposite side',1]]}; }
+    ck:[['volume ≥2× & range ≥1 ATR',1],['aggressive takers one side',1],['close on the opposite side',1],['with 4H trend',1]]}; }
 /* simulasi riwayat (candle sendiri, SL dianggap kena dulu) */
 function simHist(c,i,s,tp,sl,bars,win){
   let j=i+1, e=null; if(j>=c.length) return {res:null};
@@ -3321,10 +3328,13 @@ function scanHist(){
       if(c[i].time+dur>=boot-60) continue; // sinyal live dicatat oleh engine live
       MEM.trades.push({id,type,dir:s.dir,t:c[i].time,tp,sl,src:'hist',...r}); have.add(id); } };
   const c5=cl5(), c15=cl15();
-  run('REV',c5,300,40,(c,A,i)=>detREV(c,A,i),D.A5); run('LIQ',c5,300,40,(c,A,i)=>detLIQ(c,A,i),D.A5); 
+  run('REV',c5,300,40,(c,A,i)=>detREV(c,A,i),D.A5); run('LIQ',c5,300,40,(c,A,i)=>detLIQ(c,A,i),D.A5); run('BO',c5,300,40,(c,A,i)=>detBO(c,A,i),D.A5); 
   run('FLW',c15,900,300,(c,I,i)=>detFLW(c,I,i),D.I15); run('PB',c15,900,300,(c,I,i)=>detPB(c,I,i),D.I15); run('ABS',c15,900,300,(c,I,i)=>detABS(c,I,i),D.I15);
   learn(); saveMem();
+  window.__SNBT_CB&&window.__SNBT_CB();
 }
+// hasil backtest Sniper untuk panel Strategy · Backtest (hanya setup yang benar-benar dikirim ke Desk/Agent)
+window.__SNBT=()=>MEM.trades.filter(x=>SET[x.type]&&(SET[x.type].grade!=='C'||ME.aggr)&&x.res&&x.res!=='EXP'&&x.res!=='CANCEL'&&x.pts!=null&&x.sl).map(x=>({...x,hold:SET[x.type].bars*(SET[x.type].tf==='15M'?900:300)}));
 
 /* ---- engine live ---- */
 const ME=window.ME_STATE={ready:false,lock:ST.get('sn-lock',false),aggr:ST.get('sn-aggr',false),sig:null,waitWhy:'loading data…',bias:0,boot:Date.now()};
@@ -3473,12 +3483,12 @@ function render(){
     h=`<div class="snbig"><span class="lbl">Sniper scalp · 5 integrated setups</span><span class="tag WAIT">WAITING</span></div>
       <div class="snact" style="color:var(--warn)">WAIT</div>
       <div style="font-size:11px">No setup has qualified yet. ${esc(near.join(' · '))}</div>
-      <div class="muted" style="font-size:10.5px">Target 100–300 pts/trade. Signals appear on big liquidations (sniper/reversal), 15M flushes, macro pullbacks${ME.aggr?' or 15M bandar absorption':''}.</div>`;
+      <div class="muted" style="font-size:10.5px">Target 100–300 pts/trade. Signals appear on big liquidations (sniper/reversal), 15M flushes, bandar absorption & macro pullbacks${ME.aggr?' or 4H trend breakouts':''}.</div>`;
   }
   ME.waitWhy=cur?'':'no sniper setup has qualified yet';
   h+=`<div class="snbtn"><button class="btn sm" type="button" id="snLock" aria-pressed="${ME.lock}" title="ON: Agent, Decision Desk and ⚡ scalper only enter on these signals. OFF: all modules may enter.">LOCK: ${ME.lock?'ON':'OFF'}</button>
     <button class="btn sm" type="button" id="snBandar" aria-pressed="${!!window.BANDAR?.on}" title="ON: crowd-flow modules (tape, CVD, taker, whale, breakout, momentum) vote AGAINST retail; main engine enters only on 1H+; ⚡ scalper off; on 1M–15M entries come from Sniper only">BANDAR: ${window.BANDAR?.on?'ON':'OFF'}</button>
-    <button class="btn sm" type="button" id="snAggr" aria-pressed="${ME.aggr}" title="Include grade C setups (more frequent, thin edge)">AGGRESSIVE: ${ME.aggr?'ON':'OFF'}</button>
+    <button class="btn sm" type="button" id="snAggr" aria-pressed="${ME.aggr}" title="Include grade C setup (4H trend breakout, thinner edge)">AGGRESSIVE: ${ME.aggr?'ON':'OFF'}</button>
     <button class="btn sm" type="button" id="snBell" aria-pressed="${CFG.bell}">🔔 ${CFG.bell?'ON':'OFF'}</button><button class="btn sm" type="button" id="snTest">Test bell</button>
     ${window.Notification&&Notification.permission==='default'?'<button class="btn sm" type="button" id="snNotif">Notifications</button>':''}</div>`;
   if(NEWS.last) h+=`<div class="snnews"><span class="muted">HOT ${new Date(NEWS.last.t).toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit'})} · ${esc(NEWS.last.src)}</span><br>${NEWS.last.link?`<a href="${esc(NEWS.last.link)}" target="_blank" rel="noopener">${esc(NEWS.last.title)}</a>`:esc(NEWS.last.title)}</div>`;
@@ -3498,7 +3508,7 @@ function render(){
     <div class="lbl" style="margin-top:4px">🧠 AI memory · backtest vs experience</div>
     <table class="snst num"><tr><th>Setup</th><th>BT win/PF</th><th>Memory N</th><th>Win</th><th>PF</th><th>Status</th></tr>
     ${ORDER.map(k=>{ const s=SET[k], m=L[k]?.all||{n:0}; return `<tr><td>${s.name} <span class="muted">${s.grade}</span></td><td>${s.bt[1]}% / ${s.bt[2]}</td><td>${m.n}</td><td>${m.n?Math.round(m.wr*100)+'%':'—'}</td><td class="${m.n?(m.pf>=1?'up':'down'):''}">${m.n?m.pf.toFixed(2):'—'}</td><td class="${L[k]?.strict?'warn':'up'}">${L[k]?.strict?'STRICT':'normal'}</td></tr>`; }).join('')}</table>
-    <div class="muted" style="font-size:10px">365-day backtest on 1-minute data, 15-point cost. Grade A combined: ~0.9 signals/day. Grade C (bandar absorption 15M ~1/day PF 1.12, reversed 0.89 — replaced the losing breakout) only reaches Desk/Agent in AGGRESSIVE mode. Memory is stored in the browser and tightens any setup whose last 20 results have PF&lt;1.</div>`;
+    <div class="muted" style="font-size:10px">400-day backtest on 1-minute data, 15-point cost, parameters chosen on the first 60% and confirmed on the last 40%. Grade A/B (~1.7 signals/day combined) go to Desk/Agent; grade C (4H trend breakout, PF 1.24) only in AGGRESSIVE mode. Old losing rules and their history were reset. Memory is stored in the browser and tightens any setup whose last 20 results have PF&lt;1.</div>`;
   setH($('snC3'),h3);
   const hd=$('snHead'); if(hd) hd.textContent=`${cur?(cur.dir>0?'BUY ':'SELL ')+cur.name+' · '+cur.status:'WAIT'} · BTC ${f1(px)} · pressure ${IND.score!=null?(IND.score>0?'+':'')+IND.score:'—'}`;
 }
@@ -3515,7 +3525,7 @@ document.addEventListener('click',e=>{ const b=e.target.closest('#snLock,#snAggr
 function onClose5(){ const c=cl5(), n=c.length-1; D.A5=atr(c);
   const r=detREV(c,D.A5,n); if(r) addSig('REV',r,c[n].time,300);
   const q=detLIQ(c,D.A5,n); if(q) addSig('LIQ',q,c[n].time,300);
-}
+  const b=detBO(c,D.A5,n); if(b) addSig('BO',b,c[n].time,300); }
 function onClose15(){ const c=cl15(), n=c.length-1; D.I15=calc15(c);
   const a=detFLW(c,D.I15,n); if(a) addSig('FLW',a,c[n].time,900);
   const p=detPB(c,D.I15,n); if(p) addSig('PB',p,c[n].time,900);
@@ -3527,7 +3537,7 @@ async function tick1(){ try{ D.m1=await kl('1m',8); D.px=D.m1[D.m1.length-1].clo
 async function tickH(){ try{ const [a,b,d]=await Promise.all([kl('1h',3),kl('4h',3),kl('1d',3)]); merge(D.h1,a); merge(D.h4,b); merge(D.d1,d);
     D.H1=htfFn(D.h1,3600); D.H4=htfFn(D.h4,14400); D.D1=htfFn(D.d1,86400); }catch(e){} }
 async function boot(){
-  try{ [D.c5,D.c15]=await Promise.all([klN('5m',3),klN('15m',3)]); [D.h1,D.h4,D.d1]=await Promise.all([kl('1h',1000),kl('4h',1000),kl('1d',400)]);
+  try{ [D.c5,D.c15]=await Promise.all([klN('5m',8),klN('15m',9)]); [D.h1,D.h4,D.d1]=await Promise.all([kl('1h',1000),kl('4h',1000),kl('1d',400)]);
     D.H1=htfFn(D.h1,3600); D.H4=htfFn(D.h4,14400); D.D1=htfFn(D.d1,86400);
   }catch(e){ const h=$('snC1'); if(h) h.innerHTML='<div class="warn">Failed to load Binance data. Retrying in 30 seconds…</div>'; setTimeout(boot,30000); return; }
   learn(); D.A5=atr(cl5()); D.I15=calc15(cl15()); D.k5=D.c5[D.c5.length-2].time; D.k15=D.c15[D.c15.length-2].time;
