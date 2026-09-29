@@ -137,7 +137,7 @@ tr.active td{background:rgba(234,108,196,.08)}
 
 /* graph */
 #graphWrap{position:relative;height:420px}
-#graph{width:100%;height:100%;display:block}
+#graph{position:absolute;inset:0;width:100%;height:100%;display:block} /* absolute: canvas pixel size never feeds back into the panel height */
 .ov{position:absolute;background:rgba(5,6,10,.82);border:1px solid var(--line-2);border-radius:6px;padding:8px 10px;font-size:11px;display:grid;gap:3px}
 .ov .li{display:flex;align-items:center;gap:7px;font-weight:700;letter-spacing:.08em}
 .ov .li i{width:9px;height:9px;border-radius:50%;display:inline-block}
@@ -627,7 +627,13 @@ tr.active td{background:rgba(234,108,196,.08)}
   .a-top .side>*{flex:1 1 150px} .a-top .side .stats{flex:2 1 260px} .a-top .side .verdict{flex:2 1 220px}
   .a-tech .tabody{flex:1 1 0;min-height:0;overflow:auto;contain:size}
 }
-@media (min-width:1400px){ .a-top{grid-area:top} }
+@media (min-width:1400px){ .a-top{grid-area:top}
+  /* the long checklist no longer sets the row height (it scrolls inside); the cards column does, so Signal Graph keeps a normal size */
+  .a-ana{contain:size}
+  .a-ana .analysis{flex:1 1 0;min-height:0;grid-template-rows:minmax(0,1fr) auto auto}
+  .a-ana .checks{overflow:auto;min-height:0}
+  .a-ana #rsiChart{flex:none;height:170px}
+}
 </style>
 </head>
 <body>
@@ -3389,15 +3395,6 @@ function taRender(){
   setH(el, head+plan+ag+levels+ind+ck+read+`<div class="ta-foot">Levels follow the main chart (${tfU}) and refresh every second. Educational analysis only, not financial advice. Always use a stop loss.</div>`);
 }
 setInterval(()=>{ try{ taRender(); }catch(e){} },1000);
-/* keep the technical panel clear of the fixed right widget column (clock / widgets) */
-function taPad(){
-  const top=document.querySelector('.a-top'), fc=document.querySelector('.floatcol'); if(!top) return;
-  let pad=0;
-  if(innerWidth>=1100&&fc&&fc.getClientRects().length){ const f=fc.getBoundingClientRect(), t=top.getBoundingClientRect();
-    if(f.width>0&&f.height>0) pad=Math.max(0,Math.round(t.right-f.left+8)); }
-  if((parseFloat(top.style.paddingRight)||0)!==pad) top.style.paddingRight=pad?pad+'px':'';
-}
-setInterval(taPad,1000); addEventListener('resize',taPad);
 
 /* ---------- boot ---------- */
 (async()=>{
