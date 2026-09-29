@@ -656,6 +656,10 @@ tr.active td{background:rgba(234,108,196,.08)}
 .symsel select:hover{background-color:#1a1d26}
 .symsel select:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .symsel select option{background:#0a0c11;color:#fff}
+.dlbtn{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.06em;color:#000;background:var(--warn);border:2px solid var(--warn);border-radius:8px;padding:6px 11px;text-decoration:none;white-space:nowrap}
+.dlbtn:hover{background:#ffc94d}
+.dlbtn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media (max-width:699px){ .dlbtn{flex:1 1 100%;justify-content:center} }
 .symnote{font-size:10px;color:var(--ink-3);letter-spacing:.04em;min-width:0;flex:1 1 220px}
 @media (max-width:699px){ .symsel{flex:1 1 140px} .symsel select{flex:1;min-width:0;font-size:12px} .symsel span{display:none} }
 .tfbar{display:inline-flex;gap:4px;flex-wrap:wrap}
@@ -778,6 +782,7 @@ tr.active td{background:rgba(234,108,196,.08)}
     <div class="symbar" role="group" aria-label="Market and timeframe">
       <label class="symsel"><span>Market</span><select id="symSel" aria-label="Market"><option value="BTCUSDT">BTCUSDT · Bitcoin</option><option value="XAUUSDT">XAUUSDT · Gold</option><option value="BNBUSDT">BNBUSDT · BNB</option><option value="SOLUSDT">SOLUSDT · Solana</option></select></label>
       <label class="symsel"><span>Timeframe</span><select id="tfSel" aria-label="Timeframe" title="Chart, checklist, Technical Analysis, Decision Desk, backtest, S/R, agent &amp; widgets follow this timeframe. Sniper / Whale / Breakout / Bollinger setups keep their validated timeframes."><option value="1m">1M · 1 minute</option><option value="5m">5M · 5 minutes</option><option value="15m">15M · 15 minutes</option><option value="1h">1H · 1 hour</option><option value="4h">4H · 4 hours</option><option value="1d">1D · 1 day</option></select></label>
+      <a class="dlbtn" href="btcusdt-user-guide.pdf" download="BTCUSDT-Scalp-Deck-User-Guide.pdf" target="_blank" rel="noopener" title="Download the user guide (PDF, English): every panel, indicator and signal explained with screenshots" aria-label="Download user guide PDF"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 17v3h16v-3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>USER GUIDE · PDF</span></a>
       <span class="symnote" id="symNote"></span>
     </div>
     <div class="brand"><div class="logo" id="symLogo">₿</div><h1 id="symH1">SCALPBOT · BTCUSDT</h1></div>
@@ -907,7 +912,7 @@ tr.active td{background:rgba(234,108,196,.08)}
 
   <!-- LIQUIDATIONS -->
   <section class="panel a-liq">
-    <div class="ph"><span>⚡ BTC Liquidations · Live</span><span class="r num" id="liqHead">loading…</span></div>
+    <div class="ph"><span>⚡ <span class="symTxt">BTC</span> Liquidations · Live</span><span class="r num" id="liqHead">loading…</span></div>
     <div class="liq">
       <div class="liqL">
         <div>
@@ -1034,7 +1039,7 @@ tr.active td{background:rgba(234,108,196,.08)}
 
   <!-- SIGNAL GRAPH -->
   <section class="panel a-graph">
-    <div class="ph"><span>◉ Signal Graph · BTC · Force graph</span><span class="r num" id="gHead">—</span></div>
+    <div class="ph"><span>◉ Signal Graph · <span class="symTxt">BTC</span> · Force graph</span><span class="r num" id="gHead">—</span></div>
     <div id="graphWrap">
       <canvas id="graph"></canvas>
       <div class="ov" style="left:12px;top:12px">
@@ -2328,7 +2333,7 @@ function renderDesk(){
       <td class="down">${e.sl?fmt(e.sl,1):'—'}</td><td class="up">${e.tp2?fmt(e.tp2,1):'—'}</td><td><b style="color:${ST_COL[e.status]}">${e.status==='INFO'?e.verdict:e.status}</b></td>
       <td>${e.exit?`${fmt(e.exit,1)} <span class="muted">${hhmmss(e.exitT)}</span>`:'—'}</td><td>${plR}</td><td>${plU}</td><td class="rs">${e.chain?`<span style="color:var(--ink)">${e.chain}</span><br>`:''}${e.why}</td></tr>`;
   }).join('');
-  $('dBody').innerHTML=rows||'<tr><td colspan="11" class="muted">The log records BUY/SELL entries, position closes and setups blocked by gates.</td></tr>';
+  $('dBody').innerHTML=rows||'<tr><td colspan="11" class="muted">The log records validated BUY/SELL entries and position closes (setups that fail a gate are never emitted).</td></tr>';
 
   const cl=D.log.filter(e=>e.r!=null), w=cl.filter(e=>e.r>0).length, tot=cl.reduce((a,e)=>a+e.r,0), totU=cl.reduce((a,e)=>a+e.r*(e.riskUsd??curRiskUsd),0);
   let streak=0; for(const e of cl){ if((e.r>0)===(cl[0].r>0)) streak++; else break; }
@@ -4059,7 +4064,7 @@ function renderWhale(){
     </div>
     <div class="whc"><div class="lbl">Big candle alarm · ${f0(P(100))} / ${f0(P(200))} / ${f0(P(300))} pts (alert only)</div>${bcr.map(r=>{ const a=Math.abs(r.mv)/PS, c2=a>=100?(r.mv>0?'var(--up)':'var(--down)'):'var(--ink-3)';
         return `<div class="whbc"><span>${r.tf} candle</span><div class="trk bc"><i style="width:${Math.min(100,a/3).toFixed(0)}%;background:${c2}"></i><em style="left:33.3%"></em><em style="left:66.6%"></em></div><b style="color:${c2}">${r.mv>=0?'+':'−'}${f0(a*PS)} pts</b></div>`; }).join('')}
-      <div class="whrad">${BC.log.slice(0,4).map(e=>`<div><span class="muted">${hm(e.t)} ${e.tf}</span><b style="color:${e.d>0?'var(--up)':'var(--down)'}">${e.d>0?'▲':'▼'} ${f0(P(e.max))} pts</b><span>${e.conf?(e.conf.dir?`<b style="color:${e.conf.dir>0?'var(--up)':'var(--down)'}">✓ ${e.conf.dir>0?'BUY':'SELL'} · ${esc(e.conf.name)}</b>`:'<span class="muted">✕ no setup · skip</span>'):'<span class="warn">waiting for confirmation…</span>'}</span><span></span></div>`).join('')||'<div class="muted">No ${f0(P(100))}+ pt candles yet. The bell rings the moment one forms.</div>'}</div>
+      <div class="whrad">${BC.log.slice(0,4).map(e=>`<div><span class="muted">${hm(e.t)} ${e.tf}</span><b style="color:${e.d>0?'var(--up)':'var(--down)'}">${e.d>0?'▲':'▼'} ${f0(P(e.max))} pts</b><span>${e.conf?(e.conf.dir?`<b style="color:${e.conf.dir>0?'var(--up)':'var(--down)'}">✓ ${e.conf.dir>0?'BUY':'SELL'} · ${esc(e.conf.name)}</b>`:'<span class="muted">✕ no setup · skip</span>'):'<span class="warn">waiting for confirmation…</span>'}</span><span></span></div>`).join('')||`<div class="muted">No ${f0(P(100))}+ pt candles yet. The bell rings the moment one forms.</div>`}</div>
       <div class="muted" style="font-size:10px">Tested 400 days: jumping in on a big candle loses (PF 0.6–0.85). Enter only when a ✓ validated setup appears.</div>
       <div class="lbl" style="margin-top:4px">Live footprint · current 5M candle ${w?(w.d>0?'▲':'▼'):''}</div>${gauges}<div class="lbl" style="margin-top:4px">Whale tape · order flow</div>${tape}</div>
     <div class="whc"><div class="lbl">1M early warning · bursts (radar, not a trade signal)</div>${rad}${m1?`<div class="muted" style="font-size:10px">last 1M: vol ${m1.vr.toFixed(1)}× · size ${m1.szr.toFixed(2)}× · taker ${Math.round(m1.tbs*100)}% ${m1.d>0?'buy':'sell'}</div>`:''}
