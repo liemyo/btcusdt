@@ -2418,7 +2418,7 @@ function srState(tf,pxOverride){
   const R1=up[0]||{p:Math.max(...win.map(k=>k.high)),n:1}, R2=up[1]||null;
   const S1=dn[0]||{p:Math.min(...win.map(k=>k.low)),n:1}, S2=dn[1]||null;
   const last=c[n-2], cur=c[n-1], avg=mean(c.slice(n-22,n-2).map(k=>k.volume)), vr=avg?last.volume/avg:1;
-  let kind='RANGE', status='DALAM RANGE', col=C.ink2;
+  let kind='RANGE', status='INSIDE RANGE', col=C.ink2;
   if(px>R1.p){ if(last.close>R1.p&&vr>=1.2){ kind='BO_UP'; status='BREAKOUT ↑ CONFIRMED'; col=C.up; } else if(last.close>R1.p){ kind='BO_UP'; status='BREAKOUT ↑ · WEAK VOLUME'; col=C.warn; } else { kind='TEST_UP'; status='TESTING BREAKOUT ↑ · WAIT FOR CLOSE'; col=C.warn; } }
   else if(px<S1.p){ if(last.close<S1.p&&vr>=1.2){ kind='BO_DN'; status='BREAKDOWN ↓ CONFIRMED'; col=C.down; } else if(last.close<S1.p){ kind='BO_DN'; status='BREAKDOWN ↓ · WEAK VOLUME'; col=C.warn; } else { kind='TEST_DN'; status='TESTING BREAKDOWN ↓ · WAIT FOR CLOSE'; col=C.warn; } }
   else if((last.high>R1.p&&last.close<R1.p)||(cur.high>R1.p&&px<R1.p)){ kind='FAKE_UP'; status='FAKEOUT ↑ · REJECTED AT RESISTANCE'; col=C.collide; }
@@ -2436,7 +2436,7 @@ function renderSR(){
   $('srLad').innerHTML=items.sort((x,y)=>y.p-x.p).map(x=>x.html).join('');
   $('srMark').style.left=clamp((px-S1.p)/(h||1)*100,0,100).toFixed(1)+'%';
   const obs=(zone,lv,dir)=>lv&&(dir>0?lv.p<zone[1]:lv.p>zone[0])?`<small>obstacle: ${dir>0?'R2':'S2'} ${fmt(lv.p,0)} inside the zone</small>`:'';
-  $('srTz').innerHTML=`<div style="${st.kind==='BO_UP'||st.kind==='TEST_UP'?'border-color:var(--up)':''}"><span>Break R1 → <b class="up">${fmt(st.up[0],0)} – ${fmt(st.up[1],0)}</b></span><small>${pct(st.up[0])} s/d ${pct(st.up[1])} · measured move 0.618–1× range $${fmt(h,0)}</small>${obs(st.up,R2,1)}</div>
+  $('srTz').innerHTML=`<div style="${st.kind==='BO_UP'||st.kind==='TEST_UP'?'border-color:var(--up)':''}"><span>Break R1 → <b class="up">${fmt(st.up[0],0)} – ${fmt(st.up[1],0)}</b></span><small>${pct(st.up[0])} to ${pct(st.up[1])} · measured move 0.618–1× range $${fmt(h,0)}</small>${obs(st.up,R2,1)}</div>
     <div style="${st.kind==='BO_DN'||st.kind==='TEST_DN'?'border-color:var(--down)':''}"><span>Break S1 → <b class="down">${fmt(st.dn[1],0)} – ${fmt(st.dn[0],0)}</b></span><small>${pct(st.dn[1])} to ${pct(st.dn[0])} · measured move 0.618–1× range</small>${obs(st.dn,S2,-1)}</div>`;
   $('srFoot').textContent=`pivot swing k=3 · ${S.mtf[SR.tf].candles.length} candle · tolerance 0.35 ATR · last candle volume ${st.vr.toFixed(2)}× avg`;
 }
@@ -2652,7 +2652,7 @@ function apLog(stage,msg,cls='',minGap=0){
   AP.last[stage]=msg; AP.lastT[stage]=now; AP.list.unshift({t:now,s:stage,m:msg,c:cls}); if(AP.list.length>150) AP.list.length=150;
   store.set(APK,AP.list); apRender(true);
 }
-function apSetMini(m){ AP.mini=m; $('apw').classList.toggle('mini',m); $('apTg').textContent=m?'+':'–'; $('apTop').setAttribute('aria-expanded',!m); store.set('agent-process-mini',m); }
+function apSetMini(m){ AP.mini=m; $('apw').classList.toggle('mini',m); $('apTg').textContent=m?'+':'–'; $('apTop').setAttribute('aria-expanded',!m); store.set('agent-process-mini',m);  if(typeof fitCol==='function') fitCol(); }
 $('apTop').addEventListener('click',()=>apSetMini(!AP.mini));
 $('apTop').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); apSetMini(!AP.mini); } });
 apSetMini(AP.mini); apRender(false);
@@ -2860,6 +2860,13 @@ function wMode(m,init){
 }
 $('wdock').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) wMode(b.dataset.w); });
 if(store.get('scalp-wmode')==='hide') wMode('hide',true);
+if(innerWidth<700&&store.get('scalp-mobile-init')==null){ wSetMini(true); apSetMini(true); store.set('scalp-mobile-init',1); }
+/* keep the top-right widget column above the bottom-right stack (process log / music / dock) so corners never overlap */
+function fitCol(){ const col=document.querySelector('.floatcol'); if(!col||col.hidden) return;
+  const stack=['apw','muTg','wdock'].map(id=>$(id)).filter(e=>e&&!e.hidden&&e.getClientRects().length>0).map(e=>e.getBoundingClientRect().top);
+  const top=col.getBoundingClientRect().top, lim=(stack.length?Math.min(...stack):innerHeight)-8-top;
+  col.style.setProperty('max-height',Math.max(120,lim)+'px','important'); }
+addEventListener('resize',fitCol); setInterval(fitCol,1000); fitCol();
 
 
 /* ---------- VALIDATOR: extra instruments for deeper validation ----------
@@ -2954,8 +2961,8 @@ function xvOI(){
   const a=XV.oi; if(!a||a.length<13) return null;
   const n=a.length-1, oi=i=>+a[i].open_interest_usd, mp=i=>+a[i].mark_price;
   const q=k=>({dOI:(oi(n)/oi(n-k)-1)*100,dP:(mp(n)/mp(n-k)-1)*100});
-  const cls=(x,th)=>Math.abs(x.dOI)<th?{k:'FLAT',t:'OI flat',v:0}:x.dP>=0?(x.dOI>0?{k:'LONG_BARU',t:'price ↑ OI ↑ · new longs (healthy rise)',v:1}:{k:'SHORT_COVER',t:'price ↑ OI ↓ · short covering (fragile rise)',v:.3})
-    :(x.dOI>0?{k:'SHORT_BARU',t:'price ↓ OI ↑ · new shorts (strong drop)',v:-1}:{k:'LONG_LIQ',t:'price ↓ OI ↓ · longs exiting (weakening drop)',v:-.3});
+  const cls=(x,th)=>Math.abs(x.dOI)<th?{k:'FLAT',t:'OI flat',v:0}:x.dP>=0?(x.dOI>0?{k:'LONG_NEW',t:'price ↑ OI ↑ · new longs (healthy rise)',v:1}:{k:'SHORT_COVER',t:'price ↑ OI ↓ · short covering (fragile rise)',v:.3})
+    :(x.dOI>0?{k:'SHORT_NEW',t:'price ↓ OI ↑ · new shorts (strong drop)',v:-1}:{k:'LONG_LIQ',t:'price ↓ OI ↓ · longs exiting (weakening drop)',v:-.3});
   const s=q(3), l=q(12), L=a[n];
   return {s,l,cs:cls(s,.15),cl:cls(l,.4),oi:oi(n),top:+L.top_lsr_size,acc:+L.lsr_account,v:cls(s,.15).v*.6+cls(l,.4).v*.4};
 }
@@ -3784,5 +3791,60 @@ html.gated #muTg{display:none!important}
 })();
 </script>
 
+<style id="layoutFix">
+/* ===== widget layout: every floating widget snapped to a screen corner, stacked neatly ===== */
+/* top-right: clock → widget column · bottom-right (bottom-up): dock → music → agent process log · bottom-left: agent */
+:root{--wm:12px;--sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px)}
+.wibclk{top:calc(var(--st) + var(--wm));right:var(--wm)}
+.floatcol{right:var(--wm)!important}
+.agent{left:var(--wm);bottom:calc(var(--sb) + var(--wm))}
+.wdock{right:var(--wm)!important;bottom:calc(var(--sb) + var(--wm))!important}
+#muTg{right:var(--wm)!important;bottom:calc(var(--sb) + var(--wm) + 54px)!important}
+.apw{right:var(--wm)!important;bottom:calc(var(--sb) + var(--wm) + 98px)!important;max-height:calc(100vh - 380px);min-height:0}
+.apw .apl{flex:1 1 auto;min-height:0}
+/* widget headers never cut text: wrap instead of clipping */
+.pxw .top,.srw .top,.gzw .top,.xvw .top{flex-wrap:wrap;row-gap:3px;column-gap:6px}
+.pxw .top>span,.srw .top>span,.gzw .top>span,.xvw .top>span{min-width:0;overflow-wrap:anywhere}
+.pxw .top>span:last-child,.srw .top>span:last-child,.gzw .top>span:last-child,.xvw .top>span:last-child{margin-left:auto;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+/* panel text fills its window instead of being truncated with "…" */
+.stage i{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.dtick{white-space:normal;overflow-wrap:anywhere}
+.apw .apnow{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;padding-top:5px;padding-bottom:5px;max-height:calc(2.7em + 10px);box-sizing:border-box}
+.a-me .snlog div{grid-template-columns:40px 42px minmax(0,1fr) auto}
+.a-me .snlog div>*{min-width:0;overflow-wrap:anywhere}
+.a-me .snst td:first-child,.a-me .snst th{white-space:normal}
+.a-me .snc>*{min-width:0;max-width:100%}
+.xvw .xvg .dt,.xvw .xvg .nm,.gzc .nm{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.3}
+.xvw .xvg>div{align-items:start}
+/* panels shrink to the screen instead of pushing content past the right edge */
+@media (max-width:860px){
+  .analysis,.main,.cards,.floor,.quant,.rob,.mc{grid-template-columns:minmax(0,1fr)!important}
+  .analysis>*,.main>*,.checks,.mid,.side{min-width:0}
+  .levels{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row>div:first-child{min-width:0;overflow-wrap:anywhere}
+  .risk input{width:88px}
+  .lqr{grid-template-columns:40px minmax(0,1fr) 58px 54px;gap:4px;padding:3px 8px}
+}
+@media (max-width:699px){
+  :root{--wm:8px}
+  .wibclk{width:150px;padding:5px 8px;gap:2px;flex-direction:column;align-items:stretch}
+  .wibclk .d{display:block;white-space:nowrap;overflow:hidden} .wibclk .d span{display:none} .wibclk .d b{font-size:9.5px;letter-spacing:.02em}
+  .wibclk .t{font-size:16px;display:flex;justify-content:space-between;align-items:baseline} .wibclk .t::after{content:'WIB';font-size:9px;color:#8fa3c8;letter-spacing:.1em}
+  .strap{min-width:0!important;flex-basis:100%}
+  .floatcol{top:calc(var(--st) + 60px)!important}
+  .floatcol{top:calc(var(--st) + 58px)!important;width:150px!important;max-height:calc(100vh - 230px)!important}
+  .pxw,.srw,.gzw,.xvw{padding:7px 8px!important}
+  .pxw .top,.srw .top,.gzw .top,.xvw .top{font-size:9px;letter-spacing:.06em}
+  header.top{padding-right:160px!important}
+  .actg{padding-right:14px!important}
+  .agent{right:auto!important;max-width:calc(100vw - 16px)}
+  .agpanel{width:calc(100vw - 16px)!important}
+  .wdock{bottom:calc(var(--sb) + var(--wm))!important}
+  #muTg{bottom:calc(var(--sb) + var(--wm) + 52px)!important}
+  .apw{width:min(260px,calc(100vw - 16px))!important;bottom:calc(var(--sb) + var(--wm) + 96px)!important;max-height:calc(100vh - 330px)}
+  .apw .apr{grid-template-columns:52px minmax(0,1fr);row-gap:1px} .apw .apr .dt{display:none}
+  .a-me .snst{font-size:9.5px} .a-me .snst td,.a-me .snst th{padding:2px 3px}
+}
+</style>
 </body>
 </html>
