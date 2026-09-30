@@ -3692,7 +3692,7 @@ function shock(){ const m=D.m1; if(m.length<6) return; const x=m[m.length-2], y=
 let actx=null;
 const unlock=()=>{ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){} };
 ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true}));
-const CFG={bell:ST.get('me-bell',true)};
+const CFG={bell:false}; // Sniper window removed from view: no bells, speech, notifications or hot-news popups
 function strike(t0,f,dur){ const out=actx.createGain(); out.gain.value=1; out.connect(actx.__comp);
   [[1,1],[2.76,.6],[5.4,.4],[8.93,.25],[13.34,.15]].forEach(([r,a])=>{ const o=actx.createOscillator(), g=actx.createGain(); o.type='sine'; o.frequency.value=f*r;
     g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(a,t0+.004); g.gain.exponentialRampToValueAtTime(.0008,t0+dur/r**.35); o.connect(g); g.connect(out); o.start(t0); o.stop(t0+dur+.1); });
@@ -4691,6 +4691,50 @@ box.addEventListener('dblclick',view);
 $('tvwSym').textContent=(SYMW.name||SYMW.id||'BTC/USDT')+(SYMW.data&&SYMW.data!==SYMW.id?' ('+SYMW.data+')':'');
 syncUI(); load();
 window.__TVW={get C(){return C;},get F(){return F;},get B(){return B;},get N(){return N;},get RS(){return RS;},get PL(){return PL;},get on(){return on;}};
+})();
+</script>
+<style id="trimAll">
+/* 2026-09-30: removed windows (liquidations, ticker, backtest/best trade/Markov cards, execution cycle, analysis checklist,
+   signal graph, robustness, Monte Carlo, quincunx, trading floor, status bar, note) and every floating widget except the music toggle.
+   The engine behind them keeps running headless because the remaining panels read its data (order book, liquidations, taker flow). */
+.a-liq,.a-mq,.a-cards,.a-cyc,.a-ana,.a-strip,.a-graph,.a-quant,.a-floor,.a-foot,.a-note,
+.floatcol,#wibclk,#apw,#wdock,#agent,#meHot{display:none!important}
+@media (min-width:1400px){
+  .frame{grid-template-rows:auto!important;grid-template-areas:"hdr hdr hdr" "act act act" "top top top" "tvw tvw tvw" "me me me"!important}
+}
+html:not(.gated) #muTg{display:flex!important;right:calc(var(--wm,12px))!important;bottom:calc(env(safe-area-inset-bottom,0px) + var(--wm,12px))!important;left:auto!important;top:auto!important}
+</style>
+<div id="pxFloat" aria-live="off" aria-label="Current price of the selected pair"><div class="pfh"><span id="pfSym">BTC/USDT</span><span id="pfDot" title="live stream">●</span></div><div class="pfp num" id="pfPx">—</div><div class="pfc num" id="pfCh">24h —</div></div>
+<style id="pxFloatStyle">
+/* floating live price (top-left) · amber glass so it stands apart from the panels and the music toggle */
+#pxFloat{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:9000;min-width:190px;padding:8px 12px 9px;border-radius:12px;
+  background:linear-gradient(135deg,rgba(58,36,0,.88),rgba(28,16,0,.88));border:2px solid #ffb020;box-shadow:0 0 16px rgba(255,176,32,.45),inset 0 0 10px rgba(255,176,32,.12);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-family:var(--mono,monospace);color:#fff;pointer-events:none;transition:border-color .25s,box-shadow .25s}
+#pxFloat .pfh{display:flex;justify-content:space-between;gap:10px;font-size:10px;letter-spacing:.16em;font-weight:800;color:#ffcf6b}
+#pxFloat #pfDot{color:#6b5a3a;letter-spacing:0} #pxFloat.on #pfDot{color:#5ef0a0}
+#pxFloat .pfp{font-size:26px;font-weight:800;line-height:1.15;letter-spacing:.01em;transition:color .25s}
+#pxFloat .pfc{font-size:11px;font-weight:700;color:#d9c49a}
+#pxFloat.up .pfp{color:#3dff9a} #pxFloat.dn .pfp{color:#ff5a4d}
+#pxFloat.up{border-color:#3dff9a;box-shadow:0 0 16px rgba(61,255,154,.45)} #pxFloat.dn{border-color:#ff5a4d;box-shadow:0 0 16px rgba(255,90,77,.5)}
+html.gated #pxFloat{display:none}
+@media (max-width:699px){ #pxFloat{left:8px;top:calc(env(safe-area-inset-top,0px) + 8px);min-width:150px;padding:6px 9px} #pxFloat .pfp{font-size:20px} }
+</style>
+<script id="pxFloatScript">
+/* live price of the pair chosen in the header (SYM follows the ?s= / header selector, which reloads the page) */
+(()=>{
+const S=window.SYM, el=document.getElementById('pxFloat'); if(!S||!el) return;
+const sym=S.data.toLowerCase(), dp=S.btc?2:S.dp, $=id=>document.getElementById(id);
+$('pfSym').textContent=S.name+(S.data!==S.id?' · '+S.data:'');
+const fmt=p=>(+p).toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
+let px=null, open24=null, last=null, flashT=0, dirty=false;
+function paint(){ if(!dirty||px==null) return; dirty=false; $('pfPx').textContent=fmt(px);
+  if(last!=null&&px!==last){ el.classList.toggle('up',px>last); el.classList.toggle('dn',px<last); flashT=Date.now(); }
+  last=px; if(open24){ const ch=(px/open24-1)*100; $('pfCh').innerHTML=`24h <span style="color:${ch>=0?'#3dff9a':'#ff5a4d'}">${ch>=0?'+':''}${ch.toFixed(2)}%</span> · ${ch>=0?'+':'−'}${fmt(Math.abs(px-open24))}`; } }
+setInterval(()=>{ paint(); if(flashT&&Date.now()-flashT>900){ el.classList.remove('up','dn'); flashT=0; } },150);
+(function go(back=3000){ let ws; try{ ws=new WebSocket(`wss://data-stream.binance.vision/stream?streams=${sym}@aggTrade/${sym}@miniTicker`); }catch(e){ return setTimeout(()=>go(back*2),back); }
+  ws.onopen=()=>el.classList.add('on');
+  ws.onmessage=e=>{ try{ const m=JSON.parse(e.data), d=m.data; if(d.e==='aggTrade') px=+d.p; else if(d.e==='24hrMiniTicker'){ open24=+d.o; if(px==null) px=+d.c; } dirty=true; }catch(err){} };
+  ws.onclose=()=>{ el.classList.remove('on'); setTimeout(()=>go(Math.min(back*2,60000)),back); }; })();
 })();
 </script>
 </body>
