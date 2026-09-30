@@ -871,11 +871,13 @@ html.ob-max{overflow:hidden}
   <section class="panel a-bb" id="bbPanel" aria-label="Bollinger Band and moving average chart with the open-price squeeze breakout signal">
     <div class="bbg num">
       <div class="bbSig wait" id="bbSig">
-        <div class="bbL">BB squeeze · 1H · <span class="symTxt">BTC</span></div>
-        <div class="bbV" id="bbV">WAIT</div>
-        <div class="bbS" id="bbS">loading 1H candles…</div>
-        <div class="bbLv" id="bbLv"></div>
-        <div class="bbCd" id="bbCd">1H candle closes in --:--</div>
+        <div class="bbL">Momentum · <span id="osTf">—</span> · <span class="symTxt">BTC</span></div>
+        <canvas id="osG" aria-label="Momentum oscillator gauge, 0 oversold to 100 overbought"></canvas>
+        <div class="bbV" id="bbV">NEUTRAL</div>
+        <div class="bbS" id="bbS">loading candles…</div>
+        <div class="osB" id="osB"></div>
+        <div class="osM" id="osM"></div>
+        <div class="bbCd" id="bbCd">1H squeeze: —</div>
       </div>
       <div class="bbC">
         <div class="bbbar">
@@ -4426,18 +4428,28 @@ html.gated #fhTg{display:none}
 @media (min-width:1400px){ .a-bb{grid-area:act!important} }
 @media (min-width:1280px) and (min-height:680px){ .a-bb{grid-area:act!important} }
 .a-bb{min-width:0;overflow:hidden;margin:0!important;border:2px solid rgba(255,255,255,.9)!important}
-.bbg{display:grid;grid-template-columns:230px minmax(0,1fr) 320px;height:260px;background:var(--panel);font-size:10.5px}
+.bbg{display:grid;grid-template-columns:250px minmax(0,1fr) 320px;height:260px;background:var(--panel);font-size:10.5px}
 .bbg>div{min-width:0;min-height:0}
 .bbg>div+div{border-left:1px solid var(--line)}
 /* signal box: top-left corner, glowing blinking border */
-.bbSig{margin:6px;border:3px solid #9aa0ad;border-radius:10px;padding:7px 10px;display:flex;flex-direction:column;gap:3px;overflow:auto;background:rgba(0,0,0,.25)}
-.bbSig .bbL{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-2);font-weight:800}
-.bbSig .bbV{font-family:var(--display);font-size:34px;line-height:1;letter-spacing:.02em;color:#9aa0ad}
-.bbSig .bbS{color:var(--ink-2);font-size:10px;line-height:1.35}
+.bbSig{margin:6px;border:3px solid #9aa0ad;border-radius:10px;padding:5px 9px;display:flex;flex-direction:column;gap:2px;overflow:auto;background:rgba(0,0,0,.25)}
+.bbSig .bbL{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-2);font-weight:800}
+.bbSig .bbV{font-family:var(--display);font-size:24px;text-align:center;line-height:1;letter-spacing:.02em;color:#9aa0ad}
+.bbSig .bbS{color:var(--ink-2);font-size:9.5px;line-height:1.3;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#osG{width:100%;height:62px;display:block;flex:none}
+.osB{display:grid;gap:1px}
+.osB div{display:grid;grid-template-columns:52px minmax(0,1fr) 26px;gap:5px;align-items:center;font-size:9.5px}
+.osB span{color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;font-size:8.5px} .osB b{text-align:right;font-size:10px}
+.osB em{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,rgba(61,255,154,.35) 0 20%,rgba(255,255,255,.08) 20% 80%,rgba(255,90,77,.35) 80%)}
+.osB em i{position:absolute;top:-2px;width:3px;height:10px;margin-left:-1px;border-radius:1px;background:#e6e9ef}
+.osM{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+.osM div{border:1px solid var(--line-2);border-radius:5px;padding:1px 4px;display:grid;text-align:center}
+.osM span{font-size:8px;color:var(--ink-3);text-transform:uppercase} .osM b{font-size:11px}
+.osM .ob{border-color:rgba(255,90,77,.8);background:rgba(255,90,77,.1)} .osM .os{border-color:rgba(61,255,154,.8);background:rgba(61,255,154,.1)}
 .bbSig .bbLv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
 .bbSig .bbLv div{background:var(--panel-2);border-radius:5px;padding:2px 6px;display:grid}
 .bbSig .bbLv span{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)} .bbSig .bbLv b{font-size:12px}
-.bbSig .bbCd{margin-top:auto;font-size:10px;color:var(--ink-2)}
+.bbSig .bbCd{margin-top:auto;font-size:9px;line-height:1.3;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bbSig.buy{--gc:61,255,154;animation:bbBlink .9s ease-in-out infinite} .bbSig.buy .bbV{color:#3dff9a}
 .bbSig.sell{--gc:255,90,77;animation:bbBlink .9s ease-in-out infinite} .bbSig.sell .bbV{color:#ff5a4d}
 .bbSig.armed{--gc:255,216,77;animation:bbBlink 1.6s ease-in-out infinite} .bbSig.armed .bbV{color:#ffd84d}
@@ -4462,7 +4474,7 @@ html.gated #fhTg{display:none}
 .bbHist{display:grid;gap:1px;font-size:9.5px}
 .bbHist div{display:grid;grid-template-columns:62px 38px minmax(0,1fr) auto;gap:5px}
 .bbNote{font-size:9px;line-height:1.3;color:var(--ink-3)}
-@media (min-width:1280px) and (min-height:680px) and (max-height:900px){ .bbg{height:228px} .bbSig .bbV{font-size:28px} }
+@media (min-width:1280px) and (min-height:680px) and (max-height:900px){ .bbg{height:228px} .bbSig .bbV{font-size:19px} #osG{height:50px} .osM b{font-size:10px} }
 @media (max-width:1279px){ .bbg{grid-template-columns:220px minmax(0,1fr);height:auto} .bbC{height:300px} .bbP{grid-column:1/-1;border-left:0!important;border-top:1px solid var(--line)} }
 @media (max-width:699px){ .bbg{grid-template-columns:minmax(0,1fr)} .bbg>div+div{border-left:0;border-top:1px solid var(--line)} .bbC{height:300px} .bbLg{display:none} }
 </style>
@@ -4519,28 +4531,42 @@ async function refresh(){
 
 /* ---------- signal box + strategy column ---------- */
 const mmss=s=>{ s=Math.max(0,Math.floor(s)); return s>=3600?`${Math.floor(s/3600)}h ${String(Math.floor(s%3600/60)).padStart(2,'0')}m`:`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; };
+/* momentum oscillator: mean of RSI 14, Stochastic %K 14·3 and Bollinger %B (0–100). ≥ 80 overbought, ≤ 20 oversold.
+   Context only — fading overbought/oversold on 5m/15m lost money after costs in the 12-month test, so it never creates a trade. */
+function osc(c){ const n=c.length; if(n<30) return null;
+  let ag=null,al=null; for(let j=1;j<n;j++){ const d=c[j].c-c[j-1].c; ag=ag==null?Math.max(d,0):(ag*13+Math.max(d,0))/14; al=al==null?Math.max(-d,0):(al*13+Math.max(-d,0))/14; c[j].rsi=al===0?100:100-100/(1+ag/al); }
+  for(let j=13;j<n;j++){ let hi=-1e18,lo=1e18; for(let q=j-13;q<=j;q++){ hi=Math.max(hi,c[q].h); lo=Math.min(lo,c[q].l); } c[j].k0=hi>lo?(c[j].c-lo)/(hi-lo)*100:50; }
+  for(let j=15;j<n;j++) c[j].sk=(c[j].k0+c[j-1].k0+c[j-2].k0)/3;
+  const at=j=>{ const x=c[j]; if(x.sk==null||x.rsi==null) return null; let s=0,s2=0; for(let q=j-19;q<=j;q++){ s+=c[q].c; s2+=c[q].c*c[q].c; } const mu=s/20, sd=Math.sqrt(Math.max(0,s2/20-mu*mu)); const pb=sd?(x.c-(mu-2*sd))/(4*sd)*100:50;
+    const B=Math.max(0,Math.min(100,pb)); return {rsi:x.rsi,sk:x.sk,pb:B,v:(x.rsi+x.sk+B)/3}; };
+  const now=at(n-1), prev=at(n-4); if(!now) return null; now.slope=prev?now.v-prev.v:0; return now; }
+const zone=v=>v>=80?'ob':v<=20?'os':v>=70?'nob':v<=30?'nos':'mid';
+const OS={mtf:{}};
+async function mtf(){ for(const tf of ['1m','5m','15m','1h']){ try{ const c=tf===CH.tf&&CH.c.length>60?CH.c.slice(-120).map(x=>({...x})):await kl(tf,120); OS.mtf[tf]=osc(c); }catch(e){} } }
+function gauge(v){ const cv=$('osG'); if(!cv) return; const r=cv.getBoundingClientRect(), dpr=devicePixelRatio||1; if(!r.width) return;
+  if(cv.width!==Math.round(r.width*dpr)){ cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr); }
+  const g=cv.getContext('2d'), W=r.width, H=r.height; g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const cx=W/2, cy=H-6, R=Math.min(W/2-8,H-12), a=t=>Math.PI+t/100*Math.PI;
+  const seg=(t0,t1,col)=>{ g.beginPath(); g.arc(cx,cy,R,a(t0),a(t1)); g.strokeStyle=col; g.lineWidth=10; g.stroke(); };
+  seg(0,20,'#3dff9a'); seg(20,30,'rgba(61,255,154,.35)'); seg(30,70,'rgba(255,255,255,.14)'); seg(70,80,'rgba(255,90,77,.35)'); seg(80,100,'#ff5a4d');
+  g.fillStyle='#9aa3b2'; g.font='8px ui-monospace,monospace'; g.textAlign='left'; g.fillText('OVERSOLD',2,H-1); g.textAlign='right'; g.fillText('OVERBOUGHT',W-2,H-1);
+  if(v==null) return; const ang=a(v); g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.cos(ang)*(R-4),cy+Math.sin(ang)*(R-4)); g.strokeStyle='#e6e9ef'; g.lineWidth=2.5; g.stroke();
+  g.beginPath(); g.arc(cx,cy,4,0,7); g.fillStyle='#e6e9ef'; g.fill();
+  g.textAlign='center'; g.font='bold 15px ui-monospace,monospace'; g.fillStyle=v>=80?'#ff5a4d':v<=20?'#3dff9a':v>=70||v<=30?'#ffd84d':'#e6e9ef'; g.fillText(v.toFixed(0),cx,cy-R*.42); }
 function render(){
-  const box=$('bbSig'); if(!box||!B.lastC) return; const now=Date.now()/1000, p=B.px??(B.form?B.form.c:B.lastC.c), o=B.open, f=B.form, sq=B.sq;
-  let cls='wait', V='WAIT', S='', lv='';
-  const L=(a,b)=>`<div><span>${a}</span><b>${b}</b></div>`;
-  if(o&&o.live){ V=o.live>0?'TP HIT':'SL HIT'; S=`The ${o.dir>0?'BUY':'SELL'} from ${fP(o.entry)} reached its ${o.live>0?'2R target':'stop'} in this 1H candle — trade closed, waiting for the next squeeze.`;
-    lv=L('Entry',fP(o.entry))+L('Result',`<span style="color:${o.live>0?'#3dff9a':'#ff5a4d'}">${fD((o.live>0?o.tp:o.sl)-o.entry)}</span>`); }
-  else if(o&&o.entry!=null){ const d=o.dir, pl=(p-o.entry)*d, left=o.t0+RULE.hold*3600-now;
-    cls=d>0?'buy':'sell'; V=d>0?'BUY':'SELL';
-    S=`Squeeze breakout ${d>0?'above the upper':'below the lower'} band at ${new Date(o.t*1000).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} → entered at the 1H OPEN. Live ${pl>=0?'<b style="color:#3dff9a">':'<b style="color:#ff5a4d">'}${fD(pl)}</b> · time stop in ${mmss(left)}.`;
-    lv=L('Entry (open)',fP(o.entry))+L('R : R','1 : 2')+L('Stop · 1 ATR',`<span style="color:#ff5a4d">${fP(o.sl)}</span>`)+L('Target · 2 ATR',`<span style="color:#3dff9a">${fP(o.tp)}</span>`); }
-  else if(o){ cls=o.dir>0?'buy':'sell'; V=o.dir>0?'BUY':'SELL'; S='Breakout confirmed — entry at the OPEN of the new 1H candle.'; }
-  else if(sq&&sq.on&&f){ const up=f.ub!=null?f.ub:B.lastC.ub, dn=f.lb!=null?f.lb:B.lastC.lb, out=p>up?1:p<dn?-1:0;
-    cls='armed'; V=out>0?'BUY?':out<0?'SELL?':'ARMED';
-    S=out?`Price is ${out>0?'above the upper':'below the lower'} band now — if the 1H candle CLOSES there, ${out>0?'BUY':'SELL'} at the next open. Not confirmed yet.`:`Bands are squeezed (bandwidth ${(sq.bw*100).toFixed(2)}% vs 120-bar low ${(sq.mn*100).toFixed(2)}%). Waiting for a 1H close outside the band.`;
-    if(out) box.classList.add('hot'); else box.classList.remove('hot');
-    lv=L('BUY if close >',fP(up))+L('SELL if close <',fP(dn))+L('Stop','1 × ATR '+fP(B.lastC.atr))+L('Target','2 × ATR'); }
-  else { S=sq?`No squeeze: bandwidth ${(sq.bw*100).toFixed(2)}% is ${(sq.bw/sq.mn).toFixed(2)}× its 120-bar low (needs ≤ ${RULE.th}×). Bands are too wide for the breakout rule.`:'Waiting for data…';
-    lv=L('Upper band',fP(f?f.ub:B.lastC.ub))+L('Lower band',fP(f?f.lb:B.lastC.lb))+L('SMA 20',fP(f?f.mb:B.lastC.mb))+L('ATR 14',fP(B.lastC.atr)); }
-  if(cls!=='armed') box.classList.remove('hot');
-  box.className='bbSig '+cls+(box.classList.contains('hot')?' hot':''); $('bbV').textContent=V; $('bbS').innerHTML=S; $('bbLv').innerHTML=lv;
+  const box=$('bbSig'); if(!box) return; const c=CH.c; $('osTf').textContent=CH.tf.toUpperCase();
+  const o=c.length>60?osc(c.slice(-150).map(x=>({...x}))):null; OS.now=o; if(o) OS.mtf[CH.tf]=o; gauge(o?o.v:null);
+  if(!o){ $('bbS').textContent='loading candles…'; } else {
+    const z=zone(o.v), up=o.slope>1.5, dn=o.slope<-1.5, mom=up?'momentum rising ↑':dn?'momentum falling ↓':'momentum flat →';
+    const V={ob:'OVERBOUGHT',os:'OVERSOLD',nob:'NEAR OVERBOUGHT',nos:'NEAR OVERSOLD',mid:'NEUTRAL'}[z];
+    const cls={ob:'sell',os:'buy',nob:'armed',nos:'armed',mid:'wait'}[z];
+    const S={ob:`Stretched up · ${mom}`,os:`Stretched down · ${mom}`,nob:`Approaching overbought · ${mom}.`,nos:`Approaching oversold · ${mom}.`,mid:`No extreme · ${mom}.`}[z];
+    box.className='bbSig '+cls+((z==='ob'&&dn)||(z==='os'&&up)?' hot':''); $('bbV').textContent=V; $('bbV').style.fontSize=V.length>11?'16px':''; $('bbS').textContent=S; $('bbS').title={ob:'Overbought: late to buy — wait for the meter to turn down.',os:'Oversold: late to sell — wait for the meter to turn up.'}[z]||'';
+    const bar=(l,v)=>`<div><span>${l}</span><em><i style="left:${Math.max(0,Math.min(100,v))}%"></i></em><b style="color:${v>=80?'#ff5a4d':v<=20?'#3dff9a':'inherit'}">${v.toFixed(0)}</b></div>`;
+    $('osB').innerHTML=bar('RSI 14',o.rsi)+bar('Stoch 14·3',o.sk)+bar('BB %B',o.pb);
+    $('osM').innerHTML=['1m','5m','15m','1h'].map(tf=>{ const m=OS.mtf[tf]; const z2=m?zone(m.v):''; return `<div class="${z2==='ob'?'ob':z2==='os'?'os':''}"><span>${tf}</span><b>${m?m.v.toFixed(0):'—'}</b></div>`; }).join(''); }
+  if(!B.lastC) return; const p=B.px??(B.form?B.form.c:B.lastC.c), q=B.open, sq=B.sq;
   plan(p); }
-
 function plan(p){
   const el=$('bbPlan'); if(!el||!B.lastC) return; const k=B.form||B.lastC, sq=B.sq, o=B.open;
   const trend=k.e50>k.e200&&p>k.e200?1:k.e50<k.e200&&p<k.e200?-1:0;
@@ -4599,12 +4625,14 @@ async function load(tf){ CH.tf=tf; ST.set('bb-tf',tf); if(CH.ws){ try{ CH.ws.onc
   open(); }
 function head(){ const c=CH.c[CH.c.length-1]; if(!c||c.ub==null) return; const p=c.c, pos=(p-c.lb)/(c.ub-c.lb||1);
   $('bbHead').innerHTML=`${CH.tf} · %B ${(pos*100).toFixed(0)}% · width ${((c.ub-c.lb)/c.mb*100).toFixed(2)}% · ${p>c.mb?'above':'below'} SMA20 · ${CH.age&&Date.now()-CH.age<5000?'<span style="color:#3dff9a">● live</span>':'<span class="muted">● delayed</span>'}`; }
-function countdown(){ const now=Date.now()/1000, left=3600-now%3600; $('bbCd').textContent=`1H candle closes in ${mmss(left)} · decision at the close, entry at the next open`; }
+function countdown(){ const now=Date.now()/1000, left=3600-now%3600, q=B.open, sq=B.sq, el=$('bbCd'); if(!el) return;
+  el.innerHTML=q&&q.entry!=null&&!q.live?`1H squeeze: <b style="color:${q.dir>0?'#3dff9a':'#ff5a4d'}">${q.dir>0?'BUY':'SELL'}</b> active @ ${fP(q.entry)} · SL ${fP(q.sl)} · TP ${fP(q.tp)}`
+    :sq&&sq.on?`1H squeeze: <b style="color:#ffd84d">ARMED</b> · 1H closes in ${mmss(left)}`:`1H squeeze: none · closes in ${mmss(left)}`; }
 
 function boot(){ if(!mkChart()){ setTimeout(boot,500); return; }
-  const sel=$('bbTf'); if(!TFS[CH.tf]) CH.tf='1h'; sel.value=CH.tf; sel.onchange=()=>load(sel.value);
+  const sel=$('bbTf'); if(!TFS[CH.tf]) CH.tf='1h'; sel.value=CH.tf; sel.onchange=()=>{ load(sel.value); OS.now=null; };
   const hdr=$('tfSel'); if(hdr) hdr.addEventListener('change',()=>{ if(TFS[hdr.value]&&hdr.value!==CH.tf){ sel.value=hdr.value; load(hdr.value); } });
-  load(CH.tf); refresh();
+  load(CH.tf); refresh(); setTimeout(mtf,1500); setInterval(()=>{ if(!document.hidden) mtf(); },20000);
   let lastH=Math.floor(Date.now()/3600000);
   setInterval(()=>{ countdown(); if(!document.hidden){ render(); head(); } const h=Math.floor(Date.now()/3600000); if(h!==lastH){ lastH=h; setTimeout(refresh,4000); } },1000);
   setInterval(refresh,60000); }
