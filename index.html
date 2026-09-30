@@ -861,7 +861,7 @@ html.ob-max{overflow:hidden}
     <div class="brand"><div class="logo" id="symLogo">₿</div><h1 id="symH1">VVIP Master Scalping <span class="hdl">• @Liemyo_</span></h1></div>
     <div class="strap" id="strap">Connecting to Binance…</div>
     <div class="controls">
-      <button class="btn" id="soundBtn" aria-pressed="false" title="Sound alerts for every window. Loud repeating siren + voice on strong signals: AI Agent BUY / SELL, Sniper Indicator BUY / SELL / RE-ENTRY, footprint setup, 1H Bollinger squeeze trade. Soft beep on: momentum meter overbought / oversold, open drive, pressure meter STRONG, big trades ≥ 5× minimum. Click anywhere to silence the siren.">ALERT: OFF</button>
+      <button class="btn" id="soundBtn" aria-pressed="false" title="Sound alerts for every window (futuristic electro laser shots — the more important the signal, the louder and longer). Strong signals: rapid laser volley + charged plasma shot, repeated, plus voice: AI Agent BUY / SELL, Sniper Indicator BUY / SELL / RE-ENTRY, footprint setup, 1H Bollinger squeeze trade. Soft beep on: momentum meter overbought / oversold, open drive, pressure meter STRONG, big trades ≥ 5× minimum. Click anywhere to silence the siren.">ALERT: OFF</button>
       <a class="btn" href="https://my.exness.com/webtrading" target="_blank" rel="noopener">EXNESS ↗</a>
       <a class="btn wa" href="https://wa.me/6282299774825" target="_blank" rel="noopener" title="Contact customer service on WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.5 1.1 2.7c.1.2 1.9 2.9 4.6 4 1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.8-1.2.2-.6.2-1.1.1-1.2l-.4-.3z"/></svg>CONTACT CS</a>
     </div>
@@ -1764,10 +1764,33 @@ if($('whaleMin')&&!SYM.btc){ const w=1e5*VS, m=10**Math.floor(Math.log10(w)); $(
 /* one timeframe for chart + analysis + desk + agent + S/R + price widget (Sniper/Whale/Breakout keep validated TFs) */
 function syncTF(tf){} // agent / S-R / price widgets removed; the header TF drives the TradingView window and footprint (hdrSync)
 let actx;
-function beep(f){ try{ actx=actx||new AudioContext(); const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=f; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.15,actx.currentTime); g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.5); o.start(); o.stop(actx.currentTime+.5);}catch(e){} }
+/* ===== futuristic electro laser shots: the more important the signal, the louder and longer the shot =====
+   level 1 = light zap (small events) · 2 = double shot (pressure STRONG, big trades) · 3 = volley + charged plasma shot (strong signals) */
+let laserBus=null;
+function laserOut(){ if(laserBus) return laserBus; const comp=actx.createDynamicsCompressor(); comp.threshold.value=-10; comp.ratio.value=4; comp.connect(actx.destination);
+  const dly=actx.createDelay(.5), fb=actx.createGain(), wet=actx.createGain(); dly.delayTime.value=.085; fb.gain.value=.32; wet.gain.value=.35; // short echo = sci-fi tail
+  dly.connect(fb); fb.connect(dly); dly.connect(wet); wet.connect(comp); laserBus={in:comp,fx:dly}; return laserBus; }
+function zap(f,lvl=1,at=0){ try{ actx=actx||new AudioContext(); if(actx.state==='suspended') actx.resume(); const bus=laserOut(), t=actx.currentTime+at;
+  const dur=[0,.14,.26,.55][lvl]||.14, vol=[0,.22,.42,.75][lvl]||.22, hi=f*2.2, lo=Math.max(60,f/5);
+  const g=actx.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+.006); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  const flt=actx.createBiquadFilter(); flt.type='bandpass'; flt.Q.value=3; flt.frequency.setValueAtTime(hi*1.2,t); flt.frequency.exponentialRampToValueAtTime(lo*2,t+dur);
+  for(const [type,det] of [['sawtooth',0],['square',9]]){ const o=actx.createOscillator(); o.type=type; o.detune.value=det;
+    o.frequency.setValueAtTime(hi,t); o.frequency.exponentialRampToValueAtTime(lo,t+dur); o.connect(flt); o.start(t); o.stop(t+dur+.02); }
+  // noise crack at the muzzle
+  const n=Math.floor(actx.sampleRate*.04), buf=actx.createBuffer(1,n,actx.sampleRate), d=buf.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n);
+  const ns=actx.createBufferSource(), hp=actx.createBiquadFilter(), ng=actx.createGain(); ns.buffer=buf; hp.type='highpass'; hp.frequency.value=2500; ng.gain.value=vol*.6;
+  ns.connect(hp); hp.connect(ng); ng.connect(bus.in); ng.connect(bus.fx); ns.start(t);
+  flt.connect(g); g.connect(bus.in); g.connect(bus.fx); }catch(e){} }
+// charged plasma shot: rising charge, then a long heavy discharge
+function plasma(f,at=0){ try{ actx=actx||new AudioContext(); const t=actx.currentTime+at, bus=laserOut();
+  const c=actx.createOscillator(), cg=actx.createGain(); c.type='triangle'; c.frequency.setValueAtTime(f/3,t); c.frequency.exponentialRampToValueAtTime(f*3,t+.45);
+  cg.gain.setValueAtTime(.0001,t); cg.gain.exponentialRampToValueAtTime(.25,t+.42); cg.gain.exponentialRampToValueAtTime(.0001,t+.47);
+  const lfo=actx.createOscillator(), lg=actx.createGain(); lfo.frequency.value=28; lg.gain.value=f*.25; lfo.connect(lg); lg.connect(c.frequency); lfo.start(t); lfo.stop(t+.5);
+  c.connect(cg); cg.connect(bus.in); c.start(t); c.stop(t+.5); }catch(e){} zap(f*.8,3,at+.46); zap(f*.55,2,at+.5); }
+function beep(f,lvl=1){ zap(f,lvl); if(lvl>=2) zap(f*1.12,lvl-1,.11); }
 const setAlert=v=>{ S.sound=v; $('soundBtn').setAttribute('aria-pressed',v); $('soundBtn').textContent=`ALERT: ${v?'ON':'OFF'}`; store.set('hdr-alert',v); };
 setAlert(!!store.get('hdr-alert'));
-$('soundBtn').addEventListener('click',()=>{ setAlert(!S.sound); if(S.sound) beep(660); else alarmStop(); });
+$('soundBtn').addEventListener('click',()=>{ setAlert(!S.sound); if(S.sound){ beep(1200,1); setTimeout(()=>beep(1500,2),220); } else alarmStop(); });
 /* strong signals: loud square-wave siren, 3 pulses × 4 rounds, repeated 3 times (≈ 9 s) + spoken label; any click / key stops it.
    The same label is not repeated within 60 s. Weak signals keep the single soft beep. */
 const ALM={t:[],last:{},on:false};
@@ -1775,15 +1798,14 @@ function alarmStop(){ ALM.t.forEach(clearTimeout); ALM.t=[]; ALM.on=false; try{ 
 function alarm(dir,label){ if(!S.sound) return; const now=Date.now(); if(ALM.last[label]&&now-ALM.last[label]<60000) return; ALM.last[label]=now; alarmStop(); ALM.on=true;
   document.documentElement.classList.add('alarming');
   try{ actx=actx||new AudioContext(); if(actx.state==='suspended') actx.resume(); }catch(e){ return; }
-  const hi=dir>0?1480:880, lo=dir>0?1040:520;
-  const pulse=(f)=>{ try{ const o=actx.createOscillator(), g=actx.createGain(); o.type='square'; o.frequency.value=f; o.connect(g); g.connect(actx.destination); const t=actx.currentTime;
-    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.55,t+.01); g.gain.setValueAtTime(.55,t+.11); g.gain.exponentialRampToValueAtTime(.0001,t+.14); o.start(t); o.stop(t+.15); }catch(e){} };
-  let ms=0; for(let rep=0;rep<3;rep++){ for(let r=0;r<4;r++){ for(let k=0;k<3;k++){ const f=k%2?lo:hi; ALM.t.push(setTimeout(()=>pulse(f),ms)); ms+=190; } ms+=260; }
+  const f=dir>0?1500:760; // higher = BUY, lower = SELL
+  let ms=0; for(let rep=0;rep<3;rep++){ for(let k=0;k<5;k++){ const lv=k<4?2:3; ALM.t.push(setTimeout(()=>zap(f*(1+k*.06*(dir>0?1:-1)),lv),ms)); ms+=130; }
+    ALM.t.push(setTimeout(()=>plasma(f),ms)); ms+=1100;
     if(rep===0) ALM.t.push(setTimeout(()=>{ try{ const u=new SpeechSynthesisUtterance(label); u.lang='en-US'; u.rate=1; u.volume=1; speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} },ms));
-    ms+=1400; }
+    ms+=1300; }
   ALM.t.push(setTimeout(alarmStop,ms)); }
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,e=>{ if(ALM.on&&!(e.target.closest&&e.target.closest('#soundBtn'))) alarmStop(); },{capture:true,passive:true}));
-window.hdrAlert={on:()=>S.sound, beep:f=>{ if(S.sound) beep(f); }, alarm, stop:alarmStop}; // header ALERT toggle drives the sounds of every window
+window.hdrAlert={on:()=>S.sound, beep:(f,l)=>{ if(S.sound) beep(f,l||1); }, alarm, stop:alarmStop, test:(l)=>{ l===3?plasma(1500):beep(1200,l||1); }}; // header ALERT toggle drives the sounds of every window
 $('kApply').addEventListener('click',()=>{ if(S.kSug!=null){ $('riskPct').value=S.kSug.toFixed(2); $('riskPct').dispatchEvent(new Event('input')); } });
 
 /* ---------- liquidations ---------- */
@@ -2023,7 +2045,7 @@ function obMeter(){
     :`<div class="omt">balanced · range <b>${bw?obF(bw.p):'—'}</b> – <b>${aw?obF(aw.p):'—'}</b></div><div class="omw">biggest bid wall ↔ biggest ask wall (±0.5 %)</div>`)
     +`<div class="omw">${mg.up?`liq ↑ ${obF(mg.up.p)} ${obUsd(mg.up.usd)}`:''}${mg.up&&mg.dn?' · ':''}${mg.dn?`liq ↓ ${obF(mg.dn.p)} ${obUsd(mg.dn.usd)}`:''}</div>`;
   const P=$('obComp'); if(P) P.innerHTML=comp.map(([n,x,wt])=>`<div class="omc"><span>${n} <i>${Math.round(wt*100)}%</i></span><div class="omb"><em></em><b style="${x>=0?`left:50%;width:${x*50}%;background:#25d07d`:`right:50%;width:${-x*50}%;background:#f25745`}"></b></div><strong style="color:${x>.1?'#25d07d':x<-.1?'#f25745':'#8a93a4'}">${x>=0?'+':''}${(x*100).toFixed(0)}</strong></div>`).join('');
-  const strong=v>=45?1:v<=-45?-1:0; if(strong&&strong!==OBM.strong) window.hdrAlert?.beep(strong>0?1180:360); OBM.strong=strong;
+  const strong=v>=45?1:v<=-45?-1:0; if(strong&&strong!==OBM.strong) window.hdrAlert?.beep(strong>0?1180:520,2); OBM.strong=strong;
   const Mx=cv.closest('.obM'); if(Mx){ Mx.classList.toggle('buy',v>=15); Mx.classList.toggle('sell',v<=-15); }
   const hd=$('obHead'); if(hd) hd.innerHTML=`<span style="color:${col}">${lbl} ${(v>0?'+':'')+v.toFixed(0)}</span>${tgt?` · → ${obF(tgt.p)}`:''}`;
 }
@@ -3641,7 +3663,7 @@ function fill(ex,buy,px,qty,t){
   T.pend[k]={ex,buy,usd,q:qty,px,t,last:t};
 }
 function flush(k){ const p=T.pend[k]; delete T.pend[k]; if(!p||p.usd<minUsd()*.5) return;
-  if(p.usd>=minUsd()*5) window.hdrAlert?.beep(p.buy?1560:300);
+  if(p.usd>=minUsd()*5) window.hdrAlert?.beep(p.buy?1560:600,2);
   T.list.unshift({ex:p.ex,buy:p.buy,usd:p.usd,px:p.px,t:p.t,nw:true}); if(T.list.length>400) T.list.length=400; T.dirty=true; }
 setInterval(()=>{ const now=Date.now(); for(const k in T.pend) if(now-T.pend[k].last>200) flush(k); },250);
 
