@@ -687,6 +687,15 @@ tr.active td{background:rgba(234,108,196,.08)}
 html.ob-max{overflow:hidden}
 </style>
 <style id="obTopStyle">
+/* liquidation map + heatmaps moved to the top of the order book panel; the liquidation panel keeps volume, stats and feed */
+.lqtop{border-bottom:1px solid var(--line)}
+.a-liq .liq{grid-template-columns:minmax(0,1fr)!important}
+.a-liq .liqR{border-left:0;border-top:0}
+@media (min-width:1100px){
+  .a-liq .liqR{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"tv ft" "st fd" "br fd";align-items:start}
+  .a-liq #tvGrid{grid-area:tv} .a-liq #lqStats{grid-area:st} .a-liq #lqBars{grid-area:br} .a-liq .liqR>.lqt{grid-area:ft;border-left:1px solid var(--line)}
+  .a-liq #lqFeed{grid-area:fd;max-height:260px;border-left:1px solid var(--line);align-self:stretch}
+}
 .a-top{display:none!important}
 @media (min-width:1400px){ .a-obtop{grid-area:top} }
 .obtg{display:grid;grid-template-columns:minmax(0,1fr) 300px;background:#06131f}
@@ -822,8 +831,22 @@ html.ob-max{overflow:hidden}
   </section>
 
   <!-- TOP: real-time order book heatmap + buy/sell pressure meter (replaces main chart + technical analysis) -->
-  <section class="panel a-obtop" aria-label="Real-time order book heatmap and buy/sell pressure meter">
-    <div class="ph"><span>🔥 <span id="obSym">BTC</span> Order Book Heatmap · real-time · buy/sell pressure</span><span class="r num" id="obHead">connecting…</span></div>
+  <section class="panel a-obtop" aria-label="Liquidation map, real-time order book heatmap and buy/sell pressure meter">
+    <div class="ph"><span>🔥 <span id="obSym">BTC</span> Liquidation Map · Order Book Heatmap · real-time · buy/sell pressure</span><span class="r num" id="obHead">connecting…</span></div>
+    <div class="liqL lqtop">
+        <div>
+          <div class="lqt"><b>BTC · Liquidation Map · 3 days</b>
+            <span><i style="background:#f5b12e"></i>10×</span><span><i style="background:#ff7a59"></i>25×</span><span><i style="background:#a371f7"></i>50×</span><span><i style="background:#4fa3ff"></i>100×</span>
+            <span><i style="background:var(--down);height:2px"></i>Cum Long</span><span><i style="background:var(--up);height:2px"></i>Cum Short</span></div>
+          <canvas id="lqMap"></canvas>
+        </div>
+        <div class="lqh3">
+          <div><div class="lqt"><b>BTC · 1 Month</b><span class="muted">candle 4H</span></div><canvas id="lqH0"></canvas></div>
+          <div><div class="lqt"><b>BTC · 1 Week</b><span class="muted">candle 1H</span></div><canvas id="lqH1"></canvas></div>
+          <div><div class="lqt"><b>BTC · 12 Hours</b><span class="muted">candle 5M</span></div><canvas id="lqH2"></canvas></div>
+        </div>
+        <div class="lqnote">The map and heatmaps estimate liquidation levels from Binance volume assuming 10–100× leverage. A level disappears once price trades through it. Brighter = more positions estimated to be liquidated at that price.</div>
+      </div>
     <div class="obtg" id="obTg">
       <div class="obL">
         <div class="obwrap" id="obWrap">
@@ -953,20 +976,6 @@ html.ob-max{overflow:hidden}
   <section class="panel a-liq">
     <div class="ph"><span>⚡ <span class="symTxt">BTC</span> Liquidations · Live</span><span class="r num" id="liqHead">loading…</span></div>
     <div class="liq">
-      <div class="liqL">
-        <div>
-          <div class="lqt"><b>BTC · Liquidation Map · 3 days</b>
-            <span><i style="background:#f5b12e"></i>10×</span><span><i style="background:#ff7a59"></i>25×</span><span><i style="background:#a371f7"></i>50×</span><span><i style="background:#4fa3ff"></i>100×</span>
-            <span><i style="background:var(--down);height:2px"></i>Cum Long</span><span><i style="background:var(--up);height:2px"></i>Cum Short</span></div>
-          <canvas id="lqMap"></canvas>
-        </div>
-        <div class="lqh3">
-          <div><div class="lqt"><b>BTC · 1 Month</b><span class="muted">candle 4H</span></div><canvas id="lqH0"></canvas></div>
-          <div><div class="lqt"><b>BTC · 1 Week</b><span class="muted">candle 1H</span></div><canvas id="lqH1"></canvas></div>
-          <div><div class="lqt"><b>BTC · 12 Hours</b><span class="muted">candle 5M</span></div><canvas id="lqH2"></canvas></div>
-        </div>
-        <div class="lqnote">The map and heatmaps estimate liquidation levels from Binance volume assuming 10–100× leverage. A level disappears once price trades through it. Brighter = more positions estimated to be liquidated at that price.</div>
-      </div>
       <div class="liqR">
         <div class="tv" id="tvGrid"></div>
         <div class="lqstats num" id="lqStats"></div>
