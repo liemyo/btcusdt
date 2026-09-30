@@ -725,6 +725,32 @@ tr.active td{background:rgba(234,108,196,.08)}
 .obwrap.max #obHeat{flex:1;height:auto!important;min-height:0}
 html.ob-max{overflow:hidden}
 </style>
+<style id="obTopStyle">
+.a-top{display:none!important}
+@media (min-width:1400px){ .a-obtop{grid-area:top} }
+.obtg{display:grid;grid-template-columns:minmax(0,1fr) 300px;background:#06131f}
+.obtg .obL{min-width:0;padding-top:6px}
+.obtg #obHeat{height:600px!important}
+.obM{border-left:1px solid var(--line);padding:10px 12px;display:grid;gap:8px;align-content:start;background:var(--panel)}
+.obM .omh{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);font-weight:800}
+#obGauge{width:100%;height:170px;display:block}
+#obLean .oml{font-family:var(--display);font-size:26px;line-height:1;text-align:center;letter-spacing:.02em}
+#obLean .omt{font-size:12px;text-align:center;margin-top:6px} #obLean .omt span{color:var(--ink-2)}
+#obLean .omw{font-size:10.5px;color:var(--ink-2);text-align:center;margin-top:3px}
+#obComp{display:grid;gap:5px;border-top:1px dashed var(--line-2);padding-top:8px}
+.omc{display:grid;grid-template-columns:118px minmax(0,1fr) 34px;gap:6px;align-items:center;font-size:10.5px}
+.omc span{color:var(--ink-2)} .omc i{font-style:normal;color:var(--ink-3)} .omc strong{text-align:right}
+.omb{position:relative;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.omb em{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--ink-3)} .omb b{position:absolute;top:0;bottom:0;border-radius:4px}
+#obLean .oml small{font-family:var(--mono);font-size:15px;opacity:.9}
+.obM .omn{font-size:9.5px;color:var(--ink-3);line-height:1.4}
+@media (max-width:899px){ .obtg{grid-template-columns:minmax(0,1fr)} .obM{border-left:0;border-top:1px solid var(--line)} .obtg #obHeat{height:420px!important} }
+.obtg.max{position:fixed;inset:0;z-index:9000;grid-template-rows:100vh}
+.obtg.max .obL,.obtg.max .obwrap{display:flex;flex-direction:column;min-height:0;height:100%}
+.obtg.max #obHeat{flex:1;height:auto!important;min-height:0}
+.obtg.max .obM{overflow:auto}
+@media (max-width:899px){ .obtg.max{grid-template-rows:minmax(0,1fr) auto} .obtg.max .obL{height:auto} }
+</style>
 </head>
 <body>
 <div class="floatcol">
@@ -808,6 +834,31 @@ html.ob-max{overflow:hidden}
   <!-- MARKET ACTIVITY STATUS -->
   <section class="panel a-act" aria-label="Market activity status and trading recommendation">
     <div class="actg num" id="actBar"><span class="muted">Measuring market volume and transactions…</span></div>
+  </section>
+
+  <!-- TOP: real-time order book heatmap + buy/sell pressure meter (replaces main chart + technical analysis) -->
+  <section class="panel a-obtop" aria-label="Real-time order book heatmap and buy/sell pressure meter">
+    <div class="ph"><span>🔥 <span id="obSym">BTC</span> Order Book Heatmap · real-time · buy/sell pressure</span><span class="r num" id="obHead">connecting…</span></div>
+    <div class="obtg" id="obTg">
+      <div class="obL">
+        <div class="obwrap" id="obWrap">
+        <div class="lqt obbar" style="padding:0 12px"><b>Order book heatmap · real-time</b>
+          <label>Window <select id="obWin"><option value="60">1 min</option><option value="180">3 min</option><option value="300">5 min</option><option value="600">10 min</option><option value="1200">20 min</option></select></label>
+          <label>Range <select id="obRng"><option value="40">±40</option><option value="80">±80</option><option value="160">±160</option><option value="320">±320</option><option value="640">±640</option></select></label>
+          <label>Bubbles <select id="obMin"><option value="5000">≥ $5K</option><option value="20000">≥ $20K</option><option value="100000">≥ $100K</option></select></label>
+          <button class="btn sm" id="obMax" type="button" title="Full screen (Esc to close)">⛶</button>
+          <span class="muted obsub"><span id="obInfo">—</span> · green/red line = best bid/ask · bubble = trade · yellow ring = liquidation · hover for size</span></div>
+        <canvas id="obHeat"></canvas>
+        </div>
+      </div>
+      <aside class="obM">
+        <div class="omh">Pressure meter</div>
+        <canvas id="obGauge"></canvas>
+        <div id="obLean" class="num"><div class="omw">Waiting for the live order book…</div></div>
+        <div id="obComp" class="num"></div>
+        <div class="omn">Needle = weighted taker flow, order book imbalance, 60 s momentum and liquidation magnet pull (−100 sell … +100 buy). Short-term pressure only — not a trade signal.</div>
+      </aside>
+    </div>
   </section>
 
   <!-- TOP: main chart + technical analysis -->
@@ -976,15 +1027,6 @@ html.ob-max{overflow:hidden}
       </div>
       <div class="liqR">
         <div class="tv" id="tvGrid"></div>
-        <div class="obwrap" id="obWrap">
-        <div class="lqt obbar" style="padding:0 12px"><b>Order book heatmap · real-time</b>
-          <label>Window <select id="obWin"><option value="60">1 min</option><option value="180">3 min</option><option value="300">5 min</option><option value="600">10 min</option><option value="1200">20 min</option></select></label>
-          <label>Range <select id="obRng"><option value="40">±40</option><option value="80">±80</option><option value="160">±160</option><option value="320">±320</option><option value="640">±640</option></select></label>
-          <label>Bubbles <select id="obMin"><option value="5000">≥ $5K</option><option value="20000">≥ $20K</option><option value="100000">≥ $100K</option></select></label>
-          <button class="btn sm" id="obMax" type="button" title="Full screen (Esc to close)">⛶</button>
-          <span class="muted obsub"><span id="obInfo">—</span> · green/red line = best bid/ask · bubble = trade · yellow ring = liquidation · hover for size</span></div>
-        <canvas id="obHeat"></canvas>
-        </div>
         <div class="lqstats num" id="lqStats"></div>
         <canvas id="lqBars"></canvas>
         <div class="lqt" style="padding:8px 12px 4px;border-top:1px solid var(--line)"><b>Liquidation feed</b><span id="lqSrc" class="num" style="display:flex;gap:10px;flex-wrap:wrap"></span></div>
@@ -2246,9 +2288,11 @@ function drawOB(){
   // header strip: spread, depth ±0.1 %, imbalance, stream rate
   const r1=mid*.001; let bd=0,ad=0; for(const [p,q] of OBX.bids) if(p>=mid-r1) bd+=q; for(const [p,q] of OBX.asks) if(p<=mid+r1) ad+=q;
   OBX.ev=OBX.ev.filter(t=>t>now-5000); const rate=OBX.ev.length/5, imb=bd+ad?bd/(bd+ad):.5;
-  g.font='bold 10px JetBrains Mono'; g.fillStyle='#fff'; let tx=6; const put=(s,col)=>{ g.fillStyle=col||'#d7dce5'; g.fillText(s,tx,12); tx+=g.measureText(s).width+14; };
+  g.font='bold 10px JetBrains Mono'; g.fillStyle='#fff'; let tx=6; const put=(s,col)=>{ const wd=g.measureText(s).width; if(tx+wd>pw+ladW) return; g.fillStyle=col||'#d7dce5'; g.fillText(s,tx,12); tx+=wd+14; };
   put('● LIVE 100ms · '+rate.toFixed(1)+' upd/s','#5ef0a0'); put('bid '+obF(bbL),'#7dffb8'); put('ask '+obF(baL),'#ff9a8f'); put('spread '+(baL-bbL).toFixed(SYM.btc?2:SYM.dp));
   put(`±0.1% depth  bid ${bd.toFixed(1)} / ask ${ad.toFixed(1)} ${BASE}`); put(`imbalance ${(imb*100).toFixed(0)}% bid`,imb>.6?'#5ef0a0':imb<.4?'#ff9a8f':'#d7dce5');
+  // lean target from the pressure meter
+  if(OBM.tgt){ const yL=Y(OBM.tgt.p); if(yL>top0&&yL<top0+ph){ const cl=OBM.tgt.s>0?'#25d07d':'#f25745'; g.strokeStyle=cl; g.lineWidth=2; g.setLineDash([8,4]); g.beginPath(); g.moveTo(pw*.6,yL); g.lineTo(pw,yL); g.stroke(); g.setLineDash([]); g.font='bold 10px JetBrains Mono'; g.fillStyle=cl; g.fillText((OBM.tgt.s>0?'▲ LEAN ':'▼ LEAN ')+obF(OBM.tgt.p),pw*.6,yL-4); } }
   // price tag
   const yT=Y(mid); g.strokeStyle='rgba(255,255,255,.55)'; g.setLineDash([3,3]); g.beginPath(); g.moveTo(0,yT); g.lineTo(pw+ladW,yT); g.stroke(); g.setLineDash([]);
   g.font='bold 10px JetBrains Mono'; g.fillStyle=C.warn; g.fillRect(pw+ladW+1,yT-8,w-pw-ladW-1,16); g.fillStyle='#1d1400'; g.fillText(obF(mid),pw+ladW+4,yT+4);
@@ -2259,10 +2303,11 @@ function drawOB(){
     const lines=[`${obF((kb+r)*bin)} – ${obF((kb+r+1)*bin)}`,`${(v||0).toFixed(3)} ${BASE} · ${obUsd((v||0)*pr)}`,new Date(t).toTimeString().slice(0,8)+(c===nC-1?' · live':'')];
     g.font='10px JetBrains Mono'; const tw=Math.max(...lines.map(s=>g.measureText(s).width))+12, bx=hv.x+12+tw>pw?hv.x-tw-12:hv.x+12, by=Math.min(top0+ph-46,hv.y+10);
     g.fillStyle='rgba(8,12,20,.92)'; g.fillRect(bx,by,tw,44); g.strokeStyle='rgba(255,255,255,.4)'; g.strokeRect(bx+.5,by+.5,tw-1,43); lines.forEach((s,i)=>{ g.fillStyle=i?'#d7dce5':'#fff'; g.fillText(s,bx+6,by+13+i*13); }); }
+  try{ obMeter(); }catch(e){}
   const lbl=$('obInfo'); if(lbl) lbl.textContent=`${OBV.win>=60?OBV.win/60+' min':OBV.win+' s'} · ±${obF(half)} · row ${obF(bin)} · ${cols.length} columns`;
 }
-function obInit(){ window.__OBX=OBX;
-  const cv=$('obHeat'), wrap=$('obWrap'); obConnect(); setInterval(obSample,500);
+function obInit(){ window.__OBX=OBX; const sy=$('obSym'); if(sy) sy.textContent=SYM.base;
+  const cv=$('obHeat'), wrap=$('obTg')||$('obWrap'); obConnect(); setInterval(obSample,500);
   try{ new IntersectionObserver(e=>{ OBX.vis=e[0].isIntersecting; }).observe(cv); }catch(e){}
   setInterval(()=>{ if(OBX.vis&&!document.hidden) drawOB(); },250);
   cv.addEventListener('mousemove',e=>{ const r=cv.getBoundingClientRect(); OBX.hover={x:e.clientX-r.left,y:e.clientY-r.top}; });
@@ -2272,6 +2317,38 @@ function obInit(){ window.__OBX=OBX;
   const mx=$('obMax'), setMax=v=>{ wrap.classList.toggle('max',v); document.documentElement.classList.toggle('ob-max',v); mx.textContent=v?'✕':'⛶'; setTimeout(drawOB,30); };
   mx.addEventListener('click',()=>setMax(!wrap.classList.contains('max')));
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&wrap.classList.contains('max')) setMax(false); });
+}
+/* buy / sell pressure meter with needle + the price the market leans toward */
+const OBM={v:0, sm:0};
+function obMeter(){
+  const cv=$('obGauge'); if(!cv||!cv.clientWidth||!OBX.ready) return; const now=Date.now(), [bb,ba]=obBest(); if(!bb||!isFinite(ba)) return; const mid=(bb+ba)/2;
+  const depth=r=>{ let b=0,a=0; for(const [p,q] of OBX.bids) if(p>=mid-mid*r) b+=q; for(const [p,q] of OBX.asks) if(p<=mid+mid*r) a+=q; return b+a?(b-a)/(b+a):0; };
+  const i1=depth(.001), i5=depth(.005);
+  let fb=0,fs=0; for(const f of S.flow){ if(now-f.t<=60000){ if(f.buy) fb+=f.q; else fs+=f.q; } } const fl=fb+fs?(fb-fs)/(fb+fs):0;
+  const old=OBX.H.find(s=>s.t>=now-60000), mom=old?clamp((mid-old.mid)/SYM.P(60),-1,1):0;
+  const mg=LQ.mag||{}; let lq=0; if(mg.up||mg.dn){ const u=mg.up?mg.up.usd/Math.max(SYM.P(20),mg.up.p-mid):0, d=mg.dn?mg.dn.usd/Math.max(SYM.P(20),mid-mg.dn.p):0; lq=u+d?(u-d)/(u+d):0; }
+  const comp=[['Taker flow 60s',fl,.35],['Book ±0.1%',i1,.25],['Book ±0.5%',i5,.15],['Momentum 60s',mom,.15],['Liq magnet pull',lq,.10]];
+  const raw=comp.reduce((s,c)=>s+c[1]*c[2],0)*100; OBM.v=raw; OBM.sm=OBM.sm*.8+raw*.2; const v=clamp(OBM.sm,-100,100);
+  // walls ±0.5 % in 5-pt clusters
+  const cb=SYM.P(5), cl=new Map(); for(const [side,m] of [['b',OBX.bids],['a',OBX.asks]]) for(const [p,q] of m){ if(Math.abs(p-mid)>mid*.005) continue; const k=side+Math.floor(p/cb); cl.set(k,(cl.get(k)||0)+q); }
+  let aw=null,bw=null; for(const [k,q] of cl){ const side=k[0], p=(+k.slice(1)+.5)*cb; if(side==='a'&&(!aw||q>aw.q)) aw={p,q}; if(side==='b'&&(!bw||q>bw.q)) bw={p,q}; }
+  const lbl=v>=45?'STRONG BUY':v>=15?'BUY':v<=-45?'STRONG SELL':v<=-15?'SELL':'NEUTRAL', col=v>=15?'#25d07d':v<=-15?'#f25745':'#f5b12e';
+  let tgt=null; if(v>=15){ const c=[aw&&{p:aw.p,why:`ask wall ${aw.q.toFixed(1)} ${BASE}`},mg.up&&{p:mg.up.p,why:`liq magnet ${obUsd(mg.up.usd)}`}].filter(Boolean).sort((a,b)=>a.p-b.p); tgt=c[0]||null; }
+  else if(v<=-15){ const c=[bw&&{p:bw.p,why:`bid wall ${bw.q.toFixed(1)} ${BASE}`},mg.dn&&{p:mg.dn.p,why:`liq magnet ${obUsd(mg.dn.usd)}`}].filter(Boolean).sort((a,b)=>b.p-a.p); tgt=c[0]||null; }
+  OBM.tgt=tgt?{...tgt,s:v>0?1:-1}:null;
+  // gauge
+  const {g,w,h}=fitCanvas(cv), cx=w/2, cy=h-18, R=Math.min(w/2-14,h-34); g.clearRect(0,0,w,h);
+  const seg=[[-100,-45,'#f25745'],[-45,-15,'#b8453a'],[-15,15,'#5b6272'],[15,45,'#1f9e61'],[45,100,'#25d07d']], A=x=>Math.PI+(x+100)/200*Math.PI;
+  g.lineWidth=16; for(const [a,b,c] of seg){ g.strokeStyle=c; g.beginPath(); g.arc(cx,cy,R,A(a)+.01,A(b)-.01); g.stroke(); }
+  g.fillStyle='#8a93a4'; g.font='bold 9.5px JetBrains Mono'; g.textAlign='center'; for(const [x,t] of [[-80,'SELL'],[0,'0'],[80,'BUY']]){ const a=A(x); g.fillText(t,cx+Math.cos(a)*(R-24),cy+Math.sin(a)*(R-24)+3); }
+  const an=A(v); g.strokeStyle='#fff'; g.lineWidth=3.5; g.lineCap='round'; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.cos(an)*(R-4),cy+Math.sin(an)*(R-4)); g.stroke();
+  g.fillStyle=col; g.beginPath(); g.arc(cx,cy,8,0,7); g.fill(); g.fillStyle='#fff'; g.beginPath(); g.arc(cx,cy,3,0,7); g.fill();
+  g.textAlign='left';
+  const L=$('obLean'); if(L) L.innerHTML=`<div class="oml" style="color:${col}">${lbl} <small>${(v>0?'+':'')+v.toFixed(0)}</small></div>`+(tgt?`<div class="omt">leaning ${v>0?'↑':'↓'} toward <b style="color:${col}">${obF(tgt.p)}</b> <span>(${v>0?'+':'−'}${obF(Math.abs(tgt.p-mid))})</span></div><div class="omw">${tgt.why}</div>`
+    :`<div class="omt">balanced · range <b>${bw?obF(bw.p):'—'}</b> – <b>${aw?obF(aw.p):'—'}</b></div><div class="omw">biggest bid wall ↔ biggest ask wall (±0.5 %)</div>`)
+    +`<div class="omw">${mg.up?`liq ↑ ${obF(mg.up.p)} ${obUsd(mg.up.usd)}`:''}${mg.up&&mg.dn?' · ':''}${mg.dn?`liq ↓ ${obF(mg.dn.p)} ${obUsd(mg.dn.usd)}`:''}</div>`;
+  const P=$('obComp'); if(P) P.innerHTML=comp.map(([n,x,wt])=>`<div class="omc"><span>${n} <i>${Math.round(wt*100)}%</i></span><div class="omb"><em></em><b style="${x>=0?`left:50%;width:${x*50}%;background:#25d07d`:`right:50%;width:${-x*50}%;background:#f25745`}"></b></div><strong style="color:${x>.1?'#25d07d':x<-.1?'#f25745':'#8a93a4'}">${x>=0?'+':''}${(x*100).toFixed(0)}</strong></div>`).join('');
+  const hd=$('obHead'); if(hd) hd.innerHTML=`<span style="color:${col}">${lbl} ${(v>0?'+':'')+v.toFixed(0)}</span>${tgt?` · → ${obF(tgt.p)}`:''}`;
 }
 /* taker buy / sell */
 async function loadTV(){
