@@ -858,7 +858,7 @@ html.ob-max{overflow:hidden}
       <span class="symnote" id="symNote"></span>
       <div id="pxFloat" aria-live="off" aria-label="Current price of the selected pair"><div class="pfh"><span id="pfSym">BTC/USDT</span><span id="pfDot" title="live stream">●</span></div><div class="pfp num" id="pfPx">—</div><div class="pfc num" id="pfCh">24h —</div></div>
     </div>
-    <div class="brand"><div class="logo" id="symLogo">₿</div><h1 id="symH1">SCALPBOT · BTCUSDT</h1></div>
+    <div class="brand"><div class="logo" id="symLogo">₿</div><h1 id="symH1">VVIP Master Scalping <span class="hdl">• @Liemyo_</span></h1></div>
     <div class="strap" id="strap">Connecting to Binance…</div>
     <div class="controls">
       <button class="btn" id="soundBtn" aria-pressed="false" title="Sound alerts for every window. Loud repeating siren + voice on strong signals: AI Agent BUY / SELL, Sniper Indicator BUY / SELL / RE-ENTRY, footprint setup, 1H Bollinger squeeze trade. Soft beep on: momentum meter overbought / oversold, open drive, pressure meter STRONG, big trades ≥ 5× minimum. Click anywhere to silence the siren.">ALERT: OFF</button>
@@ -1757,7 +1757,7 @@ $('symSel').value=SYM.id;
 $('symSel').addEventListener('change',()=>{ const v=$('symSel').value; if(v===SYM.id) return; try{ localStorage.setItem('scalp-sym',v); }catch(e){}
   const u=new URL(location.href); u.searchParams.set('s',v); location.href=u.toString(); });
 document.querySelectorAll('.symTxt').forEach(x=>x.textContent=SYM.base+'USDT'); $('mainTitle').textContent=`${SYM.name} · ${S.tf.toUpperCase()} · ${SYM.src}`;
-$('symLogo').textContent=SYM.logo; $('symH1').textContent=`SCALPBOT · ${SYM.base}USDT`;
+$('symLogo').textContent=SYM.logo; $('symH1').innerHTML='VVIP Master Scalping <span class="hdl">• @Liemyo_</span>'; $('symH1').title=`${SYM.base}USDT`;
 $('symNote').textContent=SYM.note||(SYM.btc?'':`Sniper / Whale / Breakout thresholds are scaled to ${SYM.base} volatility (1 BTC point ≈ ${(+SYM.ps).toPrecision(2)} ${SYM.base} price units).`);
 document.querySelectorAll('.symP').forEach(x=>{ const v=SYM.P(+x.dataset.p); x.textContent=SYM.btc?v:+v.toPrecision(3); });
 if($('whaleMin')&&!SYM.btc){ const w=1e5*VS, m=10**Math.floor(Math.log10(w)); $('whaleMin').value=Math.round(w/m)*m; $('whaleMin').step=Math.round(w/m)*m/4; }
@@ -4645,8 +4645,36 @@ html.gated #aiw{display:none}
 #aiw .aii i{font-style:normal;font-weight:800;text-align:center} #aiw .aii span{color:#aab2c2} #aiw .aii em{font-style:normal;overflow:hidden;text-overflow:ellipsis}
 #aiw .ain{font-size:9px;line-height:1.35;color:#8a93a4}
 #symNote:empty{display:none} .symbar .symnote{flex:0 1 220px}
-@media (min-width:700px) and (max-width:1439px){ #pxFloat .pfc{display:none} #aiw .aih b{letter-spacing:.08em} }
+@media (min-width:700px) and (max-width:1599px){ #pxFloat .pfc{display:none} #aiw .aih b{letter-spacing:.08em} }
 @media (max-width:699px){ #aiw{flex:1 1 100%;max-width:none;order:5} #aiw .aib{width:100%} }
+/* ===== HEADER · symmetric two-row grid: row 1 market · timeframe · guide · AI agent · price  |  row 2 brand · strap · alert · exness · contact · clock ===== */
+:root{--hh:36px}
+header.top.a-hdr{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;column-gap:14px!important;row-gap:10px!important;padding:6px 6px 8px!important}
+header.top.a-hdr>.symbar{grid-column:1/-1;display:grid;grid-template-columns:auto auto auto minmax(0,1fr) auto;align-items:center;gap:10px 14px;padding-bottom:10px}
+header.top.a-hdr>.symbar #symNote:not(:empty){grid-column:1/-1;order:9}
+header.top.a-hdr .symsel select,header.top.a-hdr .dlbtn,header.top.a-hdr #aiw .aih,header.top.a-hdr #pxFloat,header.top.a-hdr .controls .btn,header.top.a-hdr .clockbox{height:var(--hh);box-sizing:border-box}
+header.top.a-hdr .symsel select{padding-top:0;padding-bottom:0;min-width:190px}
+header.top.a-hdr .dlbtn{padding:0 14px}
+header.top.a-hdr #aiw{max-width:none;min-width:0;width:100%}
+header.top.a-hdr #aiw .aih{padding-top:0;padding-bottom:0}
+header.top.a-hdr #pxFloat{margin-left:0;padding:0 14px;flex-wrap:nowrap;min-width:300px;justify-content:space-between}
+header.top.a-hdr #pxFloat .pfp{font-size:20px}
+/* row 2 */
+header.top.a-hdr .brand{gap:12px;min-width:0}
+header.top.a-hdr .logo{width:var(--hh);height:var(--hh);font-size:19px;flex:none}
+header.top.a-hdr #symH1{font-family:var(--display);font-size:25px;line-height:1;letter-spacing:.01em;white-space:nowrap;margin:0}
+header.top.a-hdr #symH1 .hdl{white-space:nowrap;color:#ffb020;font-size:.78em;letter-spacing:.02em;margin-left:4px}
+header.top.a-hdr .strap{text-align:center;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+header.top.a-hdr .controls{display:flex;gap:8px;flex-wrap:nowrap}
+header.top.a-hdr .controls .btn{display:inline-flex;align-items:center;justify-content:center;padding:0 14px;min-width:120px}
+header.top.a-hdr .clockbox{display:flex;flex-direction:column;justify-content:center;align-items:flex-end;min-width:118px;padding:0 12px;border:2px solid rgba(255,255,255,.25);border-radius:8px}
+header.top.a-hdr .clockbox b{font-size:19px;line-height:1}
+header.top.a-hdr .clockbox span{font-size:9px}
+@media (min-width:700px) and (max-width:1599px){ header.top.a-hdr #pxFloat{min-width:220px} }
+@media (min-width:700px) and (max-width:1439px){ header.top.a-hdr #symH1{font-size:20px} header.top.a-hdr .controls .btn{min-width:0;padding:0 10px} header.top.a-hdr .strap{font-size:10px} header.top.a-hdr #pxFloat{min-width:0} header.top.a-hdr .symsel select{min-width:0} }
+@media (min-width:700px) and (max-width:1100px){ header.top.a-hdr{grid-template-columns:minmax(0,1fr) auto} header.top.a-hdr .strap{grid-column:1/-1;order:5} header.top.a-hdr>.symbar{grid-template-columns:auto auto auto minmax(0,1fr)} header.top.a-hdr #pxFloat{grid-column:1/-1} }
+@media (max-width:699px){ header.top.a-hdr{grid-template-columns:minmax(0,1fr) auto} header.top.a-hdr>.symbar{grid-template-columns:1fr 1fr} header.top.a-hdr>.symbar>*{grid-column:1/-1} header.top.a-hdr>.symbar>.symsel{grid-column:auto}
+  header.top.a-hdr .strap{grid-column:1/-1;white-space:normal;text-align:left} header.top.a-hdr .controls{grid-column:1/-1;flex-wrap:wrap} header.top.a-hdr .controls .btn{flex:1 1 30%;min-width:0} header.top.a-hdr #symH1{font-size:18px;white-space:normal} header.top.a-hdr .clockbox{min-width:0;order:2} header.top.a-hdr .brand{order:1} header.top.a-hdr .strap{order:3} header.top.a-hdr .controls{order:4} header.top.a-hdr>.symbar{order:0} header.top.a-hdr #pxFloat{min-width:0} header.top.a-hdr .symsel select{min-width:0} }
 </style>
 <script id="bbScript">
 /* ===== BOLLINGER BAND · MA · OPEN-PRICE SQUEEZE BREAKOUT =====
@@ -4942,16 +4970,16 @@ function tick(){ // keeps running in a background tab so the ALERT siren still f
   const conf=wsum?score/wsum:0, dir=conf>=.2?1:conf<=-.2?-1:0;
   // plan
   let plan=null;
-  if(spA&&spA.s===dir) plan={src:'Sniper Indicator',s:spA.s,e:spA.e,sl:spA.sl,tp:spA.tp};
+  if(spA&&spA.s===dir) plan={src:'Sniper Indicator',s:spA.s,e:spA.e,sl:spA.sl,sl0:spA.sl0,tp:spA.tp};
   else if(fs&&fs.dir===dir) plan={src:'Footprint setup',s:fs.dir,e:fs.entry,sl:fs.sl,tp:[fs.tp1,fs.tp2]};
   else if(sq&&sq.dir===dir) plan={src:'BB squeeze 1H',s:sq.dir,e:sq.entry,sl:sq.sl,tp:[sq.entry+sq.dir*.5*(sq.tp-sq.entry),sq.tp]};
   else if(PL&&PL.s===dir) plan={src:'Auto TP/SL · '+PL.src,s:PL.s,e:PL.entry,sl:PL.sl,tp:PL.tps};
   const V=$('aiV');
-  if(dir&&plan){ const R=Math.abs(plan.e-plan.sl), far=px!=null&&Math.abs(px-plan.e)>.5*R, good=px!=null&&(px-plan.e)*plan.s<0;
+  if(dir&&plan){ const R=Math.abs(plan.e-(plan.sl0??plan.sl))||Math.abs(plan.e-plan.sl)||1e-9, far=px!=null&&Math.abs(px-plan.e)>.5*R, good=px!=null&&(px-plan.e)*plan.s<0;
     el.className=(plan.s>0?'buy':'sell')+(mini?' min':''); $('aiS').innerHTML=`<span style="color:${plan.s>0?'#3dff9a':'#ff5a4d'}">${plan.s>0?'BUY':'SELL'} @ ${fP(plan.e)}</span> · <span style="color:#3dff9a">TP1 ${fP(plan.tp[0])}</span> · <span style="color:#ff5a4d">CL ${fP(plan.sl)}</span>`; V.textContent=`${plan.s>0?'BUY':'SELL'} @ ${fP(plan.e)}`; V.style.color=plan.s>0?'#3dff9a':'#ff5a4d';
     $('aiC').textContent=`agreement ${(Math.abs(conf)*100).toFixed(0)}% · ${plan.src}`;
     const P=(k,v,c)=>`<div><span>${k}</span><b style="color:${c||'#fff'}">${v}</b></div>`;
-    $('aiP').innerHTML=P(far&&!good?'Open (limit)':'Open price',fP(plan.e),'#ffd166')+plan.tp.slice(0,3).map((t,k)=>P('Take profit '+(k+1),fP(t),'#3dff9a')).join('')+P('Cut loss',fP(plan.sl),'#ff5a4d')+P('Risk / reward',`1 : ${(Math.abs(plan.tp[Math.min(1,plan.tp.length-1)]-plan.e)/R).toFixed(1)}`)+P('Price now',fP(px));
+    $('aiP').innerHTML=P(far&&!good?'Open (limit)':'Open price',fP(plan.e),'#ffd166')+plan.tp.slice(0,3).map((t,k)=>P('Take profit '+(k+1),fP(t),'#3dff9a')).join('')+P(plan.sl0!=null&&plan.sl!==plan.sl0?'Cut loss (moved to BE)':'Cut loss',fP(plan.sl),'#ff5a4d')+P('Risk / reward',`1 : ${(Math.abs(plan.tp[Math.min(1,plan.tp.length-1)]-plan.e)/R).toFixed(1)}`)+P('Price now',fP(px));
     $('aiN').textContent=(far&&!good?`Price is ${fP(Math.abs(px-plan.e))} away from the open price — place a limit at ${fP(plan.e)} instead of chasing. `:'')+'Move the cut loss to the open price after TP1. Chart aid — the sniper rules are not backtested; size small.'; }
   else { el.className=mini?'min':''; $('aiS').innerHTML=`<span style="color:#cfd6e3">WAIT</span> · agreement ${(Math.abs(conf)*100).toFixed(0)}%`; V.textContent='WAIT'; V.style.color='#cfd6e3';
     $('aiC').textContent=`agreement ${(Math.abs(conf)*100).toFixed(0)}% ${conf>0?'buy':conf<0?'sell':''} · need ≥ 20% and a plan on the same side`;
