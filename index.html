@@ -4737,5 +4737,76 @@ setInterval(()=>{ paint(); if(flashT&&Date.now()-flashT>900){ el.classList.remov
   ws.onclose=()=>{ el.classList.remove('on'); setTimeout(()=>go(Math.min(back*2,60000)),back); }; })();
 })();
 </script>
+<style id="splitView">
+/* ===== desktop split view: every window on one screen (left = liquidation map + order book row, right = status + TradingView + footprint) ===== */
+@media (min-width:1280px) and (min-height:680px){
+  html,body{height:100%;overflow:hidden}
+  .frame{height:100vh;height:100dvh;min-height:0!important;padding:8px 10px!important;gap:8px!important;box-sizing:border-box;align-items:stretch!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:auto auto minmax(0,1fr) minmax(0,1fr)!important;
+    grid-template-areas:"hdr hdr" "act act" "lq tvw" "ob me"!important}
+  .a-hdr{grid-area:hdr!important} .a-act{grid-area:act!important} .a-tvw{grid-area:tvw!important} .a-fp{grid-area:me!important}
+  .frame>.panel{min-height:0;overflow:hidden;margin:0!important}
+  .ph{padding-top:5px!important;padding-bottom:5px!important}
+  /* header + market status: one compact strip */
+  header.top{padding-top:0!important;padding-bottom:0!important;row-gap:4px!important}
+  .a-act .actg{padding:5px 12px!important;gap:2px 16px!important;grid-template-columns:auto minmax(0,1fr) auto!important}
+  .a-act .actst{min-width:0} .a-act .actrec{font-size:11px} .a-act .actkv{font-size:10px;gap:2px 14px}
+  /* the liquidation / order-book panel splits into two cells: map + heatmaps (lq) and meter | heatmap | big trades (ob) */
+  .a-obtop{display:contents!important}
+  .a-obtop>.ph{display:none!important}
+  .a-obtop .liqL.lqtop,.a-obtop .obtg{border:2px solid rgba(255,255,255,.9);border-radius:10px;overflow:hidden;min-height:0;min-width:0}
+  .a-obtop .liqL.lqtop{grid-area:lq;display:grid!important;grid-template-rows:minmax(0,.8fr) minmax(0,1.2fr) auto!important;gap:5px!important;padding:6px 10px!important}
+  .a-obtop .liqL.lqtop>div:first-child{display:flex;flex-direction:column;min-height:0}
+  .a-obtop #lqMap{flex:1 1 0;height:0!important;min-height:0!important}
+  .a-obtop .lqt{margin-bottom:2px;font-size:10.5px}
+  .a-obtop .lqh3{min-height:0;gap:6px}
+  .a-obtop .lqh3>div{display:flex;flex-direction:column;min-height:0}
+  .a-obtop .lqh3 canvas{flex:1 1 0;height:0!important;min-height:0!important}
+  .a-obtop .lqnote{font-size:9px;line-height:1.25}
+  .a-obtop .obtg{grid-area:ob;grid-template-columns:220px minmax(0,1fr) 210px!important;grid-template-rows:minmax(0,1fr)}
+  .a-obtop .obtg .obL,.a-obtop .obtg .obwrap{display:flex;flex-direction:column;min-height:0;height:100%}
+  .a-obtop .obtg .obbar{font-size:10px}
+  .a-obtop .obtg #obHeat{flex:1 1 0;height:0!important;min-height:0}
+  .a-obtop .obtg .obM{overflow:auto;padding:6px 8px;gap:5px;margin:4px}
+  .a-obtop #obGauge{height:110px}
+  .a-obtop .btp .btv>div{height:24px;font-size:12px}
+  /* TradingView window */
+  .a-tvw{display:flex!important;flex-direction:column}
+  .a-tvw>.ph{flex:none}
+  .a-tvw .tvwbody{flex:1 1 0;min-height:0}
+  .a-tvw #tvwChart{flex:1 1 0;height:auto!important;min-height:0}
+  .a-tvw #tvwRsi{height:62px!important;flex:none}
+  .a-tvw .tvwinfo{flex:none;max-height:70px;overflow:auto}
+  .a-tvw .tvwinfo>div{padding:4px 10px}
+  /* footprint */
+  .a-fp{display:flex!important;flex-direction:column}
+  .a-fp>.ph{flex:none}
+  .a-fp .fpg{flex:1 1 0;min-height:0!important;grid-template-columns:190px minmax(0,1fr) 240px!important;grid-template-rows:minmax(0,1fr)}
+  .a-fp .fpT,.a-fp .fpP{overflow:auto;gap:5px;padding:6px 9px}
+  .a-fp .fpM{min-height:0}
+  .a-fp #fpCv{height:100%!important}
+  .a-fp #fpRing{height:120px}
+  .a-fp .fpT .fts{font-size:20px} .a-fp .fpP .fact{font-size:30px}
+}
+@media (min-width:1280px) and (max-width:1599px) and (min-height:680px){
+  .a-obtop .obtg{grid-template-columns:190px minmax(0,1fr) 180px!important}
+  .a-fp .fpg{grid-template-columns:170px minmax(0,1fr) 210px!important}
+  .a-act .acthr{display:none}
+}
+/* tiny "·" toggle bottom-right: hides / shows every floating widget (price, music) */
+#fhTg{position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);z-index:9997;width:18px;height:18px;border-radius:50%;border:1px solid #6b7280;background:rgba(10,12,18,.85);
+  color:#e6e9ef;font:700 14px/14px var(--mono,monospace);display:grid;place-items:center;padding:0;cursor:pointer;opacity:.75}
+#fhTg:hover{opacity:1;border-color:#fff}
+html.fhide #fhTg{border-color:#ffb020;color:#ffb020}
+html:not(.gated) #muTg{right:30px!important}
+html.fhide #pxFloat,html.fhide:not(.gated) #muTg{display:none!important}
+html.gated #fhTg{display:none}
+</style>
+<button id="fhTg" type="button" title="Hide / show floating widgets" aria-label="Hide or show floating widgets" aria-pressed="false">·</button>
+<script id="fhScript">
+(()=>{ const b=document.getElementById('fhTg'), K='float-hide'; let on=false; try{ on=localStorage.getItem(K)==='1'; }catch(e){}
+  const set=v=>{ on=v; document.documentElement.classList.toggle('fhide',v); b.setAttribute('aria-pressed',v); b.title=v?'Show floating widgets':'Hide floating widgets'; try{ localStorage.setItem(K,v?'1':'0'); }catch(e){} };
+  set(on); b.onclick=()=>set(!on); })();
+</script>
 </body>
 </html>
