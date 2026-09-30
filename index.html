@@ -502,8 +502,8 @@ tr.active td{background:rgba(234,108,196,.08)}
   body{padding-block:12px;padding-inline:12px}
   .frame{max-width:none;align-items:start;
     grid-template-columns:minmax(320px,1fr) minmax(0,1.75fr) minmax(340px,1.05fr);
-    grid-template-rows:auto auto auto auto auto auto auto auto auto auto auto auto 1fr auto auto auto auto;
-    grid-template-areas:"hdr hdr hdr" "top top top" "whale whale whale" "bo1m bo1m bo1m" "bb bb bb" "act act act" "me me me" "mom mom mom" "desk desk desk" "liq liq liq" "mq mq mq" "cyc cyc cyc" "cards strip ana" "cards graph ana" "quant quant quant" "floor floor floor" "foot foot foot" "note note note"}
+    grid-template-rows:auto auto auto auto auto auto auto auto auto auto auto auto auto 1fr auto auto auto auto;
+    grid-template-areas:"hdr hdr hdr" "top top top" "tvw tvw tvw" "whale whale whale" "bo1m bo1m bo1m" "bb bb bb" "act act act" "me me me" "mom mom mom" "desk desk desk" "liq liq liq" "mq mq mq" "cyc cyc cyc" "cards strip ana" "cards graph ana" "quant quant quant" "floor floor floor" "foot foot foot" "note note note"}
   .a-act{grid-area:act} .a-me{grid-area:me} .a-mom{grid-area:mom} .a-desk{grid-area:desk} .a-hdr{grid-area:hdr} .a-liq{grid-area:liq} .a-mq{grid-area:mq} .a-cyc{grid-area:cyc} .a-cards{grid-area:cards}
   .a-main{grid-area:main} .a-strip{grid-area:strip} .a-graph{grid-area:graph} .a-ana{grid-area:ana}
   .a-quant{grid-area:quant} .a-floor{grid-area:floor} .a-foot{grid-area:foot} .a-note{grid-area:note}
@@ -844,6 +844,40 @@ tr.active td{background:rgba(234,108,196,.08)}
     <div class="tabody num" id="taBody"><div class="muted" style="padding:12px">Waiting for first analysis…</div></div>
   </section>
   </div>
+
+  <!-- TRADINGVIEW WINDOW · auto drawing tools (below the chart) -->
+  <section class="panel a-tvw" id="tvw" aria-label="TradingView chart with auto drawing tools">
+    <div class="ph tvwh">
+      <span class="tvwt">📈 TradingView · <b id="tvwSym">—</b> · <span id="tvwTfL">1H</span></span>
+      <span class="tvwc">
+        <label class="symsel"><span>TF</span><select id="tvwTf" aria-label="TradingView window timeframe">
+          <option value="1m">1m</option><option value="5m">5m</option><option value="15m">15m</option><option value="30m">30m</option>
+          <option value="1h">1h</option><option value="4h">4h</option><option value="1d">D</option><option value="1w">W</option></select></label>
+        <button class="btn sm" id="tvwToolsBtn" type="button" aria-haspopup="true" aria-expanded="false">🛠 TOOLS <em id="tvwCnt">0</em> ▾</button>
+        <button class="btn sm" id="tvwReset" type="button" title="Remove every drawing and indicator — plain candles only">⟲ RESET · BLANK</button>
+        <button class="btn sm" id="tvwMax" type="button" title="Full-screen window (Esc to close)">⛶</button>
+      </span>
+      <span class="r num" id="tvwHead">loading…</span>
+      <div class="tvmenu" id="tvwMenu" hidden>
+        <div class="tvmh">Auto tools</div>
+        <label class="tvmi"><input type="checkbox" data-t="fib"><span><b>Auto Fibonacci</b><i>Retracement + extension on the latest major swing (ATR zigzag)</i></span></label>
+        <label class="tvmi"><input type="checkbox" data-t="bo"><span><b>Auto Breakout Retracement</b><i>Last swing-level / trendline breakout + 38.2–61.8% retest zone</i></span></label>
+        <label class="tvmi"><input type="checkbox" data-t="tpsl"><span><b>Auto Take Profit &amp; Stop Loss</b><i>Position box from the best active setup: N › Breakout › Fib › Trend</i></span></label>
+        <label class="tvmi"><input type="checkbox" data-t="nst"><span><b>Auto N Strategy</b><i>A-B-C N-wave, entry on break of B, targets V / N / E / NT</i></span></label>
+        <div class="tvmh">Indicators</div>
+        <label class="tvmi"><input type="checkbox" data-t="rsi"><span><b>RSI Swing Indicator</b><i>RSI(7) 70/30 swings · HH / HL / LH / LL labels + RSI pane</i></span></label>
+        <div class="tvmh">Settings</div>
+        <label class="tvmi tvms"><span><b>Swing sensitivity</b><i>How big a move counts as a swing</i></span>
+          <select id="tvwSens"><option value="low">Low · major swings</option><option value="med">Medium</option><option value="high">High · minor swings</option></select></label>
+        <div class="tvmf"><button class="btn sm" id="tvwAll" type="button">ENABLE ALL</button><button class="btn sm" id="tvwNone" type="button">⟲ RESET · BLANK</button></div>
+      </div>
+    </div>
+    <div class="tvwbody">
+      <div id="tvwChart"><canvas id="tvwOv"></canvas></div>
+      <div id="tvwRsi" hidden><span class="tvwrl">RSI SWING · 7 · 70/30</span></div>
+    </div>
+    <div class="tvwinfo num" id="tvwInfo"></div>
+  </section>
 
   <!-- WHALE PUMP/DUMP DETECTOR (below the chart) -->
   <section class="panel a-whale" aria-label="Whale pump and dump detector">
@@ -4389,5 +4423,287 @@ body{padding:0!important}
 html body header.top{padding-right:6px!important}
 html body .actg{padding-right:14px!important}
 </style>
+
+<style id="tvwStyle">
+.a-tvw .tvwh{position:relative;flex-wrap:wrap}
+.a-tvw .tvwt b{color:#fff}
+.a-tvw .tvwc{display:flex;gap:6px;align-items:center;flex-wrap:wrap;letter-spacing:.04em}
+.a-tvw .tvwc .symsel select{font-size:12px;padding:4px 26px 4px 8px}
+.a-tvw #tvwToolsBtn em{font-style:normal;background:var(--frame);color:#000;border-radius:8px;padding:0 5px;margin-left:2px}
+.a-tvw #tvwToolsBtn[aria-expanded="true"]{background:#fff;color:#000}
+.tvmenu{position:absolute;top:100%;right:8px;z-index:30;width:min(360px,calc(100% - 16px));background:#0e1118;border:2px solid #fff;border-radius:10px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,.7);
+  text-transform:none;letter-spacing:normal;font-weight:400;display:grid;gap:2px;max-height:70vh;overflow:auto}
+.tvmenu .tvmh{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);font-weight:800;padding:6px 8px 2px}
+.tvmenu .tvmi{display:flex;gap:10px;align-items:flex-start;padding:7px 8px;border-radius:7px;cursor:pointer}
+.tvmenu .tvmi:hover{background:#1a1f2b}
+.tvmenu .tvmi input{accent-color:var(--frame);width:15px;height:15px;margin:1px 0 0;flex:none}
+.tvmenu .tvmi>span{display:grid;gap:2px;min-width:0;flex:1}
+.tvmenu .tvmi b{font-size:12px;color:#fff}
+.tvmenu .tvmi i{font-style:normal;font-size:10.5px;color:var(--ink-2)}
+.tvmenu .tvms select{font-family:var(--mono);font-size:11px;background:#000;color:#fff;border:1px solid #fff;border-radius:6px;padding:4px}
+.tvmenu .tvmf{display:flex;gap:6px;justify-content:flex-end;padding:6px 4px 2px;border-top:1px solid var(--line);margin-top:4px}
+.a-tvw .tvwbody{display:flex;flex-direction:column;background:#0b0e14}
+.a-tvw #tvwChart{position:relative;height:480px}
+.a-tvw #tvwOv{position:absolute;left:0;top:0;z-index:3;pointer-events:none}
+.a-tvw #tvwRsi{position:relative;height:130px;border-top:1px solid var(--line-2)}
+.a-tvw .tvwrl{position:absolute;left:8px;top:4px;z-index:3;font-size:9.5px;letter-spacing:.12em;color:#b07cff;pointer-events:none}
+.a-tvw .tvwinfo{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.a-tvw .tvwinfo>div{background:var(--panel);padding:8px 12px;display:grid;gap:3px;font-size:10.5px;align-content:start;min-width:0}
+.a-tvw .tvwinfo h4{margin:0;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.a-tvw .tvwinfo .st{font-weight:800;font-size:12px}
+.a-tvw .tvwinfo .kv{display:flex;flex-wrap:wrap;gap:2px 12px;color:var(--ink-2)} .a-tvw .tvwinfo .kv b{color:var(--ink)}
+.a-tvw .tvwinfo .blank{grid-column:1/-1;color:var(--ink-2)}
+.a-tvw .tvwinfo .note{grid-column:1/-1;color:var(--ink-3);font-size:10px}
+.a-tvw.max{position:fixed;inset:0;z-index:9000;border-radius:0;display:flex;flex-direction:column;margin:0}
+.a-tvw.max .tvwbody{flex:1;min-height:0}
+.a-tvw.max #tvwChart{flex:1;height:auto;min-height:0}
+.a-tvw.max .tvwinfo{max-height:24vh;overflow:auto}
+html.tvw-max{overflow:hidden}
+@media (max-width:699px){ .a-tvw #tvwChart{height:360px} .a-tvw #tvwRsi{height:110px} }
+@media (min-width:1400px){ .a-tvw{grid-area:tvw} }
+</style>
+
+<script id="tvwScript">
+/* ===== TradingView window: own candles + auto Fibonacci / breakout retracement / TP-SL / N strategy / RSI Swing ===== */
+(()=>{
+const $=id=>document.getElementById(id), LW=window.LightweightCharts, SYMW=window.SYM||{data:'BTCUSDT',id:'BTCUSDT',dp:2,btc:true};
+if(!LW||!$('tvwChart')) return;
+const ST={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
+const TFL={'1m':'1M','5m':'5M','15m':'15M','30m':'30M','1h':'1H','4h':'4H','1d':'D','1w':'W'};
+const ZM={low:4,med:2.6,high:1.6}, FR={low:8,med:5,high:3};
+const OFF={fib:false,bo:false,tpsl:false,nst:false,rsi:false};
+let tf=ST.get('tvw-tf','1h'); if(!TFL[tf]) tf='1h';
+let on=Object.assign({...OFF},ST.get('tvw-tools',{}));
+let sens=ST.get('tvw-sens','med'); if(!ZM[sens]) sens='med';
+const PD=SYMW.btc?2:(SYMW.dp??2), LD=SYMW.btc?1:(SYMW.dp??2), TZ=-new Date().getTimezoneOffset()*60;
+const API='https://data-api.binance.vision/api/v3/klines?symbol='+(SYMW.data||'BTCUSDT');
+const fp=v=>v==null||!isFinite(v)?'—':v.toLocaleString('en-US',{minimumFractionDigits:LD,maximumFractionDigits:LD});
+const sg=v=>(v>=0?'+':'−')+fp(Math.abs(v));
+const UP='#25d07d', DN='#f25745', GOLD='#ffd166';
+
+/* ---------- charts ---------- */
+const box=$('tvwChart'), rbox=$('tvwRsi'), ov=$('tvwOv'), ctx=ov.getContext('2d');
+const base={layout:{background:{type:'solid',color:'#0b0e14'},textColor:'#8a93a4',fontFamily:'JetBrains Mono, ui-monospace, monospace',fontSize:11},
+  grid:{vertLines:{color:'rgba(255,255,255,.035)'},horzLines:{color:'rgba(255,255,255,.035)'}},
+  rightPriceScale:{borderColor:'#242a38',minimumWidth:90},
+  timeScale:{borderColor:'#242a38',timeVisible:true,secondsVisible:false,rightOffset:36,barSpacing:7},
+  crosshair:{mode:0}};
+const ch=LW.createChart(box,base), ts=ch.timeScale();
+const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350',
+  priceFormat:{type:'price',precision:PD,minMove:Math.pow(10,-PD)}});
+const rc=LW.createChart(rbox,{...base,timeScale:{...base.timeScale,visible:false},handleScroll:false,handleScale:false}); // follows the main chart only
+const rs=rc.addLineSeries({color:'#b07cff',lineWidth:2,priceLineVisible:false,lastValueVisible:true,
+  priceFormat:{type:'price',precision:1,minMove:.1},autoscaleInfoProvider:()=>({priceRange:{minValue:0,maxValue:100}})});
+rc.priceScale('right').applyOptions({scaleMargins:{top:.08,bottom:.08}});
+rs.createPriceLine({price:70,color:'rgba(242,87,69,.7)',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:''});
+rs.createPriceLine({price:30,color:'rgba(37,208,125,.7)',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:''});
+rs.createPriceLine({price:50,color:'rgba(138,147,164,.35)',lineWidth:1,lineStyle:1,axisLabelVisible:false,title:''});
+// manual sizing (autoSize misses charts created inside a hidden pane)
+const fit=()=>{ for(const [c,el] of [[ch,box],[rc,rbox]]){ const w=el.clientWidth, h=el.clientHeight; if(w>0&&h>0&&(el._w!==w||el._h!==h)){ el._w=w; el._h=h; c.resize(w,h); } } follow(); };
+try{ const ro=new ResizeObserver(fit); ro.observe(box); ro.observe(rbox); }catch(e){ setInterval(fit,1000); }
+let syncing=false;
+ts.subscribeVisibleLogicalRangeChange(r=>{ if(!r||syncing||rbox.hidden) return; syncing=true; rc.timeScale().setVisibleLogicalRange(r); syncing=false; });
+const follow=()=>{ const r=ts.getVisibleLogicalRange(); if(r&&!rbox.hidden) rc.timeScale().setVisibleLogicalRange(r); };
+rc.timeScale().subscribeVisibleLogicalRangeChange(()=>{ const a=ts.getVisibleLogicalRange(), b=rc.timeScale().getVisibleLogicalRange(); if(a&&b&&(Math.abs(a.from-b.from)>.01||Math.abs(a.to-b.to)>.01)) follow(); });
+
+/* ---------- maths ---------- */
+function atr(C,p=14){ const a=[]; let s=0; for(let i=0;i<C.length;i++){ const c=C[i], pc=i?C[i-1].close:c.open, tr=Math.max(c.high-c.low,Math.abs(c.high-pc),Math.abs(c.low-pc));
+  if(i<p){ s+=tr; a.push(s/(i+1)); } else a.push((a[i-1]*(p-1)+tr)/p); } return a; }
+function ema(C,p){ const k=2/(p+1), e=[]; C.forEach((c,i)=>e.push(i?c.close*k+e[i-1]*(1-k):c.close)); return e; }
+function rsi(C,p){ const r=new Array(C.length).fill(null); let g=0,l=0; for(let i=1;i<C.length;i++){ const d=C[i].close-C[i-1].close, u=Math.max(d,0), w=Math.max(-d,0);
+  if(i<=p){ g+=u; l+=w; if(i===p){ g/=p; l/=p; r[i]=l===0?100:100-100/(1+g/l); } } else { g=(g*(p-1)+u)/p; l=(l*(p-1)+w)/p; r[i]=l===0?100:100-100/(1+g/l); } } return r; }
+// ATR-deviation zigzag: confirmed pivots P + the tentative extreme T of the leg in progress
+function zigzag(C,A,m){ const P=[]; if(C.length<20) return {P,T:null}; let dir=0, hi=C[0].high, hiI=0, lo=C[0].low, loI=0;
+  for(let i=1;i<C.length;i++){ const c=C[i], th=m*A[i];
+    if(dir===0){ if(c.high>hi){ hi=c.high; hiI=i; } if(c.low<lo){ lo=c.low; loI=i; }
+      if(loI<hiI && hi-lo>=th){ P.push({i:loI,p:lo,t:'L'}); dir=1; } else if(hiI<loI && hi-lo>=th){ P.push({i:hiI,p:hi,t:'H'}); dir=-1; } }
+    else if(dir===1){ if(c.high>=hi){ hi=c.high; hiI=i; } else if(hi-c.low>=th){ P.push({i:hiI,p:hi,t:'H'}); dir=-1; lo=c.low; loI=i; } }
+    else { if(c.low<=lo){ lo=c.low; loI=i; } else if(c.high-lo>=th){ P.push({i:loI,p:lo,t:'L'}); dir=1; hi=c.high; hiI=i; } } }
+  return {P,T:dir===1?{i:hiI,p:hi,t:'H',live:1}:dir===-1?{i:loI,p:lo,t:'L',live:1}:null}; }
+const hiMax=(a,b)=>{ let m=-Infinity,k=a; for(let i=a;i<=b;i++) if(C[i].high>m){ m=C[i].high; k=i; } return [m,k]; };
+const loMin=(a,b)=>{ let m=Infinity,k=a; for(let i=a;i<=b;i++) if(C[i].low<m){ m=C[i].low; k=i; } return [m,k]; };
+
+/* ---------- state ---------- */
+let C=[], A=[], Z=null, F=null, B=null, N=null, RS=null, PL=null, gen=0;
+
+/* Auto Fibonacci: largest of the last legs whose end is still the extreme (0 = leg end, 1 = leg start) */
+function calcFib(){ const ZF=zigzag(C,A,ZM[sens]*2.5), pts=[...ZF.P]; if(ZF.T) pts.push(ZF.T); if(pts.length<2) return null; const n=C.length-1; let best=null;
+  for(let k=pts.length-1;k>=Math.max(1,pts.length-4);k--){ const a=pts[k-1], b=pts[k], s=b.p>a.p?1:-1;
+    if(b.i<n && (s>0? hiMax(b.i+1,n)[0]>b.p : loMin(b.i+1,n)[0]<b.p)) continue;
+    const r=Math.abs(b.p-a.p); if(!best||r>best.r) best={a,b,r,s}; }
+  if(!best) return null; const L=f=>best.b.p+(best.a.p-best.b.p)*f; const px=C[n].close;
+  return {...best,L,ret:(best.s*(best.b.p-px))/best.r}; }
+
+/* Auto Breakout Retracement: fractal swing level or 2-pivot trendline broken on close, then 38.2–61.8% retest zone of the breakout impulse */
+function calcBO(){ const n=C.length, k=FR[sens]; if(n<k*4) return null; const PH=[],PL2=[];
+  for(let i=k;i<n-k;i++){ let h=true,l=true; for(let j=i-k;j<=i+k&&(h||l);j++){ if(j===i) continue; if(C[j].high>C[i].high) h=false; if(C[j].low<C[i].low) l=false; }
+    if(h) PH.push({i,p:C[i].high,conf:i+k}); if(l) PL2.push({i,p:C[i].low,conf:i+k}); }
+  const used=new Set(); let ev=null;
+  const lastConf=(arr,i)=>{ let a=null,b=null; for(const q of arr){ if(q.conf>i) break; a=b; b=q; } return [a,b]; };
+  for(let i=Math.max(2*k,n-500);i<n;i++){ const c=C[i].close, c1=C[i-1].close;
+    for(const s of [1,-1]){ const [p1,p2]=lastConf(s>0?PH:PL2,i); if(!p2) continue;
+      if(!used.has('h'+s+p2.i) && s*(c-p2.p)>0 && s*(c1-p2.p)<=0){ used.add('h'+s+p2.i); ev={s,i,type:'LEVEL',lv:p2.p,piv:[p2]}; }
+      else if(p1 && s*(p2.p-p1.p)<0 && i>p2.i){ const f=x=>p1.p+(p2.p-p1.p)*(x-p1.i)/(p2.i-p1.i), key='t'+s+p1.i+'-'+p2.i;
+        if(!used.has(key) && s*(c-f(i))>0 && s*(c1-f(i-1))<=0){ used.add(key); ev={s,i,type:'TRENDLINE',lv:f(i),piv:[p1,p2],f}; } } } }
+  if(!ev) return null; const s=ev.s, ref=ev.piv[ev.piv.length-1].i, i0=ev.i, last=n-1;
+  const [org,orgI]=s>0?loMin(Math.max(ref,i0-80),i0):hiMax(Math.max(ref,i0-80),i0);
+  const [top,topI]=s>0?hiMax(i0,last):loMin(i0,last), rg=Math.abs(top-org)||1e-9, Z=f=>top-s*rg*f;
+  let failed=false; for(let j=i0+1;j<=last;j++) if(s*(C[j].close-org)<0){ failed=true; break; }
+  const retr=topI<last?(s>0?loMin(topI+1,last)[0]:hiMax(topI+1,last)[0]):top, depth=s*(top-retr)/rg;
+  const st=failed?'FAILED · closed back beyond origin':topI===last?'EXTENDING · wait for retest':depth<.382?'WAITING RETEST':depth<=.786?'RETEST IN ZONE':'DEEP RETRACE · weak';
+  return {...ev,org,orgI,top,topI,rg,Z,depth,failed,st}; }
+
+/* Auto N Strategy: A-B-C with C a higher low (bull) / lower high (bear), entry on break of B */
+function calcN(){ const P=Z.P, T=Z.T, n=C.length-1;
+  const mk=(a,b,c,live)=>{ const s=a.t==='L'?1:-1; if(c.t!==a.t||b.t===a.t) return null; if(s*(c.p-a.p)<=0) return null;
+    const r=Math.abs(b.p-c.p)/Math.abs(b.p-a.p); if(r<.236||r>.95) return null;
+    const V=b.p+(b.p-c.p), Nn=c.p+(b.p-a.p), E=b.p+(b.p-a.p), NT=c.p+(c.p-a.p); let brk=-1, hit=false, inval=false;
+    for(let j=c.i+1;j<=n;j++){ const x=C[j]; if(s*((s>0?x.low:x.high)-c.p)<0&&brk<0){ inval=true; break; } if(brk<0&&s*((s>0?x.high:x.low)-b.p)>0) brk=j; if(brk>=0&&s*((s>0?x.high:x.low)-Nn)>=0) hit=true; }
+    const st=live?'FORMING · C still in progress':inval?'INVALID · C broken':hit?'N TARGET HIT':brk>=0?'TRIGGERED · B broken':'WAITING BREAK OF B';
+    return {s,a,b,c,r,V,N:Nn,E,NT,brk,hit,inval,live,st}; };
+  let res=null; if(T&&P.length>=2) res=mk(P[P.length-2],P[P.length-1],T,true);
+  if(!res&&P.length>=3) res=mk(P[P.length-3],P[P.length-2],P[P.length-1],false);
+  return res; }
+
+/* RSI Swing (RSI 7, 70/30): swing high = highest high from RSI entering OB until it enters OS, and vice versa */
+function calcRS(){ const R=rsi(C,7), piv=[]; let st=0, cur=null;
+  for(let i=0;i<C.length;i++){ const r=R[i]; if(r==null) continue;
+    if(r>70&&st!==1){ if(cur) piv.push(cur); cur={t:'H',i,p:C[i].high}; st=1; }
+    else if(r<30&&st!==2){ if(cur) piv.push(cur); cur={t:'L',i,p:C[i].low}; st=2; }
+    else if(st===1&&C[i].high>cur.p){ cur.i=i; cur.p=C[i].high; }
+    else if(st===2&&C[i].low<cur.p){ cur.i=i; cur.p=C[i].low; } }
+  if(cur) piv.push({...cur,live:1}); let pH=null,pL=null;
+  for(const q of piv){ if(q.t==='H'){ q.lb=pH==null?'H':q.p>pH?'HH':'LH'; pH=q.p; } else { q.lb=pL==null?'L':q.p<pL?'LL':'HL'; pL=q.p; } }
+  return {R,piv}; }
+
+/* Auto TP/SL: best active setup → entry, SL, TP1-3 */
+function calcPlan(){ const n=C.length-1, a=A[n], px=C[n].close; let p=null;
+  const nOk=N&&!N.inval&&!N.hit;
+  if(nOk&&!N.live){ const s=N.s; p={src:'N STRATEGY',s,type:N.brk>=0?'STOP · triggered':'STOP (break of B)',entry:N.b.p,sl:N.c.p-s*.25*a,tps:[N.V,N.N,N.E]}; }
+  else if(B&&!B.failed){ const s=B.s; p={src:'BREAKOUT RETEST',s,type:'LIMIT (50% retest)',entry:B.Z(.5),sl:B.Z(.786)-s*.25*a,tps:[B.top,B.top+s*B.rg*.272,B.top+s*B.rg*.618]}; }
+  else if(nOk){ const s=N.s; p={src:'N STRATEGY (forming)',s,type:'STOP (break of B)',entry:N.b.p,sl:N.c.p-s*.25*a,tps:[N.V,N.N,N.E]}; }
+  else if(F){ const s=F.s; p={src:'FIB RETRACEMENT',s,type:'LIMIT (0.618)',entry:F.L(.618),sl:F.L(.786)-s*.25*a,tps:[F.L(0),F.L(-.272),F.L(-.618)]}; }
+  else { const e=ema(C,50), s=px>e[n]&&e[n]>e[n-5]?1:px<e[n]&&e[n]<e[n-5]?-1:0; if(!s) return null;
+    const sw=[...Z.P].reverse().find(q=>q.t===(s>0?'L':'H')); const sl=sw?sw.p-s*.25*a:px-s*1.5*a;
+    p={src:'TREND (EMA 50)',s,type:'MARKET',entry:px,sl,tps:[]}; }
+  const s=p.s; if(s*(p.entry-p.sl)<.4*a) p.sl=p.entry-s*.4*a; const risk=s*(p.entry-p.sl);
+  if(!p.tps.length) p.tps=[1,2,3].map(r=>p.entry+s*r*risk);
+  p.tps=p.tps.filter(t=>s*(t-p.entry)>=.5*risk).sort((x,y)=>s*(x-y)); while(p.tps.length<3) p.tps.push(p.tps.length?p.tps[p.tps.length-1]+s*risk:p.entry+s*risk);
+  p.risk=risk; p.rr=p.tps.map(t=>s*(t-p.entry)/risk); return p; }
+
+/* ---------- drawing ---------- */
+const X=i=>ts.logicalToCoordinate(i), Y=p=>cs.priceToCoordinate(p);
+let W=0,H=0,DPR=1;
+function line(x1,y1,x2,y2,col,w=1,dash=[]){ if(x1==null||y1==null||x2==null||y2==null) return; ctx.strokeStyle=col; ctx.lineWidth=w; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]); }
+function rect(x1,y1,x2,y2,col){ if([x1,y1,x2,y2].some(v=>v==null)) return; ctx.fillStyle=col; ctx.fillRect(Math.min(x1,x2),Math.min(y1,y2),Math.abs(x2-x1),Math.abs(y2-y1)); }
+function text(x,y,t,col,align='left',base='bottom',bold=false){ if(x==null||y==null) return; ctx.font=(bold?'700 ':'')+'10.5px JetBrains Mono, ui-monospace, monospace'; ctx.fillStyle=col; ctx.textAlign=align; ctx.textBaseline=base; ctx.fillText(t,x,y); }
+function tag(x,y,t,bg,fg='#fff',up=true){ if(x==null||y==null) return; ctx.font='700 10px JetBrains Mono, ui-monospace, monospace'; const w=ctx.measureText(t).width+10, h=16, yy=up?y-h-6:y+6;
+  ctx.fillStyle=bg; ctx.beginPath(); ctx.roundRect?ctx.roundRect(x-w/2,yy,w,h,3):ctx.rect(x-w/2,yy,w,h); ctx.fill();
+  ctx.beginPath(); if(up){ ctx.moveTo(x-4,yy+h); ctx.lineTo(x+4,yy+h); ctx.lineTo(x,yy+h+4); } else { ctx.moveTo(x-4,yy); ctx.lineTo(x+4,yy); ctx.lineTo(x,yy-4); } ctx.fill();
+  ctx.fillStyle=fg; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(t,x,yy+h/2+.5); }
+function dot(x,y,col,t){ if(x==null||y==null) return; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fill(); if(t) text(x+7,y-4,t,col,'left','bottom',true); }
+
+const FL=[[0,'#787b86'],[.236,'#f23645'],[.382,'#ff9800'],[.5,'#4caf50'],[.618,'#089981'],[.786,'#00bcd4'],[1,'#787b86'],[1.618,'#2962ff']];
+function drawFib(){ const f=F, x0=Math.max(0,X(f.a.i)??0), xe=W-2; if(X(f.a.i)==null) return;
+  for(let k=0;k<FL.length-1;k++){ const [l1]=FL[k], [l2,c2]=FL[k+1]; rect(x0,Y(f.L(l1)),xe,Y(f.L(l2)),c2+'22'); }
+  line(X(f.a.i),Y(f.a.p),X(f.b.i),Y(f.b.p),'rgba(200,200,200,.55)',1,[4,4]);
+  for(const [l,c] of FL){ const y=Y(f.L(l)); line(x0,y,xe,y,c,1); text(x0+4,y-2,`${l} (${fp(f.L(l))})`,c); }
+  for(const l of [-.272,-.618]){ const y=Y(f.L(l)); line(x0,y,xe,y,'#f7c948',1,[6,4]); text(x0+4,y-2,`ext ${(1-l).toFixed(3)} · ${fp(f.L(l))}`,'#f7c948'); } }
+function drawBO(){ const b=B, s=b.s, col=s>0?UP:DN, n=C.length-1, xe=W-2;
+  if(b.type==='TRENDLINE'){ const [p1]=b.piv; line(X(p1.i),Y(p1.p),X(n+8),Y(b.f(n+8)),'#f7e03a',2); b.piv.forEach(q=>dot(X(q.i),Y(q.p),'#f7e03a')); }
+  else { const q=b.piv[0]; line(X(q.i),Y(q.p),xe,Y(q.p),'#f7e03a',1.5,[6,3]); dot(X(q.i),Y(q.p),'#f7e03a'); text(xe-4,Y(q.p)-2,'BREAK LEVEL '+fp(q.p),'#f7e03a','right'); }
+  tag(X(b.i),Y(s>0?C[b.i].low:C[b.i].high),s>0?'BO ▲':'BO ▼',col,'#000',s<0);
+  const zx=X(b.topI); rect(zx,Y(b.Z(.382)),xe,Y(b.Z(.618)),'rgba(79,163,255,.16)');
+  line(zx,Y(b.Z(.382)),xe,Y(b.Z(.382)),'#4fa3ff',1); line(zx,Y(b.Z(.618)),xe,Y(b.Z(.618)),'#4fa3ff',1); line(zx,Y(b.Z(.5)),xe,Y(b.Z(.5)),'#4fa3ff',1,[3,3]);
+  line(zx,Y(b.Z(.786)),xe,Y(b.Z(.786)),'rgba(242,87,69,.8)',1,[2,3]);
+  text(zx+4,Y(b.Z(.382))-2,'RETEST ZONE 38.2% '+fp(b.Z(.382)),'#8fc6ff'); text(zx+4,Y(b.Z(.618))+12,'61.8% '+fp(b.Z(.618)),'#8fc6ff'); text(zx+4,Y(b.Z(.786))+12,'78.6% · SL side '+fp(b.Z(.786)),'#f57a6c');
+  line(X(b.orgI),Y(b.org),X(b.topI),Y(b.top),col+'aa',1,[4,3]); dot(X(b.topI),Y(b.top),col); }
+function drawN(){ const q=N, s=q.s, col=s>0?UP:DN, n=C.length-1, xe=W-2, dI=q.c.i+Math.max(3,q.b.i-q.a.i);
+  line(X(q.a.i),Y(q.a.p),X(q.b.i),Y(q.b.p),col,2.5); line(X(q.b.i),Y(q.b.p),X(q.c.i),Y(q.c.p),col,2.5); line(X(q.c.i),Y(q.c.p),X(dI),Y(q.N),col,2,[6,4]);
+  dot(X(q.a.i),Y(q.a.p),col,'A'); dot(X(q.b.i),Y(q.b.p),col,'B'); dot(X(q.c.i),Y(q.c.p),col,'C'); dot(X(dI),Y(q.N),GOLD,'N');
+  const x0=X(q.c.i); line(X(q.b.i),Y(q.b.p),xe,Y(q.b.p),'rgba(255,255,255,.55)',1,[2,3]); text((X(n)??xe)-6,Y(q.b.p)-2,'B trigger '+fp(q.b.p),'#fff','right');
+  for(const [k,v,c] of [['V',q.V,'#7fdcff'],['N',q.N,GOLD],['E',q.E,'#ff9f43'],['NT',q.NT,'#c39bff']]){ line(x0,Y(v),xe,Y(v),c,1,k==='N'?[]:[5,4]); text((X(n)??xe)-6,Y(v)-2,`${k} target ${fp(v)}`,c,'right'); } }
+function drawRS(){ const P=RS.piv; ctx.lineJoin='round';
+  for(let k=1;k<P.length;k++) line(X(P[k-1].i),Y(P[k-1].p),X(P[k].i),Y(P[k].p),'#4fa3ff',1.6,P[k].live?[5,4]:[]);
+  for(const q of P) tag(X(q.i),Y(q.p),q.lb,q.t==='H'?'#f23645':'#22ab94','#fff',q.t==='H'); }
+function drawPlan(){ const p=PL, n=C.length-1, x0=X(n+2), x1=X(n+34); if(x0==null) return; const s=p.s, far=p.tps[2];
+  rect(x0,Y(p.entry),x1,Y(far),'rgba(8,153,129,.20)'); rect(x0,Y(p.entry),x1,Y(p.sl),'rgba(242,54,69,.22)');
+  line(x0,Y(p.entry),x1,Y(p.entry),'#d7dce5',1.5); line(x0,Y(p.sl),x1,Y(p.sl),DN,1.5);
+  p.tps.forEach((t,k)=>line(x0,Y(t),x1,Y(t),UP,k===2?1.5:1,k===2?[]:[4,3]));
+  const lx=x0+4;
+  text(lx,Y(p.entry)-7,`${s>0?'LONG':'SHORT'} ENTRY ${fp(p.entry)}`,'#fff','left','middle',true);
+  text(lx,Y(p.sl)+(s>0?9:-7),`SL ${fp(p.sl)} (${sg(p.sl-p.entry)})`,DN,'left','middle',true);
+  p.tps.forEach((t,k)=>text(lx,Y(t)-7,`TP${k+1} ${fp(t)} · ${p.rr[k].toFixed(1)}R`,UP,'left','middle',true)); }
+
+function draw(){ const w=Math.max(0,ts.width()), h=Math.max(0,box.clientHeight-(ts.height?ts.height():28)); DPR=window.devicePixelRatio||1;
+  if(w!==W||h!==H||ov.width!==Math.round(w*DPR)){ W=w; H=h; ov.width=Math.round(w*DPR); ov.height=Math.round(h*DPR); ov.style.width=w+'px'; ov.style.height=h+'px'; }
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H); if(!C.length) return;
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+  try{ if(on.fib&&F) drawFib(); if(on.bo&&B) drawBO(); if(on.nst&&N) drawN(); if(on.rsi&&RS) drawRS(); if(on.tpsl&&PL) drawPlan(); }catch(e){}
+  ctx.restore(); }
+let vis=true; try{ new IntersectionObserver(e=>{ vis=e[0].isIntersecting; }).observe($('tvw')); }catch(e){}
+(function loop(){ if(vis) draw(); requestAnimationFrame(loop); })();
+
+/* ---------- info cards ---------- */
+function info(){ const el=$('tvwInfo'), n=C.length-1, out=[], a=A[n]; if(!C.length) return;
+  const card=(t,st,col,kv)=>`<div><h4>${t}</h4><div class="st" style="color:${col}">${st}</div><div class="kv">${kv}</div></div>`;
+  if(on.fib) out.push(F?card('Auto Fibonacci',`${F.s>0?'UP':'DOWN'} LEG · price at ${(F.ret*100).toFixed(1)}% retrace`,F.s>0?UP:DN,
+    `<span>1 <b>${fp(F.a.p)}</b></span><span>0 <b>${fp(F.b.p)}</b></span><span>0.5 <b>${fp(F.L(.5))}</b></span><span>0.618 <b>${fp(F.L(.618))}</b></span><span>0.786 <b>${fp(F.L(.786))}</b></span>`)
+    :card('Auto Fibonacci','no clear swing yet','var(--ink-3)',''));
+  if(on.bo) out.push(B?card('Auto Breakout Retracement',`${B.s>0?'BULL':'BEAR'} ${B.type} BREAK · ${B.st}`,B.failed?'var(--ink-3)':B.s>0?UP:DN,
+    `<span>level <b>${fp(B.lv)}</b></span><span>impulse <b>${fp(B.org)} → ${fp(B.top)}</b></span><span>zone <b>${fp(B.Z(.382))} – ${fp(B.Z(.618))}</b></span><span>retrace <b>${(B.depth*100).toFixed(0)}%</b></span>`)
+    :card('Auto Breakout Retracement','no breakout in the last 500 bars','var(--ink-3)',''));
+  if(on.nst) out.push(N?card('Auto N Strategy',`${N.s>0?'BULLISH':'BEARISH'} N · ${N.st}`,N.inval?'var(--ink-3)':N.s>0?UP:DN,
+    `<span>A <b>${fp(N.a.p)}</b></span><span>B <b>${fp(N.b.p)}</b></span><span>C <b>${fp(N.c.p)}</b></span><span>BC/AB <b>${(N.r*100).toFixed(0)}%</b></span><span>V <b>${fp(N.V)}</b></span><span>N <b>${fp(N.N)}</b></span><span>E <b>${fp(N.E)}</b></span><span>NT <b>${fp(N.NT)}</b></span>`)
+    :card('Auto N Strategy','no valid A-B-C yet · waiting for a higher low / lower high','var(--ink-3)',''));
+  if(on.rsi&&RS){ const P=RS.piv.slice(-4), r=RS.R[n]; out.push(card('RSI Swing Indicator',`RSI ${r!=null?r.toFixed(1):'—'} · ${r>70?'OVERBOUGHT':r<30?'OVERSOLD':'NEUTRAL'}`,r>70?DN:r<30?UP:'var(--ink)',
+    P.map(q=>`<span>${q.lb} <b>${fp(q.p)}</b>${q.live?' (live)':''}</span>`).join(''))); }
+  if(on.tpsl) out.push(PL?card('Auto TP &amp; SL',`${PL.s>0?'LONG':'SHORT'} · ${PL.src} · ${PL.type}`,PL.s>0?UP:DN,
+    `<span>entry <b>${fp(PL.entry)}</b></span><span>SL <b style="color:${DN}">${fp(PL.sl)}</b> (${fp(PL.risk)})</span>${PL.tps.map((t,k)=>`<span>TP${k+1} <b style="color:${UP}">${fp(t)}</b> ${PL.rr[k].toFixed(1)}R</span>`).join('')}<span>ATR <b>${fp(a)}</b></span>`)
+    :card('Auto TP &amp; SL','no setup · trend flat','var(--ink-3)',''));
+  el.innerHTML=out.length?out.join('')+`<div class="note">Auto drawings are chart aids calculated from Binance ${SYMW.data} ${TFL[tf]} candles — they are not backtested Sniper signals. Use the validated setups above for trade decisions.</div>`
+    :`<div class="blank">Blank chart — open <b>🛠 TOOLS</b> to add Auto Fibonacci, Auto Breakout Retracement, Auto TP &amp; SL, Auto N Strategy or the RSI Swing Indicator.</div>`;
+  $('tvwCnt').textContent=Object.values(on).filter(Boolean).length; }
+function head(){ const n=C.length-1; if(n<1) return; const c=C[n], d=c.close-C[n-1].close; $('tvwHead').innerHTML=`<span style="color:${d>=0?UP:DN}">${fp(c.close)} ${sg(d)} (${(d/C[n-1].close*100).toFixed(2)}%)</span>`; }
+
+/* ---------- data ---------- */
+const toC=k=>({time:Math.floor(k[0]/1000)+TZ,open:+k[1],high:+k[2],low:+k[3],close:+k[4]});
+function setRsi(d){ rs.setData(d); follow(); }
+function compute(){ if(C.length<60){ info(); return; } A=atr(C,14); Z=zigzag(C,A,ZM[sens]);
+  try{ F=calcFib(); }catch(e){ F=null; } try{ B=calcBO(); }catch(e){ B=null; } try{ N=calcN(); }catch(e){ N=null; } try{ RS=calcRS(); }catch(e){ RS=null; } try{ PL=calcPlan(); }catch(e){ PL=null; }
+  if(RS&&!rbox.hidden) setRsi(C.map((c,i)=>RS.R[i]==null?{time:c.time}:{time:c.time,value:RS.R[i]}));
+  info(); head(); }
+async function load(){ const g=++gen; $('tvwHead').textContent='loading…'; $('tvwTfL').textContent=TFL[tf];
+  try{ const j=await (await fetch(API+'&interval='+tf+'&limit=1000',{cache:'no-store'})).json(); if(g!==gen) return; C=j.map(toC); cs.setData(C); compute(); view(); }
+  catch(e){ if(g===gen) $('tvwHead').textContent='data error · retrying'; setTimeout(()=>{ if(g===gen) load(); },5000); } }
+async function poll(){ if(!C.length||document.hidden) return; const g=gen;
+  try{ const j=await (await fetch(API+'&interval='+tf+'&limit=2',{cache:'no-store'})).json(); if(g!==gen||!C.length) return;
+    for(const k of j){ const c=toC(k), L=C[C.length-1]; if(c.time===L.time) C[C.length-1]=c; else if(c.time>L.time) C.push(c); else continue; cs.update(c); }
+    compute(); }catch(e){} }
+setInterval(poll,3000);
+function view(){ const n=C.length; ts.setVisibleLogicalRange({from:Math.max(0,n-160),to:n+20}); cs.priceScale().applyOptions({autoScale:true}); }
+
+/* ---------- UI ---------- */
+const menu=$('tvwMenu'), btn=$('tvwToolsBtn');
+function syncUI(){ menu.querySelectorAll('input[data-t]').forEach(i=>i.checked=!!on[i.dataset.t]); $('tvwSens').value=sens;
+  const showR=!!on.rsi; if(rbox.hidden===showR){ rbox.hidden=!showR; if(showR){ if(RS) setRsi(C.map((c,i)=>RS.R[i]==null?{time:c.time}:{time:c.time,value:RS.R[i]})); setTimeout(fit,30); } }
+  ST.set('tvw-tools',on); info(); }
+btn.addEventListener('click',e=>{ e.stopPropagation(); menu.hidden=!menu.hidden; btn.setAttribute('aria-expanded',String(!menu.hidden)); });
+document.addEventListener('click',e=>{ if(!menu.hidden&&!menu.contains(e.target)&&e.target!==btn){ menu.hidden=true; btn.setAttribute('aria-expanded','false'); } });
+menu.addEventListener('change',e=>{ const t=e.target.dataset?.t; if(t){ on[t]=e.target.checked; syncUI(); } });
+$('tvwSens').addEventListener('change',e=>{ sens=e.target.value; ST.set('tvw-sens',sens); compute(); });
+const blank=()=>{ on={...OFF}; syncUI(); view(); };
+$('tvwReset').addEventListener('click',blank); $('tvwNone').addEventListener('click',()=>{ blank(); menu.hidden=true; btn.setAttribute('aria-expanded','false'); });
+$('tvwAll').addEventListener('click',()=>{ for(const k in on) on[k]=true; syncUI(); });
+const tfs=$('tvwTf'); tfs.value=tf; tfs.addEventListener('change',()=>{ tf=tfs.value; ST.set('tvw-tf',tf); C=[]; load(); });
+const sec=$('tvw'); const setMax=v=>{ sec.classList.toggle('max',v); document.documentElement.classList.toggle('tvw-max',v); $('tvwMax').textContent=v?'✕':'⛶'; };
+$('tvwMax').addEventListener('click',()=>setMax(!sec.classList.contains('max')));
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!menu.hidden){ menu.hidden=true; btn.setAttribute('aria-expanded','false'); } else if(sec.classList.contains('max')) setMax(false); } });
+box.addEventListener('dblclick',view);
+$('tvwSym').textContent=(SYMW.name||SYMW.id||'BTC/USDT')+(SYMW.data&&SYMW.data!==SYMW.id?' ('+SYMW.data+')':'');
+syncUI(); load();
+window.__TVW={get C(){return C;},get F(){return F;},get B(){return B;},get N(){return N;},get RS(){return RS;},get PL(){return PL;},get on(){return on;}};
+})();
+</script>
 </body>
 </html>
