@@ -875,6 +875,7 @@ html.ob-max{overflow:hidden}
       <div><div class="lbl2" id="sgIH">Instruments · live confluence</div><div class="sgI" id="sgI"></div></div>
       <div class="sgT"><div class="lbl2">Validated triggers · market</div><div id="sgT"></div><div class="sgH" id="sgH"></div></div>
     </div>
+    <div class="sgJ" id="sgJ"></div>
   </section>
   <section class="panel a-act" aria-label="Market activity status and trading recommendation">
     <div class="actg num" id="actBar"><span class="muted">Measuring market volume and transactions…</span></div>
@@ -4591,7 +4592,7 @@ function exrManage(p){ const s=EXR.sig; if(!FP4.isOpen(s)||p==null) return; cons
 
 /* ---------- validated Sniper setup (engine runs headless, same rules as its backtest) ---------- */
 function sniper(){ const s=window.ME_STATE?.sig; if(!s) return null; const SET={REV:'A',LIQ:'A',FLW:'A',ABS:'A',PB:'B',BO:'C'};
-  const e=s.entry??s.lvl; return {id:s.id,src:'SNIPER',grade:SET[s.type]||'B',dir:s.dir,name:s.name,kind:s.pending?'LIMIT / STOP':'MARKET',entry:e,sl:e-s.dir*s.slPts,tp:e+s.dir*s.tpPts,R:s.slPts,until:s.pending?(s.expires||s.until):(s.until||s.expires),status:s.pending?'PENDING':'LIVE',why:s.why||s.chain||''}; }
+  const e=s.entry??s.lvl; return {id:s.id,src:'SNIPER',grade:SET[s.type]||'B',dir:s.dir,name:s.name,kind:s.pending?'LIMIT / STOP':'MARKET',entry:e,sl:e-s.dir*s.slPts,tp:e+s.dir*s.tpPts,R:s.slPts,fillBy:s.pending?s.expires:null,hold:s.until,until:s.pending?(s.expires||s.until):(s.until||s.expires),status:s.pending?'PENDING':'LIVE',why:s.why||s.chain||''}; }
 
 /* ---------- live instruments: each one votes +1 / −1 / 0 for direction d ---------- */
 function instruments(){
@@ -4641,6 +4642,7 @@ function decide(){
   const id=main?main.id:null;
   if(main&&!conflict&&id!==X.last){ X.last=id; beep(main.dir>0?1320:520); setTimeout(()=>beep(main.dir>0?1560:440),250);
     X.hist.unshift({t:Date.now()/1000,dir:main.dir,src:main.src,g:main.grade,name:main.name,entry:main.entry,agree:ins.filter(x=>x.v===main.dir).length,n:ins.length}); X.hist.length=Math.min(X.hist.length,30); ST.set('ix-hist-'+SYMX.id,X.hist); }
+  if(main&&!conflict) window.__SIGJ?.add(main,ins);
   if(!main) X.last=null;
   return {V,cls,sub,main,trig,ins,zone,conflict,p}; }
 
@@ -4655,6 +4657,7 @@ function render(){
   if(m&&!D.conflict){ const R=Math.abs(m.entry-m.sl), rr=Math.abs(m.tp-m.entry)/(R||1), ur=D.p!=null?(D.p-m.entry)*m.dir:0, left=m.until?Math.max(0,m.until-Date.now()/1000):null;
     ph=`<div class="sgPlan"><div><span class="lbl">${m.kind}</span><b>${fP(m.entry)}</b></div><div><span class="lbl">Stop loss</span><b class="down">${fP(m.sl)}</b></div>
       <div><span class="lbl">Take profit · ${rr.toFixed(1)}R</span><b class="up">${fP(m.tp)}</b></div><div><span class="lbl">Now · ${left!=null?mmss(left)+' left':''}</span><b class="${ur>=0?'up':'down'}">${ur>=0?'+':''}${fP(ur)} pts</b></div></div>
+      ${(()=>{ const J=window.__SIGJ; if(!J) return ''; const L=J.lot(m), G=J.guard(); return `<div class="sgS"><b>Lot ${L.lot.toFixed(2)}</b> · risk $${L.riskUsd.toFixed(0)} (${J.cfg.risk}%) · SL ${fP(Math.abs(m.entry-m.sl))} + cost ${J.cfg.cost} pts${L.tooBig?' · <span class="down">stop too wide for this risk (min lot 0.01 risks more)</span>':''}${G.stop?' · <span class="down"><b>DAILY STOP HIT — skip this trade</b></span>':''}</div>`; })()}
       <div class="sgS" title="${m.why.replace(/"/g,'&quot;')}">${m.src==='EXR'?'Exhaustion reversal':'Sniper '+m.name} · grade ${m.grade} · ${m.why.slice(0,150)}</div>`; }
   else ph=`<div class="sgS">${D.conflict?'Two validated triggers disagree — no trade.':'No open trade plan. A plan appears only when a validated trigger fires (Sniper setup or exhaustion reversal); the entry, stop and target come from that trigger.'}</div>`;
   set('sgPlan',ph); set('sgPlanH',m&&!D.conflict?`Trade plan · ${m.dir>0?'LONG':'SHORT'}`:'Trade plan');
@@ -4694,5 +4697,95 @@ window.__SIG={EXR,X,render,decide};
   el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end);
   el.addEventListener('dblclick',()=>{ pos=null; try{ localStorage.removeItem(K); }catch(e){} place(null); });
   addEventListener('resize',()=>place(pos));
+})();
+</script>
+<style id="sigJStyle">
+/* forward-test journal + risk manager (inside the Integrated signal panel) */
+.sgJ{border-top:1px solid var(--line);background:var(--panel-2);font-size:10.5px}
+.sgJs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:4px 10px}
+.sgJs b{font-weight:800} .sgJs .stop{color:#000;background:#ff5a4d;border-radius:4px;padding:0 6px;font-weight:900}
+.sgJs button,.sgJb button{font:inherit;font-size:10px;background:#000;color:var(--ink);border:1px solid var(--line-2);border-radius:4px;padding:1px 7px;cursor:pointer}
+.sgJb{display:none;padding:4px 10px 8px;gap:6px}
+.sgJ.open .sgJb{display:grid}
+.sgJb label{display:inline-flex;gap:4px;align-items:center;margin-right:10px;color:var(--ink-2)}
+.sgJb input{width:78px;font:inherit;font-size:10.5px;background:#000;color:var(--ink);border:1px solid var(--line-2);border-radius:4px;padding:1px 4px}
+.sgJt{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border-radius:6px;overflow:hidden}
+.sgJt div{background:var(--panel);padding:3px 7px;display:grid}
+.sgJl{max-height:150px;overflow:auto;display:grid;gap:1px;font-size:10px}
+.sgJl div{display:grid;grid-template-columns:78px 50px minmax(0,1fr) 70px 70px 56px;gap:6px}
+@media (max-width:699px){ .sgJt{grid-template-columns:repeat(2,minmax(0,1fr))} .sgJl div{grid-template-columns:64px 40px minmax(0,1fr) 60px} .sgJl div>:nth-child(5),.sgJl div>:nth-child(6){display:none} }
+</style>
+<script id="sigJournal">
+/* ===== FORWARD-TEST JOURNAL + RISK MANAGER =====
+   Every integrated signal is written down with the state of all live instruments at that moment. Outcomes are resolved from
+   Binance 1-minute candles (stop checked first inside a candle), so results are correct even if the page was closed.
+   Over time this measures (1) whether the backtested edge holds live and (2) whether instrument agreement really helps. */
+(()=>{
+'use strict';
+const SYMX=window.SYM, $=id=>document.getElementById(id), API='https://data-api.binance.vision/api/v3/klines?symbol='+SYMX.data;
+const ST={get(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??d; }catch(e){ return d; } },set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
+const dp=SYMX.btc?1:SYMX.dp, fP=p=>p==null||!isFinite(p)?'—':(+p).toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
+const K='ix-journal-'+SYMX.id, KC='ix-risk-'+SYMX.id;
+const J={list:ST.get(K,[]),cfg:Object.assign({bal:1000,risk:1,cost:SYMX.btc?15:15*(SYMX.ps||1),open:false},ST.get(KC,{})),busy:false};
+const save=()=>ST.set(K,J.list.slice(0,400)), saveC=()=>ST.set(KC,J.cfg);
+const dayKey=t=>new Date(t*1000).toDateString();
+J.add=(m,ins)=>{ if(!m||J.list.some(x=>x.id===m.id)) return; const now=Date.now()/1000, mk=m.kind==='MARKET';
+  J.list.unshift({id:m.id,t:now,src:m.src,g:m.grade,name:m.name,dir:m.dir,kind:m.kind,entry:m.entry,sl:m.sl,tp:m.tp,fillBy:mk?null:(m.fillBy||now+1800),until:m.hold||m.until||now+10800,
+    status:mk?'OPEN':'PENDING',fillT:mk?now:null,votes:Object.fromEntries(ins.map(x=>[x.k,x.v])),agree:ins.filter(x=>x.v===m.dir).length,against:ins.filter(x=>x.v===-m.dir).length,n:ins.length});
+  save(); render(); };
+/* outcome from 1-minute candles after the signal (stop first when a candle touches both) */
+async function resolve(){
+  if(J.busy) return; J.busy=true; const now=Date.now()/1000;
+  try{ for(const e of J.list.filter(x=>x.status==='OPEN'||x.status==='PENDING').slice(0,6)){
+      const start=(Math.floor(e.t/60)+1)*60; if(now<start+60) continue;
+      const r=await fetch(`${API}&interval=1m&startTime=${start*1000}&limit=1000`,{cache:'no-store'}); const a=await r.json(); if(!Array.isArray(a)) continue;
+      for(const k of a){ const t=k[0]/1000, h=+k[2], l=+k[3], c=+k[4]; if(t+60>now) break;
+        if(e.status==='PENDING'){ if(t>=e.fillBy){ e.status='CANCEL'; e.exitT=t; break; } if(l<=e.entry&&h>=e.entry){ e.status='OPEN'; e.fillT=t; if((e.dir>0?l:h)*e.dir<=e.sl*e.dir){ close(e,'SL',e.sl,t); break; } } continue; }
+        if((e.dir>0?l:h)*e.dir<=e.sl*e.dir){ close(e,'SL',e.sl,t); break; }
+        if((e.dir>0?h:l)*e.dir>=e.tp*e.dir){ close(e,'TP',e.tp,t); break; }
+        if(t+60>=e.until){ close(e,'TIME',c,t+60); break; } }
+    } save(); }catch(err){} J.busy=false; render(); }
+function close(e,res,px,t){ e.status=res; e.exit=px; e.exitT=t; e.pts=+((px-e.entry)*e.dir).toFixed(1); }
+const net=e=>e.pts-J.cfg.cost, rOf=e=>net(e)/(Math.abs(e.entry-e.sl)||1);
+function stats(a){ const n=a.length, w=a.filter(e=>net(e)>0), gw=w.reduce((s,e)=>s+net(e),0), gl=-a.filter(e=>net(e)<=0).reduce((s,e)=>s+net(e),0);
+  return {n,wr:n?w.length/n:0,pf:gl?gw/gl:(gw>0?Infinity:0),pts:gw-gl,R:a.reduce((s,e)=>s+rOf(e),0)}; }
+J.guard=()=>{ const today=dayKey(Date.now()/1000), d=J.list.filter(e=>e.exitT&&e.pts!=null&&dayKey(e.exitT)===today).sort((a,b)=>a.exitT-b.exitT);
+  const R=d.reduce((s,e)=>s+rOf(e),0); let streak=0; for(const e of d) streak=net(e)<=0?streak+1:0;
+  return {R,streak,n:d.length,stop:R<=-3||streak>=3}; };
+J.lot=m=>{ const riskUsd=J.cfg.bal*J.cfg.risk/100, pts=Math.abs(m.entry-m.sl)+J.cfg.cost, lot=Math.floor(riskUsd/(pts*(SYMX.lot||1))*100)/100;
+  return {lot:Math.max(.01,lot),riskUsd,tooBig:lot<.01}; };
+function render(){
+  const el=$('sgJ'); if(!el) return; el.classList.toggle('open',!!J.cfg.open);
+  const done=J.list.filter(e=>e.pts!=null&&['TP','SL','TIME'].includes(e.status)), S=stats(done), G=J.guard(), open=J.list.filter(e=>e.status==='OPEN'||e.status==='PENDING').length;
+  const hi=done.filter(e=>e.agree>e.n/2), lo=done.filter(e=>e.agree<=e.n/2), Sh=stats(hi), Sl=stats(lo);
+  const pf=x=>x===Infinity?'∞':x.toFixed(2);
+  const sum=`<span class="lbl2" style="margin:0">Forward test</span>
+    <span>${S.n} closed${open?` · ${open} open`:''} · win <b>${Math.round(S.wr*100)}%</b> · PF <b class="${S.pf>=1?'up':'down'}">${S.n?pf(S.pf):'—'}</b> · <b class="${S.pts>=0?'up':'down'}">${S.pts>=0?'+':''}${fP(S.pts)} pts</b> (${S.R>=0?'+':''}${S.R.toFixed(1)}R)</span>
+    <span>Today ${G.R>=0?'+':''}${G.R.toFixed(1)}R · ${G.n} trades</span>
+    ${G.stop?'<span class="stop">DAILY STOP · no more trades today</span>':''}
+    <span>Risk ${J.cfg.risk}% of $${J.cfg.bal.toLocaleString('en-US')} · cost ${J.cfg.cost} pts</span>
+    <button type="button" id="sgJTg">${J.cfg.open?'Hide journal ▴':'Journal & risk ▾'}</button>`;
+  const body=`<div><label>Balance $ <input id="sgJBal" type="number" min="10" step="10" value="${J.cfg.bal}"></label><label>Risk % / trade <input id="sgJRisk" type="number" min=".1" max="5" step=".1" value="${J.cfg.risk}"></label>
+      <label>Your cost (spread + comm.) pts <input id="sgJCost" type="number" min="0" step="1" value="${J.cfg.cost}"></label>
+      <button type="button" id="sgJCsv">Export CSV</button> <button type="button" id="sgJClr">Clear</button></div>
+    <div class="sgJt"><div><span class="lbl">All signals</span><b>${S.n} · win ${Math.round(S.wr*100)}% · PF ${S.n?pf(S.pf):'—'}</b></div>
+      <div><span class="lbl">Instruments agree (&gt; half)</span><b>${Sh.n} · win ${Math.round(Sh.wr*100)}% · PF ${Sh.n?pf(Sh.pf):'—'}</b></div>
+      <div><span class="lbl">Instruments split / against</span><b>${Sl.n} · win ${Math.round(Sl.wr*100)}% · PF ${Sl.n?pf(Sl.pf):'—'}</b></div>
+      <div><span class="lbl">Rules</span><b>stop day at −3R or 3 losses in a row</b></div></div>
+    <div class="sgJl">${J.list.slice(0,25).map(e=>`<div><span class="muted">${new Date(e.t*1000).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false})}</span>
+      <b class="${e.dir>0?'up':'down'}">${e.dir>0?'BUY':'SELL'}</b><span>${e.src==='EXR'?'Exhaustion':e.name.toLowerCase()} ${e.g} · ${e.agree}/${e.n} agree</span><span>${fP(e.entry)}</span>
+      <b class="${e.pts==null?'':net(e)>0?'up':'down'}">${e.pts==null?e.status:`${e.status} ${net(e)>=0?'+':''}${fP(net(e))}`}</b><span class="muted">${e.pts==null?'':`${rOf(e)>=0?'+':''}${rOf(e).toFixed(2)}R`}</span></div>`).join('')||'<span class="muted">No signal recorded yet. Keep this page open: every integrated signal is logged here and its result is checked against real 1-minute candles.</span>'}</div>
+    <div class="muted" style="font-size:9.5px">Results are net of your cost setting. "Instruments agree" compares signals where most live instruments pointed the same way with the rest — after ~50 signals this tells us whether the live confluence adds edge. Stored in this browser only.</div>`;
+  const h=`<div class="sgJs num">${sum}</div><div class="sgJb num">${body}</div>`; if(el._h===h) return;
+  const act=document.activeElement&&el.contains(document.activeElement)&&document.activeElement.tagName==='INPUT'; if(act&&el._h) return; // don't redraw while typing
+  el.innerHTML=h; el._h=h;
+  $('sgJTg').onclick=()=>{ J.cfg.open=!J.cfg.open; saveC(); el._h=null; render(); };
+  const num=(id,k,min,max)=>{ const i=$(id); if(i) i.onchange=()=>{ const v=+i.value; if(isFinite(v)&&v>=min&&v<=max){ J.cfg[k]=v; saveC(); } el._h=null; render(); }; };
+  num('sgJBal','bal',10,1e9); num('sgJRisk','risk',.1,5); num('sgJCost','cost',0,500);
+  const csv=$('sgJCsv'); if(csv) csv.onclick=()=>{ const rows=[['time','source','grade','setup','dir','kind','entry','sl','tp','status','exit','pts_gross','pts_net','R','agree','of'].join(',')].concat(J.list.map(e=>[new Date(e.t*1000).toISOString(),e.src,e.g,`"${e.name}"`,e.dir>0?'BUY':'SELL',e.kind,e.entry,e.sl,e.tp,e.status,e.exit??'',e.pts??'',e.pts!=null?net(e).toFixed(1):'',e.pts!=null?rOf(e).toFixed(2):'',e.agree,e.n].join(',')));
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'})); a.download=`${SYMX.id}-signal-journal.csv`; a.click(); };
+  const clr=$('sgJClr'); if(clr) clr.onclick=()=>{ if(clr.dataset.sure){ J.list=[]; save(); el._h=null; render(); } else { clr.dataset.sure=1; clr.textContent='Click again to clear'; } };
+}
+J.resolve=resolve; window.__SIGJ=J; render(); resolve(); setInterval(resolve,60000); setInterval(()=>{ if(!document.hidden) render(); },5000);
 })();
 </script>
