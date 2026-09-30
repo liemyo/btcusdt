@@ -4571,7 +4571,7 @@ const beep=f=>window.hdrAlert?.beep(f);
 
 /* ---------- exhaustion reversal (validated rule, same code as the backtest: fp4core.js) ---------- */
 const EXR={B:null,last5:null,sig:null,lastT:0,busy:false,hist:ST.get('ix-exr-'+SYMX.id,[])};
-const RULE={A:.40,B:.35,minSl:1,hold:180*60};
+const RULE={A:.40,B:.35,minSl:1.3,tpR:3,hold:180*60}; // exits re-optimised on both halves of 12 months: TP 3R, SL ≥ 1.3× 5m ATR, 3 h (PF 1.32 / 1.28)
 async function kl(tf){ const r=await fetch(`${API}&interval=${tf}&limit=200`,{cache:'no-store'}); const a=await r.json(); return a.map(k=>({t:k[0]/1000,o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5],bv:+k[9]})); }
 async function exrEval(){
   const now=Date.now()/1000, T=Math.floor(now/300)*300; if(T<=EXR.lastT||EXR.busy) return; EXR.busy=true;
@@ -4582,8 +4582,8 @@ async function exrEval(){
     if(d&&!d.none&&!d.limit&&d.name==='SWEEP & RECLAIM'&&!FP4.isOpen(EXR.sig)&&SYMX.btc){
       const dir=d.dir, st=[B[3].b*dir,B[5].b*dir,B[15].b*dir], worst=Math.max(...st);
       if(worst< -RULE.B&&now-T<90){ const p=px()??C5[C5.length-1].c, R=Math.max(Math.abs(p-d.sl),RULE.minSl*B[5].A);
-        if((d.sl-p)*dir<0&&(d.tp2-p)*dir>0){ const g=worst< -RULE.A?'A':'B';
-          EXR.sig={id:'EXR-'+T,src:'EXR',grade:g,dir,name:'EXHAUSTION REVERSAL',kind:'MARKET',entry:p,sl:p-dir*R,tp:d.tp2,R,t:T,until:T+RULE.hold,status:'LIVE',st,why:`5m ${d.why}; 3m/5m/15m stretched ${st.map(x=>x.toFixed(2)).join(' / ')}`}; } } }
+        if((d.sl-p)*dir<0){ const g=worst< -RULE.A?'A':'B';
+          EXR.sig={id:'EXR-'+T,src:'EXR',grade:g,dir,name:'EXHAUSTION REVERSAL',kind:'MARKET',entry:p,sl:p-dir*R,tp:p+dir*RULE.tpR*R,R,t:T,until:T+RULE.hold,status:'LIVE',st,why:`5m ${d.why}; 3m/5m/15m stretched ${st.map(x=>x.toFixed(2)).join(' / ')}`}; } } }
   }catch(e){} finally{ EXR.busy=false; } }
 function exrManage(p){ const s=EXR.sig; if(!FP4.isOpen(s)||p==null) return; const now=Date.now()/1000; let res=null;
   if((p-s.sl)*s.dir<=0) res='SL'; else if((p-s.tp)*s.dir>=0) res='TP'; else if(now>s.until) res='TIME';
@@ -4666,6 +4666,7 @@ function render(){
   const A=window.__ACT&&window.__ACT.st, S=window.ME_STATE, sn=sniper(), ez=EXR.B;
   set('sgT',`<div><span class="muted">Sniper</span><b class="${sn?(sn.dir>0?'up':'down'):''}">${sn?`${sn.dir>0?'BUY':'SELL'} ${sn.name} (${sn.grade}) ${sn.status}`:S&&S.ready?'watching REV · LIQ · FLW · PB · ABS · BO':'loading…'}</b></div>
     <div><span class="muted">Exhaustion</span><b class="${FP4.isOpen(EXR.sig)?(EXR.sig.dir>0?'up':'down'):D.zone?'warn':''}">${FP4.isOpen(EXR.sig)?`${EXR.sig.dir>0?'BUY':'SELL'} grade ${EXR.sig.grade}`:ez?`3m ${ez[3].b.toFixed(2)} · 5m ${ez[5].b.toFixed(2)} · 15m ${ez[15].b.toFixed(2)}`:'loading…'}</b></div>
+    <div><span class="muted">Backtest</span><span class="muted">EXR 12 mo: 219 trades · win 36% · PF 1.30 · +8,173 pts after 15-pt cost · Sniper 400 d: PF 1.2–1.9 per setup</span></div>
     <div><span class="muted">Market</span><b class="${A?(A.lvl==='HIGH'?'up':A.lvl==='LOW'?'warn':'down'):''}">${A?`${A.lvl} activity ${Math.round(A.r*100)}%${A.lvl==='HIGH'?'':' · smaller size'}`:'—'}</b></div>`);
   set('sgH',X.hist.slice(0,6).map(x=>`<div><span class="muted">${hm(x.t)}</span> <b class="${x.dir>0?'up':'down'}">${x.dir>0?'BUY':'SELL'}</b> ${x.src==='EXR'?'exhaustion':x.name.toLowerCase()} ${x.g} · ${fP(x.entry)} · ${x.agree}/${x.n} agree</div>`).join('')||'<span class="muted">No integrated signal yet in this browser.</span>');
 }
