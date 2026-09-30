@@ -687,6 +687,14 @@ tr.active td{background:rgba(234,108,196,.08)}
 html.ob-max{overflow:hidden}
 </style>
 <style id="obTopStyle">
+/* pressure meter: far-left column with a glowing border (green BUY / red SELL / yellow neutral), like the Auto TP&SL card */
+.obtg{grid-template-columns:300px minmax(0,1fr) 250px!important}
+.obtg .obM{order:-1;border:3px solid #ffd84d;border-radius:8px;margin:6px;box-shadow:0 0 14px rgba(255,216,77,.55),inset 0 0 10px rgba(255,216,77,.12);transition:border-color .4s,box-shadow .4s}
+.obtg .obM.buy{border-color:#3dff9a;box-shadow:0 0 14px rgba(61,255,154,.55),inset 0 0 10px rgba(61,255,154,.12)}
+.obtg .obM.sell{border-color:#ff5a4d;box-shadow:0 0 14px rgba(255,90,77,.6),inset 0 0 10px rgba(255,90,77,.14)}
+.obtg .obM .omh{color:#fff}
+@media (min-width:900px) and (max-width:1279px){ .obtg{grid-template-columns:260px minmax(0,1fr) 220px!important} }
+@media (max-width:899px){ .obtg{grid-template-columns:minmax(0,1fr)!important} }
 /* liquidation map + heatmaps moved to the top of the order book panel; the liquidation panel keeps volume, stats and feed */
 .lqtop{border-bottom:1px solid var(--line)}
 .a-liq .liq{grid-template-columns:minmax(0,1fr)!important}
@@ -2269,6 +2277,7 @@ function obMeter(){
     :`<div class="omt">balanced · range <b>${bw?obF(bw.p):'—'}</b> – <b>${aw?obF(aw.p):'—'}</b></div><div class="omw">biggest bid wall ↔ biggest ask wall (±0.5 %)</div>`)
     +`<div class="omw">${mg.up?`liq ↑ ${obF(mg.up.p)} ${obUsd(mg.up.usd)}`:''}${mg.up&&mg.dn?' · ':''}${mg.dn?`liq ↓ ${obF(mg.dn.p)} ${obUsd(mg.dn.usd)}`:''}</div>`;
   const P=$('obComp'); if(P) P.innerHTML=comp.map(([n,x,wt])=>`<div class="omc"><span>${n} <i>${Math.round(wt*100)}%</i></span><div class="omb"><em></em><b style="${x>=0?`left:50%;width:${x*50}%;background:#25d07d`:`right:50%;width:${-x*50}%;background:#f25745`}"></b></div><strong style="color:${x>.1?'#25d07d':x<-.1?'#f25745':'#8a93a4'}">${x>=0?'+':''}${(x*100).toFixed(0)}</strong></div>`).join('');
+  const Mx=cv.closest('.obM'); if(Mx){ Mx.classList.toggle('buy',v>=15); Mx.classList.toggle('sell',v<=-15); }
   const hd=$('obHead'); if(hd) hd.innerHTML=`<span style="color:${col}">${lbl} ${(v>0?'+':'')+v.toFixed(0)}</span>${tgt?` · → ${obF(tgt.p)}`:''}`;
 }
 /* taker buy / sell */
