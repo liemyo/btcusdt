@@ -503,7 +503,7 @@ tr.active td{background:rgba(234,108,196,.08)}
   .frame{max-width:none;align-items:start;
     grid-template-columns:minmax(320px,1fr) minmax(0,1.75fr) minmax(340px,1.05fr);
     grid-template-rows:auto auto auto auto auto auto auto auto auto auto auto auto auto 1fr auto auto auto auto;
-    grid-template-areas:"hdr hdr hdr" "top top top" "tvw tvw tvw" "whale whale whale" "bo1m bo1m bo1m" "bb bb bb" "act act act" "me me me" "mom mom mom" "desk desk desk" "liq liq liq" "mq mq mq" "cyc cyc cyc" "cards strip ana" "cards graph ana" "quant quant quant" "floor floor floor" "foot foot foot" "note note note"}
+    grid-template-areas:"hdr hdr hdr" "act act act" "top top top" "tvw tvw tvw" "whale whale whale" "bo1m bo1m bo1m" "bb bb bb" "me me me" "mom mom mom" "desk desk desk" "liq liq liq" "mq mq mq" "cyc cyc cyc" "cards strip ana" "cards graph ana" "quant quant quant" "floor floor floor" "foot foot foot" "note note note"}
   .a-act{grid-area:act} .a-me{grid-area:me} .a-mom{grid-area:mom} .a-desk{grid-area:desk} .a-hdr{grid-area:hdr} .a-liq{grid-area:liq} .a-mq{grid-area:mq} .a-cyc{grid-area:cyc} .a-cards{grid-area:cards}
   .a-main{grid-area:main} .a-strip{grid-area:strip} .a-graph{grid-area:graph} .a-ana{grid-area:ana}
   .a-quant{grid-area:quant} .a-floor{grid-area:floor} .a-foot{grid-area:foot} .a-note{grid-area:note}
@@ -794,6 +794,11 @@ tr.active td{background:rgba(234,108,196,.08)}
     <div class="clockbox num"><b id="clk">--:--:--</b><span id="lat">UTC · — ms</span></div>
   </header>
 
+  <!-- MARKET ACTIVITY STATUS -->
+  <section class="panel a-act" aria-label="Market activity status and trading recommendation">
+    <div class="actg num" id="actBar"><span class="muted">Measuring market volume and transactions…</span></div>
+  </section>
+
   <!-- TOP: main chart + technical analysis -->
   <div class="a-top">
   <!-- MAIN CHART -->
@@ -897,10 +902,6 @@ tr.active td{background:rgba(234,108,196,.08)}
     <div class="whg num" id="bbBody"><div class="muted" style="padding:12px">Loading 1H history…</div></div>
   </section>
 
-  <!-- MARKET ACTIVITY STATUS -->
-  <section class="panel a-act" aria-label="Market activity status and trading recommendation">
-    <div class="actg num" id="actBar"><span class="muted">Measuring market volume and transactions…</span></div>
-  </section>
 
   <!-- SNIPER SCALP: integrated setups -->
   <section class="panel a-me" aria-label="Integrated sniper scalp signals">
