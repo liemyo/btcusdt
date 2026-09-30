@@ -853,7 +853,7 @@ html.ob-max{overflow:hidden}
   <header class="top a-hdr">
     <div class="symbar" role="group" aria-label="Market and timeframe">
       <label class="symsel"><span>Market</span><select id="symSel" aria-label="Market"><option value="BTCUSDT">BTCUSDT · Bitcoin</option><option value="XAUUSDT">XAUUSDT · Gold</option><option value="BNBUSDT">BNBUSDT · BNB</option><option value="SOLUSDT">SOLUSDT · Solana</option></select></label>
-      <label class="symsel"><span>Timeframe</span><select id="tfSel" aria-label="Timeframe" title="Applies to every window that has a timeframe: TradingView window (all TFs) and Footprint (1M / 5M). Liquidation map, order book heatmap and Big trades use fixed windows."><option value="1m">1M · 1 minute</option><option value="5m">5M · 5 minutes</option><option value="15m">15M · 15 minutes</option><option value="1h">1H · 1 hour</option><option value="4h">4H · 4 hours</option><option value="1d">1D · 1 day</option></select></label>
+      <label class="symsel"><span>Timeframe</span><select id="tfSel" aria-label="Timeframe" title="One timeframe for every instrument: Bollinger / MA chart + momentum meter, live per-second graph (open reference), TradingView window + Sniper Indicator + AI Agent, Footprint (1M / 5M; higher TFs keep 5M). Liquidation map, order book heatmap and Big trades use fixed windows."><option value="1m">1M · 1 minute</option><option value="5m">5M · 5 minutes</option><option value="15m">15M · 15 minutes</option><option value="1h">1H · 1 hour</option><option value="4h">4H · 4 hours</option><option value="1d">1D · 1 day</option></select></label>
       <a class="dlbtn" href="btcusdt-user-guide.pdf" download="BTCUSDT-Scalp-Deck-User-Guide.pdf" target="_blank" rel="noopener" title="Download the user guide (PDF, English): every panel, indicator and signal explained with screenshots" aria-label="Download user guide PDF"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 17v3h16v-3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>USER GUIDE · PDF</span></a>
       <span class="symnote" id="symNote"></span>
       <div id="pxFloat" aria-live="off" aria-label="Current price of the selected pair"><div class="pfh"><span id="pfSym">BTC/USDT</span><span id="pfDot" title="live stream">●</span></div><div class="pfp num" id="pfPx">—</div><div class="pfc num" id="pfCh">24h —</div></div>
@@ -861,7 +861,7 @@ html.ob-max{overflow:hidden}
     <div class="brand"><div class="logo" id="symLogo">₿</div><h1 id="symH1">SCALPBOT · BTCUSDT</h1></div>
     <div class="strap" id="strap">Connecting to Binance…</div>
     <div class="controls">
-      <button class="btn" id="soundBtn" aria-pressed="false" title="Sound alerts for every window: footprint setups, pressure meter STRONG BUY / SELL, Big trades ≥ 5× the minimum">ALERT: OFF</button>
+      <button class="btn" id="soundBtn" aria-pressed="false" title="Sound alerts for every window. Loud repeating siren + voice on strong signals: AI Agent BUY / SELL, Sniper Indicator BUY / SELL / RE-ENTRY, footprint setup, 1H Bollinger squeeze trade. Soft beep on: momentum meter overbought / oversold, open drive, pressure meter STRONG, big trades ≥ 5× minimum. Click anywhere to silence the siren.">ALERT: OFF</button>
       <a class="btn" href="https://my.exness.com/webtrading" target="_blank" rel="noopener">EXNESS ↗</a>
       <a class="btn wa" href="https://wa.me/6282299774825" target="_blank" rel="noopener" title="Contact customer service on WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.5 1.1 2.7c.1.2 1.9 2.9 4.6 4 1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.8-1.2.2-.6.2-1.1.1-1.2l-.4-.3z"/></svg>CONTACT CS</a>
     </div>
@@ -897,7 +897,7 @@ html.ob-max{overflow:hidden}
       </div>
       <div class="tkP" aria-label="Real-time per-second price graph with open-price momentum">
         <div class="tkH"><b>Live · per second</b>
-          <label title="Candle open used as the reference line">Open <select id="tkOpen"><option value="60">1m</option><option value="300">5m</option><option value="900">15m</option><option value="3600">1h</option></select></label>
+          <label title="Candle open used as the reference line">Open <select id="tkOpen"><option value="60">1m</option><option value="300">5m</option><option value="900">15m</option><option value="3600">1h</option><option value="14400">4h</option><option value="86400">1D</option></select></label>
           <label title="Time window shown">Win <select id="tkWin"><option value="60">1 min</option><option value="120">2 min</option><option value="300">5 min</option></select></label>
           <span class="r" id="tkSt">connecting…</span></div>
         <div class="tkS" id="tkS"></div>
@@ -1767,8 +1767,23 @@ let actx;
 function beep(f){ try{ actx=actx||new AudioContext(); const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=f; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.15,actx.currentTime); g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.5); o.start(); o.stop(actx.currentTime+.5);}catch(e){} }
 const setAlert=v=>{ S.sound=v; $('soundBtn').setAttribute('aria-pressed',v); $('soundBtn').textContent=`ALERT: ${v?'ON':'OFF'}`; store.set('hdr-alert',v); };
 setAlert(!!store.get('hdr-alert'));
-$('soundBtn').addEventListener('click',()=>{ setAlert(!S.sound); if(S.sound) beep(660); });
-window.hdrAlert={on:()=>S.sound, beep:f=>{ if(S.sound) beep(f); }}; // header ALERT toggle drives the sounds of every window
+$('soundBtn').addEventListener('click',()=>{ setAlert(!S.sound); if(S.sound) beep(660); else alarmStop(); });
+/* strong signals: loud square-wave siren, 3 pulses × 4 rounds, repeated 3 times (≈ 9 s) + spoken label; any click / key stops it.
+   The same label is not repeated within 60 s. Weak signals keep the single soft beep. */
+const ALM={t:[],last:{},on:false};
+function alarmStop(){ ALM.t.forEach(clearTimeout); ALM.t=[]; ALM.on=false; try{ speechSynthesis.cancel(); }catch(e){} document.documentElement.classList.remove('alarming'); }
+function alarm(dir,label){ if(!S.sound) return; const now=Date.now(); if(ALM.last[label]&&now-ALM.last[label]<60000) return; ALM.last[label]=now; alarmStop(); ALM.on=true;
+  document.documentElement.classList.add('alarming');
+  try{ actx=actx||new AudioContext(); if(actx.state==='suspended') actx.resume(); }catch(e){ return; }
+  const hi=dir>0?1480:880, lo=dir>0?1040:520;
+  const pulse=(f)=>{ try{ const o=actx.createOscillator(), g=actx.createGain(); o.type='square'; o.frequency.value=f; o.connect(g); g.connect(actx.destination); const t=actx.currentTime;
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.55,t+.01); g.gain.setValueAtTime(.55,t+.11); g.gain.exponentialRampToValueAtTime(.0001,t+.14); o.start(t); o.stop(t+.15); }catch(e){} };
+  let ms=0; for(let rep=0;rep<3;rep++){ for(let r=0;r<4;r++){ for(let k=0;k<3;k++){ const f=k%2?lo:hi; ALM.t.push(setTimeout(()=>pulse(f),ms)); ms+=190; } ms+=260; }
+    if(rep===0) ALM.t.push(setTimeout(()=>{ try{ const u=new SpeechSynthesisUtterance(label); u.lang='en-US'; u.rate=1; u.volume=1; speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} },ms));
+    ms+=1400; }
+  ALM.t.push(setTimeout(alarmStop,ms)); }
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,e=>{ if(ALM.on&&!(e.target.closest&&e.target.closest('#soundBtn'))) alarmStop(); },{capture:true,passive:true}));
+window.hdrAlert={on:()=>S.sound, beep:f=>{ if(S.sound) beep(f); }, alarm, stop:alarmStop}; // header ALERT toggle drives the sounds of every window
 $('kApply').addEventListener('click',()=>{ if(S.kSug!=null){ $('riskPct').value=S.kSug.toFixed(2); $('riskPct').dispatchEvent(new Event('input')); } });
 
 /* ---------- liquidations ---------- */
@@ -3448,7 +3463,7 @@ html.gated #muTg{display:none!important}
 <div id="muBox" aria-hidden="true"><div id="muP"></div></div>
 <script>
 (()=>{
-  const VID='a8_tPrslIZg', KEY='btcusdt-music', btn=document.getElementById('muTg'), ic=document.getElementById('muIc'), lb=document.getElementById('muLb');
+  const VID='VUQfT3gNT3g', LIST='RDVUQfT3gNT3g', KEY='btcusdt-music', btn=document.getElementById('muTg'), ic=document.getElementById('muIc'), lb=document.getElementById('muLb');
   try{ if(localStorage.getItem('scalp-wmode')==='"hide"') btn.hidden=true; }catch(e){} // respect the dock's "hide all widgets" mode
   let p=null, ready=false, err=false, want=true; try{ want=localStorage.getItem(KEY)!=='pause'; }catch(e){}
   const playing=()=>ready&&[1,3].includes(p.getPlayerState());
@@ -3463,10 +3478,10 @@ html.gated #muTg{display:none!important}
   ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,kick,{capture:true,passive:true}));
   document.addEventListener('gate-unlocked',()=>{ if(want&&ready&&!playing()) play(); setTimeout(ui,300); });
   window.onYouTubeIframeAPIReady=()=>{
-    p=new YT.Player('muP',{width:200,height:200,videoId:VID,playerVars:{autoplay:1,playsinline:1,controls:0,rel:0,loop:1,playlist:VID},
+    p=new YT.Player('muP',{width:256,height:144,videoId:VID,playerVars:{autoplay:1,playsinline:1,controls:0,rel:0,listType:'playlist',list:LIST,vq:'small'}, // 144p-size hidden player + 'small' (240p) quality: audio only, low power
       events:{
         onReady:e=>{ ready=true; if(want) play(); ui(); },
-        onStateChange:e=>{ if(e.data===0&&want){ p.seekTo(0); p.playVideo(); } ui(); },
+        onStateChange:e=>{ if(e.data===1||e.data===3){ try{ if(p.getPlaybackQuality()!=='small'&&p.getPlaybackQuality()!=='tiny') p.setPlaybackQuality('small'); }catch(er){} } if(e.data===0&&want){ try{ p.playVideoAt(0); }catch(er){ p.seekTo(0); p.playVideo(); } } ui(); },
         onError:e=>{ err=true; btn.classList.add('err'); lb.textContent='N/A'; ui(); }
       }});
   };
@@ -3850,7 +3865,7 @@ function detect(){
 function onClose(){ const s=detect(); F.ctx=s&&s.none?s:(s?{vp:s.vp,A:s.A}:null);
   if(s&&!s.none&&(!F.sig||F.sig.status==='TP'||F.sig.status==='SL'||F.sig.status==='EXP'||F.sig.dir!==s.dir)){
     if(F.sig&&(F.sig.status==='LIVE'||F.sig.status==='PENDING')&&F.sig.dir!==s.dir) finish('FLIP',F.c[F.c.length-1].o);
-    F.sig=s; window.hdrAlert?.beep(s.dir>0?1320:520); } }
+    F.sig=s; window.hdrAlert?.alarm?.(s.dir,`Footprint ${s.dir>0?'long':'short'} setup ${SYMX.base||''}`); } }
 function finish(res,px){ const s=F.sig; if(!s) return; s.status=res; const r=s.status==='FLIP'||s.status==='EXP'?(px-s.entry)*s.dir/s.R:res==='TP'?(s.tp2-s.entry)*s.dir/s.R:res==='SL'?-1:0;
   if(s.filled){ F.hist.unshift({t:s.t,dir:s.dir,name:s.name,res,r:+r.toFixed(2)}); F.hist.length=Math.min(F.hist.length,30); ST.set('fp-hist-'+SYMX.id,F.hist); } }
 function manage(px){ const s=F.sig; if(!s||!px) return; const now=Date.now()/1000;
@@ -4373,7 +4388,7 @@ function compute(){ if(C.length<60){ info(); return; } A=atr(C,14); Z=zigzag(C,A
 async function load(){ const g=++gen; $('tvwHead').textContent='loading…'; $('tvwTfL').textContent=TFL[tf];
   try{ const j=await (await fetch(API+'&interval='+tf+'&limit=1000',{cache:'no-store'})).json(); if(g!==gen) return; C=j.map(toC); cs.setData(C); compute(); view(); }
   catch(e){ if(g===gen) $('tvwHead').textContent='data error · retrying'; setTimeout(()=>{ if(g===gen) load(); },5000); } }
-async function poll(){ if(!C.length||document.hidden) return; const g=gen;
+async function poll(){ if(!C.length||(document.hidden&&!window.hdrAlert?.on())) return; // background tab keeps polling while ALERT is on const g=gen;
   try{ const j=await (await fetch(API+'&interval='+tf+'&limit=2',{cache:'no-store'})).json(); if(g!==gen||!C.length) return;
     for(const k of j){ const c=toC(k), L=C[C.length-1]; if(c.time===L.time) C[C.length-1]=c; else if(c.time>L.time) C.push(c); else continue; cs.update(c); }
     compute(); }catch(e){} }
@@ -4519,7 +4534,7 @@ html.gated #fhTg{display:none}
 (()=>{ const $=id=>document.getElementById(id), tf=$('tfSel');
   if(tf){ const apply=v=>{
       const t=$('tvwTf'); if(t&&[...t.options].some(o=>o.value===v)&&t.value!==v){ t.value=v; t.dispatchEvent(new Event('change')); }
-      const f=$('fpTf'), m={'1m':'60','5m':'300'}[v]; if(f&&m&&f.value!==m){ f.value=m; f.dispatchEvent(new Event('change')); } // 15M+ does not exist on the footprint → skipped
+      const f=$('fpTf'), m={'1m':'60','5m':'300'}[v]||'300'; if(f&&m&&f.value!==m){ f.value=m; f.dispatchEvent(new Event('change')); } // 15M+ does not exist on the footprint → skipped
     };
     tf.addEventListener('change',()=>apply(tf.value)); setTimeout(()=>apply(tf.value),1200); }
   // tiny "·" toggle sits directly right of the music widget, vertically centred on it
@@ -4679,7 +4694,7 @@ async function refresh(){
     const j=w.closed.length-1; B.sq=squeeze(w.closed,j); B.lastC=w.closed[j]; B.form=c[c.length-1].t+3600>Date.now()/1000?c[c.length-1]:null;
     if(B.open&&B.open.entry==null&&B.form&&B.form.t===B.open.t0){ B.open.entry=B.form.o; B.open.sl=B.open.entry-B.open.dir*RULE.sl*B.open.A; B.open.tp=B.open.entry+B.open.dir*RULE.tp*B.open.A; }
     if(B.open&&B.open.entry!=null&&B.form&&B.form.t>=B.open.t0){ const o=B.open, d=o.dir, f=B.form; o.live=(d>0?f.l:f.h)*d<=o.sl*d?-1:(d>0?f.h:f.l)*d>=o.tp*d?1:0; }
-    if(B.open&&B.open.entry!=null&&B.alerted!==B.open.t){ B.alerted=B.open.t; ST.set('bb-alert-'+SYMX.id,B.open.t); if(Date.now()/1000-B.open.t0<3600) window.hdrAlert?.beep(B.open.dir>0?1320:520); }
+    if(B.open&&B.open.entry!=null&&B.alerted!==B.open.t){ B.alerted=B.open.t; ST.set('bb-alert-'+SYMX.id,B.open.t); if(Date.now()/1000-B.open.t0<3600) window.hdrAlert?.alarm?.(B.open.dir,`Bollinger squeeze ${B.open.dir>0?'buy':'sell'} one hour`); }
     render(); drawLevels(); if(CH.tf==='1h') marks();
   }catch(e){ $('bbS').textContent='1H data unavailable — retrying…'; } }
 
@@ -4784,7 +4799,7 @@ function countdown(){ const now=Date.now()/1000, left=3600-now%3600, q=B.open, s
     :sq&&sq.on?`1H squeeze: <b style="color:#ffd84d">ARMED</b> · 1H closes in ${mmss(left)}`:`1H squeeze: none · closes in ${mmss(left)}`; }
 
 function boot(){ if(!mkChart()){ setTimeout(boot,500); return; }
-  const sel=$('bbTf'); if(!TFS[CH.tf]) CH.tf='1h'; sel.value=CH.tf; sel.onchange=()=>{ load(sel.value); OS.now=null; };
+  const sel=$('bbTf'), hv=$('tfSel')?.value; if(TFS[hv]) CH.tf=hv; if(!TFS[CH.tf]) CH.tf='1h'; sel.value=CH.tf; sel.onchange=()=>{ load(sel.value); OS.now=null; };
   const hdr=$('tfSel'); if(hdr) hdr.addEventListener('change',()=>{ if(TFS[hdr.value]&&hdr.value!==CH.tf){ sel.value=hdr.value; load(hdr.value); } });
   load(CH.tf); refresh(); setTimeout(mtf,1500); setInterval(()=>{ if(!document.hidden) mtf(); },20000);
   let lastH=Math.floor(Date.now()/3600000);
@@ -4810,8 +4825,10 @@ const K={pts:[],last:null,bv:0,sv:0,tr:[],openTf:ST.get('tk-open',60),win:ST.get
 const cv=$('tkCv'); if(!cv) return;
 $('tkOpen').value=K.openTf; $('tkWin').value=K.win;
 $('tkOpen').onchange=e=>{ K.openTf=+e.target.value; ST.set('tk-open',K.openTf); K.openT=0; };
+{ const hs=$('tfSel'), map={'1m':60,'5m':300,'15m':900,'1h':3600,'4h':14400,'1d':86400}, follow=()=>{ const v=map[hs?.value]; if(v&&v!==K.openTf){ K.openTf=v; $('tkOpen').value=v; ST.set('tk-open',v); K.openT=0; } };
+  if(hs){ hs.addEventListener('change',follow); follow(); } }
 $('tkWin').onchange=e=>{ K.win=+e.target.value; ST.set('tk-win',K.win); };
-async function fetchOpen(T){ try{ const iv={60:'1m',300:'5m',900:'15m',3600:'1h'}[K.openTf]; const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=${iv}&limit=1`,{cache:'no-store'}); const a=await r.json(); if(a[0]&&a[0][0]/1000===T&&K.openT===T) K.open=+a[0][1]; }catch(e){} }
+async function fetchOpen(T){ try{ const iv={60:'1m',300:'5m',900:'15m',3600:'1h',14400:'4h',86400:'1d'}[K.openTf]; const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=${iv}&limit=1`,{cache:'no-store'}); const a=await r.json(); if(a[0]&&a[0][0]/1000===T&&K.openT===T) K.open=+a[0][1]; }catch(e){} }
 async function seed(){ try{ const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=1s&limit=300`,{cache:'no-store'}); const a=await r.json(); if(Array.isArray(a)&&a.length&&!K.pts.length){ K.pts=a.map(k=>({t:k[0]/1000,p:+k[4]})); K.last=K.pts[K.pts.length-1].p; } }catch(e){} }
 function conn(){ const ws=new WebSocket(`wss://data-stream.binance.vision/ws/${sym.toLowerCase()}@aggTrade`); K.ws=ws;
   ws.onmessage=ev=>{ const d=JSON.parse(ev.data), p=+d.p, q=+d.q*p; K.last=p; K.age=Date.now(); const t=Date.now()/1000; K.tr.push({t,b:!d.m,q}); };
@@ -4826,7 +4843,7 @@ function stats(){ const p=K.last; if(p==null) return; const now=Date.now()/1000,
   const m=s=>{ const q=at(s); return q==null?null:p-q; }, m10=m(10), m30=m(30), m60=m(60);
   const buy=K.tr.filter(x=>x.t>now-30&&x.b).reduce((a,x)=>a+x.q,0), sell=K.tr.filter(x=>x.t>now-30&&!x.b).reduce((a,x)=>a+x.q,0), bp=buy+sell?buy/(buy+sell)*100:50;
   const dO=K.open!=null?p-K.open:null, col=v=>v==null?'inherit':v>0?'#3dff9a':v<0?'#ff5a4d':'inherit', arr=v=>v==null?'—':(v>0?'▲ ':v<0?'▼ ':'')+fD(v);
-  const tfL={60:'1m',300:'5m',900:'15m',3600:'1h'}[K.openTf];
+  const tfL={60:'1m',300:'5m',900:'15m',3600:'1h',14400:'4h',86400:'1D'}[K.openTf];
   const C=(l,v,c)=>`<div><span>${l}</span><b style="color:${c||'inherit'}">${v}</b></div>`;
   $('tkS').innerHTML=C('Price',fP(p))+C(`Δ ${tfL} open`,dO==null?'—':fD(dO),col(dO))+C('Speed 10s',m10==null?'—':(m10/10>=0?'+':'−')+Math.abs(m10/10).toFixed(dp)+'/s',col(m10))
     +C('Mom 30s',arr(m30),col(m30))+C('Mom 60s',arr(m60),col(m60))+C('Buy 30s',bp.toFixed(0)+'%',bp>=60?'#3dff9a':bp<=40?'#ff5a4d':'inherit');
@@ -4861,7 +4878,7 @@ function draw(){ const r=cv.getBoundingClientRect(), dpr=devicePixelRatio||1; if
   // dots at each minute open on the line
   for(const x of pts) if(x.t%60===0){ g.beginPath(); g.arc(X(x.t),Y(x.p),2.5,0,7); g.fillStyle='#ffd84d'; g.fill(); }
   // open line
-  if(op!=null){ const y=Y(op), tfL={60:'1m',300:'5m',900:'15m',3600:'1h'}[K.openTf];
+  if(op!=null){ const y=Y(op), tfL={60:'1m',300:'5m',900:'15m',3600:'1h',14400:'4h',86400:'1D'}[K.openTf];
     if(y>=padT-4&&y<=H-padB+4){ g.setLineDash([5,4]); g.strokeStyle='rgba(255,216,77,.85)'; g.lineWidth=1; g.beginPath(); g.moveTo(0,y); g.lineTo(W-padR,y); g.stroke(); g.setLineDash([]);
       g.fillStyle='#ffd84d'; g.fillRect(W-padR+2,y-7,padR-4,14); g.fillStyle='#000'; g.font='bold 9px ui-monospace,monospace'; g.textAlign='left'; g.fillText('OPEN '+tfL,W-padR+5,y+3); }
     else { g.fillStyle='#ffd84d'; g.font='9px ui-monospace,monospace'; g.textAlign='left'; g.fillText((y<padT?'▲ ':'▼ ')+'open '+fP(op),W-padR-110,y<padT?padT+2:H-padB-4); } }
@@ -4889,7 +4906,7 @@ K.draw=draw; K.stats=stats; window.__TK=K; seed().then(()=>{ conn(); requestAnim
 const SYMX=window.SYM, dp=SYMX.btc?1:SYMX.dp, fP=p=>p==null||!isFinite(p)?'—':(+p).toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
 const ST={get(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??d; }catch(e){ return d; } },set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
 const el=document.createElement('div'); el.id='aiw'; el.setAttribute('aria-label','AI agent: summary of all indicators and sniper plan');
-el.innerHTML=`<div class="aih"><span>🤖</span><b>AI AGENT · <span id="aiSym"></span></b><span class="r"><button type="button" id="aiMin" title="Minimise">–</button><button type="button" id="aiRst" title="Reset position and width">⟲</button></span></div>
+el.innerHTML=`<div class="aih"><span>🤖</span><b>AI AGENT · <span id="aiSym"></span> · <span id="aiTf"></span></b><span class="r"><button type="button" id="aiMin" title="Minimise">–</button><button type="button" id="aiRst" title="Reset position and width">⟲</button></span></div>
   <div class="aib"><div class="aiv"><strong id="aiV">…</strong><small id="aiC"></small></div><div class="aip" id="aiP"></div><div class="aii" id="aiI"></div><div class="ain" id="aiN"></div></div><i class="aigrip" title="Drag to resize"></i>`;
 document.body.appendChild(el); const $=id=>document.getElementById(id); $('aiSym').textContent=SYMX.name||SYMX.id;
 const K='aiw-geo'; let geo=ST.get(K,null), mini=ST.get('aiw-min',innerWidth<700); if(mini) el.classList.add('min');
@@ -4915,7 +4932,7 @@ $('aiMin').onclick=()=>{ mini=!el.classList.toggle('min')?false:true; $('aiMin')
 $('aiMin').textContent=mini?'+':'–';
 $('aiRst').onclick=()=>{ geo=null; save(); place(); };
 
-function tick(){ if(document.hidden) return;
+function tick(){ // keeps running in a background tab so the ALERT siren still fires
   const TV=window.__TVW, SP=TV&&TV.SP, PL=TV&&TV.PL, BBx=window.__BB, OS=BBx&&BBx.OS&&BBx.OS.now, SQ=BBx&&BBx.B, TK=window.__TK&&window.__TK.snap, OBM=window.__OBM, FP=window.__FP, BT=window.__BT;
   const px=TK?.p??SQ?.px??null, rows=[]; let score=0, wsum=0;
   const vote=(name,dir,w,txt)=>{ rows.push([dir,name,txt]); if(dir){ score+=dir*w; } wsum+=w; };
@@ -4958,7 +4975,14 @@ function tick(){ if(document.hidden) return;
     $('aiN').textContent='Indicators disagree or no side has a plan — no open price yet. Watch for a Sniper SELL/BUY, a footprint setup or a 1H squeeze break.'; }
   $('aiI').innerHTML=rows.map(([d,n,t])=>`<div><i style="color:${d>0?'#3dff9a':d<0?'#ff5a4d':'#8a93a4'}">${d>0?'▲':d<0?'▼':'·'}</i><span>${n}</span><em>${t}</em></div>`).join('');
 }
-tick(); setInterval(tick,1000); window.__AI={tick};
+/* alerts: strong → loud siren (AI verdict, new Sniper signal); weak → soft beep (momentum extremes, open drive) */
+const AL={v:null,sp:null,oz:null,od:0};
+function alerts(){ const H=window.hdrAlert; if(!H) return; const TV=window.__TVW, SP=TV&&TV.SP, C=TV&&TV.C, V=$('aiV').textContent, sym=SYMX.base||SYMX.name||'';
+  const side=/^BUY/.test(V)?1:/^SELL/.test(V)?-1:0; if(AL.v!==null&&side&&side!==AL.v) H.alarm(side,`AI agent ${side>0?'buy':'sell'} ${sym}`); AL.v=side;
+  const g=SP&&SP.last; if(g&&C&&C[g.i]){ const key=C[g.i].time+':'+g.s; if(AL.sp!==null&&key!==AL.sp&&g.i>=C.length-2) H.alarm(g.s,`Sniper ${g.re?'re-':''}${g.s>0?'buy':'sell'} ${sym}`); AL.sp=key; }
+  const os=window.__BB?.OS?.now, z=os?os.v>=80?1:os.v<=20?-1:0:0; if(AL.oz!==null&&z&&z!==AL.oz) H.beep(z>0?420:1250); AL.oz=z;
+  const tk=window.__TK?.snap; if(tk&&tk.z!=null&&Math.abs(tk.z)>=2&&tk.el<=60&&Date.now()-AL.od>60000){ AL.od=Date.now(); H.beep(tk.z>0?1320:520); } }
+tick(); setInterval(()=>{ tick(); try{ alerts(); }catch(e){} $('aiTf').textContent=(document.getElementById('tvwTf')?.value||'').toUpperCase(); },1000); window.__AI={tick};
 })();
 </script>
 </body>
