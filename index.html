@@ -853,14 +853,14 @@ html.ob-max{overflow:hidden}
   <header class="top a-hdr">
     <div class="symbar" role="group" aria-label="Market and timeframe">
       <label class="symsel"><span>Market</span><select id="symSel" aria-label="Market"><option value="BTCUSDT">BTCUSDT · Bitcoin</option><option value="XAUUSDT">XAUUSDT · Gold</option><option value="BNBUSDT">BNBUSDT · BNB</option><option value="SOLUSDT">SOLUSDT · Solana</option></select></label>
-      <label class="symsel"><span>Timeframe</span><select id="tfSel" aria-label="Timeframe" title="Chart, checklist, Technical Analysis, backtest, S/R, agent &amp; widgets follow this timeframe. Sniper / Whale / Breakout / Bollinger setups keep their validated timeframes."><option value="1m">1M · 1 minute</option><option value="5m">5M · 5 minutes</option><option value="15m">15M · 15 minutes</option><option value="1h">1H · 1 hour</option><option value="4h">4H · 4 hours</option><option value="1d">1D · 1 day</option></select></label>
+      <label class="symsel"><span>Timeframe</span><select id="tfSel" aria-label="Timeframe" title="Applies to every window that has a timeframe: TradingView window (all TFs) and Footprint (1M / 5M). Liquidation map, order book heatmap and Big trades use fixed windows."><option value="1m">1M · 1 minute</option><option value="5m">5M · 5 minutes</option><option value="15m">15M · 15 minutes</option><option value="1h">1H · 1 hour</option><option value="4h">4H · 4 hours</option><option value="1d">1D · 1 day</option></select></label>
       <a class="dlbtn" href="btcusdt-user-guide.pdf" download="BTCUSDT-Scalp-Deck-User-Guide.pdf" target="_blank" rel="noopener" title="Download the user guide (PDF, English): every panel, indicator and signal explained with screenshots" aria-label="Download user guide PDF"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 17v3h16v-3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>USER GUIDE · PDF</span></a>
       <span class="symnote" id="symNote"></span>
     </div>
     <div class="brand"><div class="logo" id="symLogo">₿</div><h1 id="symH1">SCALPBOT · BTCUSDT</h1></div>
     <div class="strap" id="strap">Connecting to Binance…</div>
     <div class="controls">
-      <button class="btn" id="soundBtn" aria-pressed="false">ALERT: OFF</button>
+      <button class="btn" id="soundBtn" aria-pressed="false" title="Sound alerts for every window: footprint setups, pressure meter STRONG BUY / SELL, Big trades ≥ 5× the minimum">ALERT: OFF</button>
       <a class="btn" href="https://my.exness.com/webtrading" target="_blank" rel="noopener">EXNESS ↗</a>
     </div>
     <div class="clockbox num"><b id="clk">--:--:--</b><span id="lat">UTC · — ms</span></div>
@@ -2086,7 +2086,10 @@ function syncTF(tf){
 }
 let actx;
 function beep(f){ try{ actx=actx||new AudioContext(); const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=f; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.15,actx.currentTime); g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.5); o.start(); o.stop(actx.currentTime+.5);}catch(e){} }
-$('soundBtn').addEventListener('click',()=>{ S.sound=!S.sound; $('soundBtn').setAttribute('aria-pressed',S.sound); $('soundBtn').textContent=`ALERT: ${S.sound?'ON':'OFF'}`; if(S.sound) beep(660); });
+const setAlert=v=>{ S.sound=v; $('soundBtn').setAttribute('aria-pressed',v); $('soundBtn').textContent=`ALERT: ${v?'ON':'OFF'}`; store.set('hdr-alert',v); };
+setAlert(!!store.get('hdr-alert'));
+$('soundBtn').addEventListener('click',()=>{ setAlert(!S.sound); if(S.sound) beep(660); });
+window.hdrAlert={on:()=>S.sound, beep:f=>{ if(S.sound) beep(f); }}; // header ALERT toggle drives the sounds of every window
 ['acct','riskPct'].forEach(id=>$(id).addEventListener('input',()=>{ S.dirty=true; monteCarlo(); renderCards(); renderMC(); renderRob(); }));
 $('kApply').addEventListener('click',()=>{ if(S.kSug!=null){ $('riskPct').value=S.kSug.toFixed(2); $('riskPct').dispatchEvent(new Event('input')); } });
 window.addEventListener('resize',()=>{ renderStrip(); renderMC(); renderConv(); });
@@ -2328,6 +2331,7 @@ function obMeter(){
     :`<div class="omt">balanced · range <b>${bw?obF(bw.p):'—'}</b> – <b>${aw?obF(aw.p):'—'}</b></div><div class="omw">biggest bid wall ↔ biggest ask wall (±0.5 %)</div>`)
     +`<div class="omw">${mg.up?`liq ↑ ${obF(mg.up.p)} ${obUsd(mg.up.usd)}`:''}${mg.up&&mg.dn?' · ':''}${mg.dn?`liq ↓ ${obF(mg.dn.p)} ${obUsd(mg.dn.usd)}`:''}</div>`;
   const P=$('obComp'); if(P) P.innerHTML=comp.map(([n,x,wt])=>`<div class="omc"><span>${n} <i>${Math.round(wt*100)}%</i></span><div class="omb"><em></em><b style="${x>=0?`left:50%;width:${x*50}%;background:#25d07d`:`right:50%;width:${-x*50}%;background:#f25745`}"></b></div><strong style="color:${x>.1?'#25d07d':x<-.1?'#f25745':'#8a93a4'}">${x>=0?'+':''}${(x*100).toFixed(0)}</strong></div>`).join('');
+  const strong=v>=45?1:v<=-45?-1:0; if(strong&&strong!==OBM.strong) window.hdrAlert?.beep(strong>0?1180:360); OBM.strong=strong;
   const Mx=cv.closest('.obM'); if(Mx){ Mx.classList.toggle('buy',v>=15); Mx.classList.toggle('sell',v<=-15); }
   const hd=$('obHead'); if(hd) hd.innerHTML=`<span style="color:${col}">${lbl} ${(v>0?'+':'')+v.toFixed(0)}</span>${tgt?` · → ${obF(tgt.p)}`:''}`;
 }
@@ -2940,7 +2944,7 @@ function fitColRun(){
   // bottom-right: dock in the corner, music beside it (centred on the same row), process log above both
   let rowTop=innerHeight, dh=0, dw=0;
   if(vis(dk)){ put(dk,'right',m); put(dk,'bottom',m+safeB); const r=dk.getBoundingClientRect(); dh=r.height; dw=r.width; rowTop=r.top; }
-  if(vis(mu)){ const mh=mu.getBoundingClientRect().height; put(mu,'right',m+dw+(dw?g:0)); put(mu,'bottom',m+safeB+Math.max(0,(dh-mh)/2)); rowTop=Math.min(rowTop,mu.getBoundingClientRect().top); }
+  if(vis(mu)){ const mh=mu.getBoundingClientRect().height; put(mu,'right',m+dw+(dw?g:0)+(window.__fhW||0)); put(mu,'bottom',m+safeB+Math.max(0,(dh-mh)/2)); rowTop=Math.min(rowTop,mu.getBoundingClientRect().top); }
   if(vis(ap)){ put(ap,'right',m); put(ap,'bottom',innerHeight-rowTop+g); }
   // bottom-left: agent pill mirrored on the same row as the dock
   if(ag&&pill&&vis(pill)){ put(ag,'left',m); const ph=pill.getBoundingClientRect().height; put(ag,'bottom',m+safeB+Math.max(0,(dh-ph)/2)); }
@@ -4143,6 +4147,7 @@ function fill(ex,buy,px,qty,t){
   T.pend[k]={ex,buy,usd,q:qty,px,t,last:t};
 }
 function flush(k){ const p=T.pend[k]; delete T.pend[k]; if(!p||p.usd<minUsd()*.5) return;
+  if(p.usd>=minUsd()*5) window.hdrAlert?.beep(p.buy?1560:300);
   T.list.unshift({ex:p.ex,buy:p.buy,usd:p.usd,px:p.px,t:p.t,nw:true}); if(T.list.length>400) T.list.length=400; T.dirty=true; }
 setInterval(()=>{ const now=Date.now(); for(const k in T.pend) if(now-T.pend[k].last>200) flush(k); },250);
 
@@ -4316,7 +4321,7 @@ function detect(){
 function onClose(){ const s=detect(); F.ctx=s&&s.none?s:(s?{vp:s.vp,A:s.A}:null);
   if(s&&!s.none&&(!F.sig||F.sig.status==='TP'||F.sig.status==='SL'||F.sig.status==='EXP'||F.sig.dir!==s.dir)){
     if(F.sig&&(F.sig.status==='LIVE'||F.sig.status==='PENDING')&&F.sig.dir!==s.dir) finish('FLIP',F.c[F.c.length-1].o);
-    F.sig=s; } }
+    F.sig=s; window.hdrAlert?.beep(s.dir>0?1320:520); } }
 function finish(res,px){ const s=F.sig; if(!s) return; s.status=res; const r=s.status==='FLIP'||s.status==='EXP'?(px-s.entry)*s.dir/s.R:res==='TP'?(s.tp2-s.entry)*s.dir/s.R:res==='SL'?-1:0;
   if(s.filled){ F.hist.unshift({t:s.t,dir:s.dir,name:s.name,res,r:+r.toFixed(2)}); F.hist.length=Math.min(F.hist.length,30); ST.set('fp-hist-'+SYMX.id,F.hist); } }
 function manage(px){ const s=F.sig; if(!s||!px) return; const now=Date.now()/1000;
@@ -4798,7 +4803,6 @@ setInterval(()=>{ paint(); if(flashT&&Date.now()-flashT>900){ el.classList.remov
   color:#e6e9ef;font:700 14px/14px var(--mono,monospace);display:grid;place-items:center;padding:0;cursor:pointer;opacity:.75}
 #fhTg:hover{opacity:1;border-color:#fff}
 html.fhide #fhTg{border-color:#ffb020;color:#ffb020}
-html:not(.gated) #muTg{right:30px!important}
 html.fhide #pxFloat,html.fhide:not(.gated) #muTg{display:none!important}
 html.gated #fhTg{display:none}
 </style>
@@ -4807,6 +4811,21 @@ html.gated #fhTg{display:none}
 (()=>{ const b=document.getElementById('fhTg'), K='float-hide'; let on=false; try{ on=localStorage.getItem(K)==='1'; }catch(e){}
   const set=v=>{ on=v; document.documentElement.classList.toggle('fhide',v); b.setAttribute('aria-pressed',v); b.title=v?'Show floating widgets':'Hide floating widgets'; try{ localStorage.setItem(K,v?'1':'0'); }catch(e){} };
   set(on); b.onclick=()=>set(!on); })();
+</script>
+<script id="hdrSync">
+(()=>{ const $=id=>document.getElementById(id), tf=$('tfSel');
+  if(tf){ const apply=v=>{
+      const t=$('tvwTf'); if(t&&[...t.options].some(o=>o.value===v)&&t.value!==v){ t.value=v; t.dispatchEvent(new Event('change')); }
+      const f=$('fpTf'), m={'1m':'60','5m':'300'}[v]; if(f&&m&&f.value!==m){ f.value=m; f.dispatchEvent(new Event('change')); } // 15M+ does not exist on the footprint → skipped
+    };
+    tf.addEventListener('change',()=>apply(tf.value)); setTimeout(()=>apply(tf.value),1200); }
+  // tiny "·" toggle sits directly right of the music widget, vertically centred on it
+  window.__fhW=26;
+  const b=$('fhTg'), mu=$('muTg'); let last=null;
+  const place=()=>{ if(!b||!mu) return; const z=parseFloat(getComputedStyle(mu).zoom)||1, want=(30/z).toFixed(1)+'px'; if(mu.style.getPropertyValue('right')!==want) mu.style.setProperty('right',want,'important'); const r=mu.getBoundingClientRect(); if(r.width) last=r; if(!last) return;
+    b.style.left=Math.round(last.right+5)+'px'; b.style.top=Math.round(last.top+(last.height-18)/2)+'px'; b.style.right='auto'; b.style.bottom='auto'; };
+  place(); setInterval(place,250); addEventListener('resize',place);
+})();
 </script>
 </body>
 </html>
