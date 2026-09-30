@@ -1737,7 +1737,7 @@ function clock(){
   $('session').textContent=`Active session: ${act.join(' + ')||'quiet (between sessions)'}`;
   const wib=new Date(now+7*36e5).toISOString().slice(11,19), utc=d.toISOString().slice(11,19);
   $('clk').textContent=utc; $('lat').textContent=`UTC · ${S.rtt??'—'} ms`;
-  $('strap').textContent=`${wib} WIB · TF ${S.tf.toUpperCase()} · Markov · Kelly · Self-learn · Monte Carlo`;
+  $('strap').textContent=`${wib} WIB · TF ${S.tf.toUpperCase()}`;
 }
 setInterval(clock,1000); clock();
 
