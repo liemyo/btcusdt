@@ -868,7 +868,7 @@ html.ob-max{overflow:hidden}
 
   <!-- MARKET ACTIVITY STATUS -->
   <!-- BOLLINGER BAND · MA · OPEN-PRICE STRATEGY (replaces the integrated signal panel) -->
-  <section class="panel a-bb" id="bbPanel" aria-label="Bollinger Band and moving average chart with the open-price squeeze breakout signal">
+  <section class="panel a-bb" id="bbPanel" aria-label="Momentum meter, Bollinger Band and moving average chart, and live per-second price graph">
     <div class="bbg num">
       <div class="bbSig wait" id="bbSig">
         <div class="bbL">Momentum · <span id="osTf">—</span> · <span class="symTxt">BTC</span></div>
@@ -893,7 +893,14 @@ html.ob-max{overflow:hidden}
         </div>
         <div id="bbChart"></div>
       </div>
-      <div class="bbP" id="bbPlan"><div class="muted">Loading strategy…</div></div>
+      <div class="tkP" aria-label="Real-time per-second price graph with open-price momentum">
+        <div class="tkH"><b>Live · per second</b>
+          <label title="Candle open used as the reference line">Open <select id="tkOpen"><option value="60">1m</option><option value="300">5m</option><option value="900">15m</option><option value="3600">1h</option></select></label>
+          <label title="Time window shown">Win <select id="tkWin"><option value="60">1 min</option><option value="120">2 min</option><option value="300">5 min</option></select></label>
+          <span class="r" id="tkSt">connecting…</span></div>
+        <div class="tkS" id="tkS"></div>
+        <div class="tkW"><canvas id="tkCv"></canvas><div class="tkOB" id="tkOB"></div></div>
+      </div>
     </div>
   </section>
   <section class="panel a-act" aria-label="Market activity status and trading recommendation">
@@ -4428,7 +4435,7 @@ html.gated #fhTg{display:none}
 @media (min-width:1400px){ .a-bb{grid-area:act!important} }
 @media (min-width:1280px) and (min-height:680px){ .a-bb{grid-area:act!important} }
 .a-bb{min-width:0;overflow:hidden;margin:0!important;border:2px solid rgba(255,255,255,.9)!important}
-.bbg{display:grid;grid-template-columns:250px minmax(0,1fr) 320px;height:260px;background:var(--panel);font-size:10.5px}
+.bbg{display:grid;grid-template-columns:250px minmax(0,1fr) minmax(300px,.62fr);height:260px;background:var(--panel);font-size:10.5px}
 .bbg>div{min-width:0;min-height:0}
 .bbg>div+div{border-left:1px solid var(--line)}
 /* signal box: top-left corner, glowing blinking border */
@@ -4475,8 +4482,22 @@ html.gated #fhTg{display:none}
 .bbHist div{display:grid;grid-template-columns:62px 38px minmax(0,1fr) auto;gap:5px}
 .bbNote{font-size:9px;line-height:1.3;color:var(--ink-3)}
 @media (min-width:1280px) and (min-height:680px) and (max-height:900px){ .bbg{height:228px} .bbSig .bbV{font-size:19px} #osG{height:50px} .osM b{font-size:10px} }
-@media (max-width:1279px){ .bbg{grid-template-columns:220px minmax(0,1fr);height:auto} .bbC{height:300px} .bbP{grid-column:1/-1;border-left:0!important;border-top:1px solid var(--line)} }
-@media (max-width:699px){ .bbg{grid-template-columns:minmax(0,1fr)} .bbg>div+div{border-left:0;border-top:1px solid var(--line)} .bbC{height:300px} .bbLg{display:none} }
+@media (max-width:1279px){ .bbg{grid-template-columns:220px minmax(0,1fr);height:auto} .bbC{height:300px} .tkP{grid-column:1/-1;border-left:0!important;border-top:1px solid var(--line);height:260px} }
+@media (max-width:699px){ .tkS{grid-template-columns:repeat(3,minmax(0,1fr))!important} .bbg{grid-template-columns:minmax(0,1fr)} .bbg>div+div{border-left:0;border-top:1px solid var(--line)} .bbC{height:300px} .bbLg{display:none} }
+/* live per-second graph (right column) */
+.tkP{display:flex;flex-direction:column;background:#000}
+.tkH{display:flex;align-items:center;gap:4px 10px;flex-wrap:wrap;padding:4px 10px;font-size:10px;border-bottom:1px solid var(--line)}
+.tkH label{display:inline-flex;gap:4px;align-items:center;color:var(--ink-3)} .tkH select{background:var(--panel-2);color:var(--ink);border:1px solid var(--line-2);border-radius:5px;font:inherit;font-size:10px;padding:1px 3px}
+.tkH .r{margin-left:auto;color:var(--ink-3)}
+.tkS{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:var(--line)}
+.tkS div{background:#05070a;padding:2px 5px;display:grid;min-width:0}
+.tkS span{font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tkS b{font-size:11px;white-space:nowrap}
+.tkW{position:relative;flex:1 1 0;min-height:0}
+#tkCv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tkOB{position:absolute;left:8px;top:6px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.06em;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.6);pointer-events:none}
+.tkOB.up{border-color:#3dff9a;color:#3dff9a;box-shadow:0 0 12px rgba(61,255,154,.45)} .tkOB.dn{border-color:#ff5a4d;color:#ff5a4d;box-shadow:0 0 12px rgba(255,90,77,.45)}
+.tkOB small{display:block;font-weight:500;letter-spacing:0;color:var(--ink-2);font-size:9px}
 </style>
 <script id="bbScript">
 /* ===== BOLLINGER BAND · MA · OPEN-PRICE SQUEEZE BREAKOUT =====
@@ -4638,6 +4659,89 @@ function boot(){ if(!mkChart()){ setTimeout(boot,500); return; }
   setInterval(refresh,60000); }
 window.__BB={B,CH,refresh,walk,render,drawLevels};
 boot();
+})();
+</script>
+
+<script id="tkScript">
+/* ===== LIVE PER-SECOND GRAPH · open-price momentum =====
+   Own Binance aggTrade stream. One point per second, drawn with smooth scrolling. Ornaments: candle OPEN line (1m/5m/15m/1h),
+   minute-open ticks, 10 s EMA, glowing head, and an "open drive" badge that scores the move since the open against the
+   market's own per-second noise (z = Δ / (σ1s·√t)). Context for timing only — not a validated entry rule. */
+(()=>{
+'use strict';
+const SYMX=window.SYM, $=id=>document.getElementById(id), sym=SYMX.data;
+const ST={get(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??d; }catch(e){ return d; } },set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
+const dp=SYMX.btc?1:SYMX.dp, fP=p=>p==null||!isFinite(p)?'—':(+p).toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
+const fD=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(dp);
+const K={pts:[],last:null,bv:0,sv:0,tr:[],openTf:ST.get('tk-open',60),win:ST.get('tk-win',120),open:null,openT:0,ws:null,age:0,ema:null};
+const cv=$('tkCv'); if(!cv) return;
+$('tkOpen').value=K.openTf; $('tkWin').value=K.win;
+$('tkOpen').onchange=e=>{ K.openTf=+e.target.value; ST.set('tk-open',K.openTf); K.openT=0; };
+$('tkWin').onchange=e=>{ K.win=+e.target.value; ST.set('tk-win',K.win); };
+async function fetchOpen(T){ try{ const iv={60:'1m',300:'5m',900:'15m',3600:'1h'}[K.openTf]; const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=${iv}&limit=1`,{cache:'no-store'}); const a=await r.json(); if(a[0]&&a[0][0]/1000===T&&K.openT===T) K.open=+a[0][1]; }catch(e){} }
+async function seed(){ try{ const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=1s&limit=300`,{cache:'no-store'}); const a=await r.json(); if(Array.isArray(a)&&a.length&&!K.pts.length){ K.pts=a.map(k=>({t:k[0]/1000,p:+k[4]})); K.last=K.pts[K.pts.length-1].p; } }catch(e){} }
+function conn(){ const ws=new WebSocket(`wss://data-stream.binance.vision/ws/${sym.toLowerCase()}@aggTrade`); K.ws=ws;
+  ws.onmessage=ev=>{ const d=JSON.parse(ev.data), p=+d.p, q=+d.q*p; K.last=p; K.age=Date.now(); const t=Date.now()/1000; K.tr.push({t,b:!d.m,q}); };
+  ws.onclose=()=>setTimeout(conn,3000); }
+function sec(){ const now=Math.floor(Date.now()/1000); if(K.last==null) return;
+  const L=K.pts[K.pts.length-1]; if(!L||L.t<now) K.pts.push({t:now,p:K.last}); else L.p=K.last;
+  while(K.pts.length&&K.pts[0].t<now-360) K.pts.shift(); while(K.tr.length&&K.tr[0].t<now-60) K.tr.shift();
+  const T=Math.floor(now/K.openTf)*K.openTf; if(T!==K.openT){ K.openT=T; const f=K.pts.find(x=>x.t>=T); K.open=f?f.p:K.last; fetchOpen(T); } }
+const at=s=>{ const n=Math.floor(Date.now()/1000)-s; for(let i=K.pts.length-1;i>=0;i--) if(K.pts[i].t<=n) return K.pts[i].p; return null; };
+function sigma(){ const a=K.pts.slice(-181); if(a.length<20) return null; let s=0,n=0; for(let i=1;i<a.length;i++){ const d=a[i].p-a[i-1].p; s+=d*d; n++; } return Math.sqrt(s/n)||null; }
+function stats(){ const p=K.last; if(p==null) return; const now=Date.now()/1000, el=now-K.openT;
+  const m=s=>{ const q=at(s); return q==null?null:p-q; }, m10=m(10), m30=m(30), m60=m(60);
+  const buy=K.tr.filter(x=>x.t>now-30&&x.b).reduce((a,x)=>a+x.q,0), sell=K.tr.filter(x=>x.t>now-30&&!x.b).reduce((a,x)=>a+x.q,0), bp=buy+sell?buy/(buy+sell)*100:50;
+  const dO=K.open!=null?p-K.open:null, col=v=>v==null?'inherit':v>0?'#3dff9a':v<0?'#ff5a4d':'inherit', arr=v=>v==null?'—':(v>0?'▲ ':v<0?'▼ ':'')+fD(v);
+  const tfL={60:'1m',300:'5m',900:'15m',3600:'1h'}[K.openTf];
+  const C=(l,v,c)=>`<div><span>${l}</span><b style="color:${c||'inherit'}">${v}</b></div>`;
+  $('tkS').innerHTML=C('Price',fP(p))+C(`Δ ${tfL} open`,dO==null?'—':fD(dO),col(dO))+C('Speed 10s',m10==null?'—':(m10/10>=0?'+':'−')+Math.abs(m10/10).toFixed(dp)+'/s',col(m10))
+    +C('Mom 30s',arr(m30),col(m30))+C('Mom 60s',arr(m60),col(m60))+C('Buy 30s',bp.toFixed(0)+'%',bp>=60?'#3dff9a':bp<=40?'#ff5a4d':'inherit');
+  // open drive: move since the open vs per-second noise
+  const ob=$('tkOB'), sd=sigma(); if(dO==null||!sd||el<3){ ob.className='tkOB'; ob.innerHTML=`NEW ${tfL} CANDLE<small>open ${fP(K.open)}</small>`; }
+  else { const z=dO/(sd*Math.sqrt(el)), early=el<=Math.min(60,K.openTf/3), dir=z>0?'up':'dn', a=Math.abs(z);
+    const lab=a>=2?(early?'OPEN DRIVE':'STRONG TREND'):a>=1?'LEANING':'NO DRIVE'; ob.className='tkOB'+(a>=1?' '+dir:'');
+    ob.innerHTML=`${lab} ${a>=1?(z>0?'↑':'↓'):'·'} z ${z.toFixed(1)}<small>${fD(dO)} in ${el<60?Math.floor(el)+'s':Math.floor(el/60)+'m'} since ${tfL} open · ${early?'opening phase':'mid-candle'}</small>`; }
+  $('tkSt').innerHTML=K.age&&Date.now()-K.age<4000?'<span style="color:#3dff9a">● live</span>':'● waiting'; }
+function draw(){ const r=cv.getBoundingClientRect(), dpr=devicePixelRatio||1; if(!r.width||!r.height||!K.pts.length) return;
+  if(cv.width!==Math.round(r.width*dpr)||cv.height!==Math.round(r.height*dpr)){ cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr); }
+  const g=cv.getContext('2d'), W=r.width, H=r.height, padR=64, padB=14, padT=40, now=Date.now()/1000, win=K.win;
+  g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const pts=K.pts.filter(x=>x.t>=now-win-2).map(x=>({t:x.t,p:x.p})); if(K.last!=null) pts.push({t:now,p:K.last}); if(pts.length<2) return;
+  let lo=Math.min(...pts.map(x=>x.p)), hi=Math.max(...pts.map(x=>x.p)); const span0=Math.max(hi-lo,(SYMX.btc?8:K.last*1e-4));
+  const op=K.open; if(op!=null&&op>lo-span0*1.5&&op<hi+span0*1.5){ lo=Math.min(lo,op); hi=Math.max(hi,op); }
+  const pad=Math.max(hi-lo,span0)*.12; lo-=pad; hi+=pad;
+  const X=t=>(W-padR)-(now-t)/win*(W-padR), Y=p=>padT+(hi-p)/(hi-lo)*(H-padT-padB);
+  // grid + minute-open ticks
+  g.strokeStyle='rgba(255,255,255,.05)'; g.lineWidth=1; g.font='9px ui-monospace,monospace'; g.fillStyle='rgba(255,255,255,.35)'; g.textAlign='center';
+  const step=win<=60?15:win<=120?30:60; for(let t=Math.ceil((now-win)/step)*step;t<=now;t+=step){ const x=X(t); const isM=t%60===0; g.strokeStyle=isM?'rgba(255,216,77,.22)':'rgba(255,255,255,.05)'; g.setLineDash(isM?[2,3]:[]); g.beginPath(); g.moveTo(x,padT-6); g.lineTo(x,H-padB); g.stroke(); g.setLineDash([]);
+    g.fillText(new Date(t*1000).toLocaleTimeString('en-GB',{hour12:false,minute:'2-digit',second:'2-digit'}),x,H-3); }
+  const up=op==null||K.last>=op, rgb=up?'61,255,154':'255,90,77';
+  // fill
+  const gr=g.createLinearGradient(0,padT,0,H-padB); gr.addColorStop(0,`rgba(${rgb},.22)`); gr.addColorStop(1,'rgba(255,255,255,0.02)');
+  g.beginPath(); pts.forEach((x,i)=>i?g.lineTo(X(x.t),Y(x.p)):g.moveTo(X(x.t),Y(x.p))); g.lineTo(X(now),H-padB); g.lineTo(X(pts[0].t),H-padB); g.closePath(); g.fillStyle=gr; g.fill();
+  // 10 s EMA (faint yellow)
+  let e=null; g.beginPath(); pts.forEach((x,i)=>{ e=e==null?x.p:e+(x.p-e)*2/11; i?g.lineTo(X(x.t),Y(e)):g.moveTo(X(x.t),Y(e)); }); g.strokeStyle='rgba(255,209,102,.55)'; g.lineWidth=1; g.stroke();
+  // glowing price line
+  g.save(); g.shadowColor='rgba(255,255,255,.9)'; g.shadowBlur=8; g.beginPath(); pts.forEach((x,i)=>i?g.lineTo(X(x.t),Y(x.p)):g.moveTo(X(x.t),Y(x.p))); g.strokeStyle='#f4f6fa'; g.lineWidth=1.6; g.lineJoin='round'; g.stroke(); g.restore();
+  // dots at each minute open on the line
+  for(const x of pts) if(x.t%60===0){ g.beginPath(); g.arc(X(x.t),Y(x.p),2.5,0,7); g.fillStyle='#ffd84d'; g.fill(); }
+  // open line
+  if(op!=null){ const y=Y(op), tfL={60:'1m',300:'5m',900:'15m',3600:'1h'}[K.openTf];
+    if(y>=padT-4&&y<=H-padB+4){ g.setLineDash([5,4]); g.strokeStyle='rgba(255,216,77,.85)'; g.lineWidth=1; g.beginPath(); g.moveTo(0,y); g.lineTo(W-padR,y); g.stroke(); g.setLineDash([]);
+      g.fillStyle='#ffd84d'; g.fillRect(W-padR+2,y-7,padR-4,14); g.fillStyle='#000'; g.font='bold 9px ui-monospace,monospace'; g.textAlign='left'; g.fillText('OPEN '+tfL,W-padR+5,y+3); }
+    else { g.fillStyle='#ffd84d'; g.font='9px ui-monospace,monospace'; g.textAlign='left'; g.fillText((y<padT?'▲ ':'▼ ')+'open '+fP(op),W-padR-110,y<padT?padT+2:H-padB-4); } }
+  // head: pulsing glow + price tag
+  const hx=X(now), hy=Y(K.last), ph=(Math.sin(Date.now()/180)+1)/2;
+  g.beginPath(); g.arc(hx,hy,5+ph*6,0,7); g.fillStyle=`rgba(${rgb},${.25-ph*.18})`; g.fill();
+  g.beginPath(); g.arc(hx,hy,3,0,7); g.fillStyle='#fff'; g.shadowColor=`rgb(${rgb})`; g.shadowBlur=10; g.fill(); g.shadowBlur=0;
+  g.fillStyle=`rgb(${rgb})`; g.fillRect(W-padR+2,hy-8,padR-4,16); g.fillStyle='#000'; g.font='bold 10px ui-monospace,monospace'; g.textAlign='left'; g.fillText(fP(K.last),W-padR+4,hy+4);
+  // hi / lo of the window
+  g.fillStyle='rgba(255,255,255,.45)'; g.font='9px ui-monospace,monospace'; g.textAlign='right'; const vh=Math.max(...pts.map(x=>x.p)), vl=Math.min(...pts.map(x=>x.p));
+  g.fillText('H '+fP(vh),W-padR-4,Y(vh)-4); g.fillText('L '+fP(vl),W-padR-4,Y(vl)+11); }
+let lastS=0; function loop(){ if(!document.hidden){ const n=Date.now(); if(n-lastS>=250){ sec(); lastS=n; } draw(); } requestAnimationFrame(loop); }
+setInterval(()=>{ if(document.hidden) sec(); },1000); setInterval(()=>{ if(!document.hidden) stats(); },500);
+K.draw=draw; K.stats=stats; window.__TK=K; seed().then(()=>{ conn(); requestAnimationFrame(loop); });
 })();
 </script>
 </body>
