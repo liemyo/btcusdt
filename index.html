@@ -862,7 +862,7 @@ tr.active td{background:rgba(234,108,196,.08)}
         <div class="tvmh">Auto tools</div>
         <label class="tvmi"><input type="checkbox" data-t="fib"><span><b>Auto Fibonacci</b><i>Retracement + extension on the latest major swing (ATR zigzag)</i></span></label>
         <label class="tvmi"><input type="checkbox" data-t="bo"><span><b>Auto Breakout Retracement</b><i>Last swing-level / trendline breakout + 38.2–61.8% retest zone</i></span></label>
-        <label class="tvmi"><input type="checkbox" data-t="tpsl"><span><b>Auto Take Profit &amp; Stop Loss</b><i>Position box from the best active setup: N › Breakout › Fib › Trend</i></span></label>
+        <label class="tvmi"><input type="checkbox" data-t="tpsl"><span><b>Auto Take Profit &amp; Stop Loss</b><i>Position box from the switched-on tools: N › Breakout › Fib (Trend if none)</i></span></label>
         <label class="tvmi"><input type="checkbox" data-t="nst"><span><b>Auto N Strategy</b><i>A-B-C N-wave, entry on break of B, targets V / N / E / NT</i></span></label>
         <div class="tvmh">Indicators</div>
         <label class="tvmi"><input type="checkbox" data-t="rsi"><span><b>RSI Swing Indicator</b><i>RSI(7) 70/30 swings · HH / HL / LH / LL labels + RSI pane</i></span></label>
@@ -4452,8 +4452,8 @@ html body .actg{padding-right:14px!important}
 .a-tvw .tvwinfo h4{margin:0;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
 .a-tvw .tvwinfo .st{font-weight:800;font-size:12px}
 .a-tvw .tvwinfo .kv{display:flex;flex-wrap:wrap;gap:2px 12px;color:var(--ink-2)} .a-tvw .tvwinfo .kv b{color:var(--ink)}
-.a-tvw .tvwinfo .blank{flex-basis:100%;color:var(--ink-2)}
-.a-tvw .tvwinfo .note{flex-basis:100%;color:var(--ink-3);font-size:10px}
+.a-tvw .tvwinfo .blank{display:block;flex-basis:100%;color:var(--ink-2)}
+.a-tvw .tvwinfo .note{display:block;flex-basis:100%;color:var(--ink-3);font-size:10px}
 .a-tvw.max{position:fixed;inset:0;z-index:9000;border-radius:0;display:flex;flex-direction:column;margin:0}
 .a-tvw.max .tvwbody{flex:1;min-height:0}
 .a-tvw.max #tvwChart{flex:1;height:auto;min-height:0}
@@ -4578,11 +4578,12 @@ function calcRS(){ const R=rsi(C,7), piv=[]; let st=0, cur=null;
 
 /* Auto TP/SL: best active setup → entry, SL, TP1-3 */
 function calcPlan(){ const n=C.length-1, a=A[n], px=C[n].close; let p=null;
-  const nOk=N&&!N.inval&&!N.hit;
+  const any=on.fib||on.bo||on.nst, use=k=>on[k]||!any; // TP/SL follows the tools that are switched on (all of them when only TP/SL is on)
+  const nOk=use('nst')&&N&&!N.inval&&!N.hit;
   if(nOk&&!N.live){ const s=N.s; p={src:'N STRATEGY',s,type:N.brk>=0?'STOP · triggered':'STOP (break of B)',entry:N.b.p,sl:N.c.p-s*.25*a,tps:[N.V,N.N,N.E]}; }
-  else if(B&&!B.failed){ const s=B.s; p={src:'BREAKOUT RETEST',s,type:'LIMIT (50% retest)',entry:B.Z(.5),sl:B.Z(.786)-s*.25*a,tps:[B.top,B.top+s*B.rg*.272,B.top+s*B.rg*.618]}; }
+  else if(use('bo')&&B&&!B.failed){ const s=B.s; p={src:'BREAKOUT RETEST',s,type:'LIMIT (50% retest)',entry:B.Z(.5),sl:B.Z(.786)-s*.25*a,tps:[B.top,B.top+s*B.rg*.272,B.top+s*B.rg*.618]}; }
   else if(nOk){ const s=N.s; p={src:'N STRATEGY (forming)',s,type:'STOP (break of B)',entry:N.b.p,sl:N.c.p-s*.25*a,tps:[N.V,N.N,N.E]}; }
-  else if(F){ const s=F.s; p={src:'FIB RETRACEMENT',s,type:'LIMIT (0.618)',entry:F.L(.618),sl:F.L(.786)-s*.25*a,tps:[F.L(0),F.L(-.272),F.L(-.618)]}; }
+  else if(use('fib')&&F){ const s=F.s; p={src:'FIB RETRACEMENT',s,type:'LIMIT (0.618)',entry:F.L(.618),sl:F.L(.786)-s*.25*a,tps:[F.L(0),F.L(-.272),F.L(-.618)]}; }
   else { const e=ema(C,50), s=px>e[n]&&e[n]>e[n-5]?1:px<e[n]&&e[n]<e[n-5]?-1:0; if(!s) return null;
     const sw=[...Z.P].reverse().find(q=>q.t===(s>0?'L':'H')); const sl=sw?sw.p-s*.25*a:px-s*1.5*a;
     p={src:'TREND (EMA 50)',s,type:'MARKET',entry:px,sl,tps:[]}; }
@@ -4687,7 +4688,7 @@ function view(){ const n=C.length; ts.setVisibleLogicalRange({from:Math.max(0,n-
 const menu=$('tvwMenu'), btn=$('tvwToolsBtn');
 function syncUI(){ menu.querySelectorAll('input[data-t]').forEach(i=>i.checked=!!on[i.dataset.t]); $('tvwSens').value=sens;
   const showR=!!on.rsi; if(rbox.hidden===showR){ rbox.hidden=!showR; if(showR){ if(RS) setRsi(C.map((c,i)=>RS.R[i]==null?{time:c.time}:{time:c.time,value:RS.R[i]})); setTimeout(fit,30); } }
-  ts.applyOptions({rightOffset:on.tpsl?30:6}); ST.set('tvw-tools',on); info(); }
+  ts.applyOptions({rightOffset:on.tpsl?30:6}); ST.set('tvw-tools',on); if(C.length>=60){ try{ PL=calcPlan(); }catch(e){ PL=null; } } info(); }
 btn.addEventListener('click',e=>{ e.stopPropagation(); menu.hidden=!menu.hidden; btn.setAttribute('aria-expanded',String(!menu.hidden)); });
 document.addEventListener('click',e=>{ if(!menu.hidden&&!menu.contains(e.target)&&e.target!==btn){ menu.hidden=true; btn.setAttribute('aria-expanded','false'); } });
 menu.addEventListener('change',e=>{ const t=e.target.dataset?.t; if(t){ on[t]=e.target.checked; syncUI(); } });
