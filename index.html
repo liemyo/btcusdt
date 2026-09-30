@@ -4621,17 +4621,18 @@ html.gated #fhTg{display:none}
 @media (max-width:1023px){ .fpg{grid-template-columns:minmax(0,1fr)!important} }
 @media (min-width:1280px) and (min-height:680px){ .a-fp .fpg{grid-template-columns:190px minmax(0,1fr)!important} }
 @media (min-width:1280px) and (max-width:1599px) and (min-height:680px){ .a-fp .fpg{grid-template-columns:170px minmax(0,1fr)!important} }
-/* ===== AI AGENT floating widget (bottom-left · drag the header to move · drag the right edge to resize) ===== */
-#aiw{position:fixed;left:12px;bottom:12px;z-index:9001;width:340px;min-width:260px;max-width:min(720px,calc(100vw - 16px));max-height:min(78vh,640px);display:flex;flex-direction:column;
-  background:linear-gradient(160deg,rgba(24,18,52,.94),rgba(8,10,22,.94));border:2px solid #7b61ff;border-radius:12px;box-shadow:0 0 18px rgba(123,97,255,.45);
-  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-family:var(--mono,monospace);color:#e6e9ef;font-size:10.5px}
-#aiw.buy{border-color:#3dff9a;box-shadow:0 0 18px rgba(61,255,154,.5)} #aiw.sell{border-color:#ff5a4d;box-shadow:0 0 18px rgba(255,90,77,.5)}
+/* ===== AI AGENT · fixed in the header top row (between USER GUIDE and the live price); + drops the summary down ===== */
+#aiw{position:relative;flex:1 1 200px;min-width:180px;max-width:760px;align-self:center;z-index:9001;font-family:var(--mono,monospace);color:#e6e9ef;font-size:10.5px}
 html.gated #aiw{display:none}
-#aiw .aih{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;border-bottom:1px solid rgba(255,255,255,.1)}
-#aiw.drag .aih{cursor:grabbing}
-#aiw .aih b{font-size:10px;letter-spacing:.16em;color:#b9a8ff} #aiw .aih .r{margin-left:auto;display:flex;gap:4px}
-#aiw .aih button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:5px;font:inherit;font-size:10px;padding:0 6px;cursor:pointer}
-#aiw .aib{overflow:auto;padding:7px 10px;display:grid;gap:6px}
+#aiw .aih{display:flex;align-items:center;gap:8px;padding:5px 8px 5px 10px;cursor:pointer;border:2px solid #7b61ff;border-radius:10px;background:linear-gradient(160deg,rgba(24,18,52,.94),rgba(8,10,22,.94));box-shadow:0 0 12px rgba(123,97,255,.4);min-width:0}
+#aiw.buy .aih{border-color:#3dff9a;box-shadow:0 0 14px rgba(61,255,154,.5)} #aiw.sell .aih{border-color:#ff5a4d;box-shadow:0 0 14px rgba(255,90,77,.5)}
+#aiw .aih b{font-size:10px;letter-spacing:.16em;color:#b9a8ff;white-space:nowrap}
+#aiw .aiS{flex:1 1 auto;min-width:0;font-weight:800;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#aiw .aih .r{margin-left:auto;display:flex;gap:4px}
+#aiw .aih button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:5px;font:inherit;font-size:12px;line-height:1;padding:2px 7px;cursor:pointer}
+#aiw .aib{position:absolute;left:0;top:calc(100% + 6px);width:max(100%,420px);max-width:calc(100vw - 16px);max-height:min(72vh,620px);overflow:auto;padding:8px 10px;display:grid;gap:6px;
+  background:linear-gradient(160deg,rgba(24,18,52,.97),rgba(8,10,22,.97));border:2px solid #7b61ff;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.6),0 0 16px rgba(123,97,255,.4);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+#aiw.buy .aib{border-color:#3dff9a} #aiw.sell .aib{border-color:#ff5a4d}
 #aiw.min .aib{display:none}
 #aiw .aiv{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 #aiw .aiv strong{font-family:var(--display);font-size:26px;line-height:1}
@@ -4643,9 +4644,9 @@ html.gated #aiw{display:none}
 #aiw .aii div{display:grid;grid-template-columns:16px 104px minmax(0,1fr);gap:6px;padding:2px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
 #aiw .aii i{font-style:normal;font-weight:800;text-align:center} #aiw .aii span{color:#aab2c2} #aiw .aii em{font-style:normal;overflow:hidden;text-overflow:ellipsis}
 #aiw .ain{font-size:9px;line-height:1.35;color:#8a93a4}
-#aiw .aigrip{position:absolute;right:-5px;top:0;bottom:0;width:10px;cursor:ew-resize;touch-action:none}
-#aiw .aigrip::after{content:'';position:absolute;right:3px;top:50%;height:34px;margin-top:-17px;width:3px;border-radius:2px;background:rgba(185,168,255,.55)}
-@media (max-width:699px){ #aiw{left:8px;bottom:8px;width:calc(100vw - 84px);min-width:0} }
+#symNote:empty{display:none} .symbar .symnote{flex:0 1 220px}
+@media (min-width:700px) and (max-width:1439px){ #pxFloat .pfc{display:none} #aiw .aih b{letter-spacing:.08em} }
+@media (max-width:699px){ #aiw{flex:1 1 100%;max-width:none;order:5} #aiw .aib{width:100%} }
 </style>
 <script id="bbScript">
 /* ===== BOLLINGER BAND · MA · OPEN-PRICE SQUEEZE BREAKOUT =====
@@ -4906,31 +4907,16 @@ K.draw=draw; K.stats=stats; window.__TK=K; seed().then(()=>{ conn(); requestAnim
 const SYMX=window.SYM, dp=SYMX.btc?1:SYMX.dp, fP=p=>p==null||!isFinite(p)?'—':(+p).toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
 const ST={get(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??d; }catch(e){ return d; } },set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
 const el=document.createElement('div'); el.id='aiw'; el.setAttribute('aria-label','AI agent: summary of all indicators and sniper plan');
-el.innerHTML=`<div class="aih"><span>🤖</span><b>AI AGENT · <span id="aiSym"></span> · <span id="aiTf"></span></b><span class="r"><button type="button" id="aiMin" title="Minimise">–</button><button type="button" id="aiRst" title="Reset position and width">⟲</button></span></div>
-  <div class="aib"><div class="aiv"><strong id="aiV">…</strong><small id="aiC"></small></div><div class="aip" id="aiP"></div><div class="aii" id="aiI"></div><div class="ain" id="aiN"></div></div><i class="aigrip" title="Drag to resize"></i>`;
-document.body.appendChild(el); const $=id=>document.getElementById(id); $('aiSym').textContent=SYMX.name||SYMX.id;
-const K='aiw-geo'; let geo=ST.get(K,null), mini=ST.get('aiw-min',innerWidth<700); if(mini) el.classList.add('min');
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function place(){ if(!geo){ el.style.left=''; el.style.top=''; el.style.bottom=''; el.style.width=''; return; }
-  if(geo.w) el.style.width=clamp(geo.w,260,innerWidth-16)+'px';
-  if(geo.x!=null){ const w=el.offsetWidth, h=el.offsetHeight; el.style.left=clamp(geo.x*innerWidth,4,innerWidth-w-4)+'px'; el.style.top=clamp(geo.y*innerHeight,4,innerHeight-h-4)+'px'; el.style.bottom='auto'; } }
-place(); addEventListener('resize',place);
-const save=()=>ST.set(K,geo);
-// move by dragging the header
-let mv=null; const hd=el.querySelector('.aih');
-hd.addEventListener('pointerdown',e=>{ if(e.target.closest('button')) return; const r=el.getBoundingClientRect(); mv={dx:e.clientX-r.left,dy:e.clientY-r.top}; hd.setPointerCapture(e.pointerId); el.classList.add('drag'); e.preventDefault(); });
-hd.addEventListener('pointermove',e=>{ if(!mv) return; el.style.left=clamp(e.clientX-mv.dx,4,innerWidth-el.offsetWidth-4)+'px'; el.style.top=clamp(e.clientY-mv.dy,4,innerHeight-el.offsetHeight-4)+'px'; el.style.bottom='auto'; });
-const mvEnd=()=>{ if(!mv) return; mv=null; el.classList.remove('drag'); const r=el.getBoundingClientRect(); geo={...(geo||{}),x:r.left/innerWidth,y:r.top/innerHeight}; save(); };
-hd.addEventListener('pointerup',mvEnd); hd.addEventListener('pointercancel',mvEnd);
-// resize width by dragging the right edge
-let rz=null; const gr=el.querySelector('.aigrip');
-gr.addEventListener('pointerdown',e=>{ rz={x:e.clientX,w:el.offsetWidth}; gr.setPointerCapture(e.pointerId); e.preventDefault(); });
-gr.addEventListener('pointermove',e=>{ if(!rz) return; el.style.width=clamp(rz.w+e.clientX-rz.x,260,Math.min(720,innerWidth-el.getBoundingClientRect().left-4))+'px'; });
-const rzEnd=()=>{ if(!rz) return; rz=null; geo={...(geo||{}),w:el.offsetWidth}; save(); };
-gr.addEventListener('pointerup',rzEnd); gr.addEventListener('pointercancel',rzEnd);
-$('aiMin').onclick=()=>{ mini=!el.classList.toggle('min')?false:true; $('aiMin').textContent=mini?'+':'–'; ST.set('aiw-min',mini); };
+el.innerHTML=`<div class="aih"><span>🤖</span><b>AI AGENT · <span id="aiSym"></span> · <span id="aiTf"></span></b><span class="aiS" id="aiS">…</span><span class="r"><button type="button" id="aiMin" title="Show the full summary">+</button></span></div>
+  <div class="aib"><div class="aiv"><strong id="aiV">…</strong><small id="aiC"></small></div><div class="aip" id="aiP"></div><div class="aii" id="aiI"></div><div class="ain" id="aiN"></div></div>`;
+{ const bar=document.querySelector('.a-hdr .symbar'), px=document.getElementById('pxFloat'); if(bar&&px) bar.insertBefore(el,px); else if(bar) bar.appendChild(el); else document.body.appendChild(el); }
+const $=id=>document.getElementById(id); $('aiSym').textContent=SYMX.name||SYMX.id;
+/* fixed in the header top row: the bar shows the verdict, the + button drops the full summary down over the page */
+let mini=ST.get('aiw-closed',true); if(mini) el.classList.add('min');
+el.querySelector('.aih').addEventListener('click',e=>{ if(e.target.closest('button')) return; $('aiMin').click(); });
+document.addEventListener('pointerdown',e=>{ if(!mini&&!el.contains(e.target)&&innerWidth<1280){ $('aiMin').click(); } });
+$('aiMin').onclick=()=>{ mini=el.classList.toggle('min'); $('aiMin').textContent=mini?'+':'–'; $('aiMin').title=mini?'Show the full summary':'Hide the summary'; ST.set('aiw-closed',mini); };
 $('aiMin').textContent=mini?'+':'–';
-$('aiRst').onclick=()=>{ geo=null; save(); place(); };
 
 function tick(){ // keeps running in a background tab so the ALERT siren still fires
   const TV=window.__TVW, SP=TV&&TV.SP, PL=TV&&TV.PL, BBx=window.__BB, OS=BBx&&BBx.OS&&BBx.OS.now, SQ=BBx&&BBx.B, TK=window.__TK&&window.__TK.snap, OBM=window.__OBM, FP=window.__FP, BT=window.__BT;
@@ -4962,12 +4948,12 @@ function tick(){ // keeps running in a background tab so the ALERT siren still f
   else if(PL&&PL.s===dir) plan={src:'Auto TP/SL · '+PL.src,s:PL.s,e:PL.entry,sl:PL.sl,tp:PL.tps};
   const V=$('aiV');
   if(dir&&plan){ const R=Math.abs(plan.e-plan.sl), far=px!=null&&Math.abs(px-plan.e)>.5*R, good=px!=null&&(px-plan.e)*plan.s<0;
-    el.className=(plan.s>0?'buy':'sell')+(mini?' min':''); V.textContent=`${plan.s>0?'BUY':'SELL'} @ ${fP(plan.e)}`; V.style.color=plan.s>0?'#3dff9a':'#ff5a4d';
+    el.className=(plan.s>0?'buy':'sell')+(mini?' min':''); $('aiS').innerHTML=`<span style="color:${plan.s>0?'#3dff9a':'#ff5a4d'}">${plan.s>0?'BUY':'SELL'} @ ${fP(plan.e)}</span> · <span style="color:#3dff9a">TP1 ${fP(plan.tp[0])}</span> · <span style="color:#ff5a4d">CL ${fP(plan.sl)}</span>`; V.textContent=`${plan.s>0?'BUY':'SELL'} @ ${fP(plan.e)}`; V.style.color=plan.s>0?'#3dff9a':'#ff5a4d';
     $('aiC').textContent=`agreement ${(Math.abs(conf)*100).toFixed(0)}% · ${plan.src}`;
     const P=(k,v,c)=>`<div><span>${k}</span><b style="color:${c||'#fff'}">${v}</b></div>`;
     $('aiP').innerHTML=P(far&&!good?'Open (limit)':'Open price',fP(plan.e),'#ffd166')+plan.tp.slice(0,3).map((t,k)=>P('Take profit '+(k+1),fP(t),'#3dff9a')).join('')+P('Cut loss',fP(plan.sl),'#ff5a4d')+P('Risk / reward',`1 : ${(Math.abs(plan.tp[Math.min(1,plan.tp.length-1)]-plan.e)/R).toFixed(1)}`)+P('Price now',fP(px));
     $('aiN').textContent=(far&&!good?`Price is ${fP(Math.abs(px-plan.e))} away from the open price — place a limit at ${fP(plan.e)} instead of chasing. `:'')+'Move the cut loss to the open price after TP1. Chart aid — the sniper rules are not backtested; size small.'; }
-  else { el.className=mini?'min':''; V.textContent='WAIT'; V.style.color='#cfd6e3';
+  else { el.className=mini?'min':''; $('aiS').innerHTML=`<span style="color:#cfd6e3">WAIT</span> · agreement ${(Math.abs(conf)*100).toFixed(0)}%`; V.textContent='WAIT'; V.style.color='#cfd6e3';
     $('aiC').textContent=`agreement ${(Math.abs(conf)*100).toFixed(0)}% ${conf>0?'buy':conf<0?'sell':''} · need ≥ 20% and a plan on the same side`;
     const lq=SP&&SP.liq||[], up=lq.filter(l=>l.s>0).sort((a,b)=>a.p-b.p)[0], dn=lq.filter(l=>l.s<0).sort((a,b)=>b.p-a.p)[0];
     const P=(k,v,c)=>`<div><span>${k}</span><b style="color:${c||'#fff'}">${v}</b></div>`;
