@@ -4431,6 +4431,18 @@ html.gated #fhTg{display:none}
 .sgH{max-height:44px;overflow:auto;display:grid;gap:1px;font-size:9.5px}
 @media (max-width:1279px){ .sgg{grid-template-columns:190px minmax(0,1fr)} .sgg>div:nth-child(3){grid-column:1/-1;border-left:0;border-top:1px solid var(--line)} .sgg>div:nth-child(4){grid-column:1/-1;border-left:0;border-top:1px solid var(--line)} }
 @media (max-width:699px){ .sgg{grid-template-columns:minmax(0,1fr)} .sgg>div+div{border-left:0;border-top:1px solid var(--line)} .sgI{grid-template-columns:repeat(2,minmax(0,1fr))} .sgPlan{grid-template-columns:repeat(2,minmax(0,1fr))} }
+/* compact integrated panel on one-screen desktop layouts: fixed height, each column scrolls, long notes clamp to 2 lines */
+@media (min-width:1280px) and (min-height:680px){
+  .a-sig .sgg>div{max-height:168px;overflow:auto;padding:5px 9px;gap:2px}
+  .a-sig .sgV{font-size:26px}
+  .a-sig .sgS{font-size:9.5px;line-height:1.3}
+  .a-sig #sgPlan .sgS{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .a-sig .sgPlan div{padding:2px 6px} .a-sig .sgPlan b{font-size:11px}
+  .a-sig .sgI div{padding:2px 6px} .a-sig .sgI b{font-size:10.5px}
+  .a-sig #sgT>div{font-size:9.5px}
+  .a-sig .sgJs{padding:3px 9px}
+}
+@media (min-width:1280px) and (max-height:900px){ .a-sig .sgg>div{max-height:138px} .a-sig .sgV{font-size:22px} }
 /* floating price: right side, draggable */
 #pxFloat{left:auto;right:12px;top:calc(50% - 40px);pointer-events:auto;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 #pxFloat.drag{cursor:grabbing;opacity:.92}
