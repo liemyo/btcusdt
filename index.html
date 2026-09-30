@@ -4421,7 +4421,8 @@ html.gated #fhTg{display:none}
 .sgS{color:var(--ink-2);font-size:10px;line-height:1.35}
 .sgPlan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border-radius:6px;overflow:hidden}
 .sgPlan div{background:var(--panel-2);padding:3px 6px;display:grid} .sgPlan b{font-size:12px}
-.sgI{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.sgI{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:4px;flex:1 1 auto}
+.sgg>div:nth-child(3){display:flex!important;flex-direction:column} .sgI div{align-content:center}
 .sgI div{border:1px solid var(--line-2);border-radius:6px;padding:3px 6px;display:grid;gap:1px;min-width:0}
 .sgI div.ok{border-color:rgba(61,255,154,.7);background:rgba(61,255,154,.07)} .sgI div.no{border-color:rgba(255,90,77,.7);background:rgba(255,90,77,.07)}
 .sgI span{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -4580,6 +4581,7 @@ async function exrEval(){
     const C3=k3.filter(c=>c.t+180<=T), C5=k5.filter(c=>c.t+300<=T), C15=k15.filter(c=>c.t+900<T);
     const B={3:FP4.bias(C3,1),5:FP4.bias(C5,1),15:FP4.bias(C15,1)}; if(!B[3]||!B[5]||!B[15]) return; EXR.B=B; EXR.lastT=T;
     const d=FP4.detect(C5,300,null,1); EXR.last5={t:T,d:d&&!d.none?d:null};
+    { const A5=B[5].A, sw=FP4.swings(C5.slice(-40)); EXR.ctx={vp:FP4.profile(C5.slice(-60),FP4.nice(A5/8),1),swH:sw.H.length?Math.max(...sw.H.slice(-3)):null,swL:sw.L.length?Math.min(...sw.L.slice(-3)):null,A:A5,t:T}; }
     if(d&&!d.none&&!d.limit&&d.name==='SWEEP & RECLAIM'&&!FP4.isOpen(EXR.sig)&&SYMX.btc){
       const dir=d.dir, st=[B[3].b*dir,B[5].b*dir,B[15].b*dir], worst=Math.max(...st);
       if(worst< -RULE.B&&now-T<90){ const p=px()??C5[C5.length-1].c, R=Math.max(Math.abs(p-d.sl),RULE.minSl*B[5].A);
@@ -4651,7 +4653,7 @@ function render(){
   const D=decide(), P=$('sigPanel'); if(!P) return;
   P.classList.remove('buy','sell','watch','conflict'); if(D.cls) P.classList.add(D.cls);
   const col=D.cls==='buy'?'#3dff9a':D.cls==='sell'?'#ff5a4d':D.cls==='watch'?'#ffd84d':D.cls==='conflict'?'#ff8a4d':'#9aa0ad';
-  const v=$('sgV'); v.textContent=D.V; v.style.color=col; set('sgS',D.sub);
+  const v=$('sgV'); v.textContent=D.V; v.style.color=col; set('sgS',D.sub+stretchMeter());
   // plan
   const m=D.main; let ph='';
   if(m&&!D.conflict){ const R=Math.abs(m.entry-m.sl), rr=Math.abs(m.tp-m.entry)/(R||1), ur=D.p!=null?(D.p-m.entry)*m.dir:0, left=m.until?Math.max(0,m.until-Date.now()/1000):null;
@@ -4659,7 +4661,7 @@ function render(){
       <div><span class="lbl">Take profit · ${rr.toFixed(1)}R</span><b class="up">${fP(m.tp)}</b></div><div><span class="lbl">Now · ${left!=null?mmss(left)+' left':''}</span><b class="${ur>=0?'up':'down'}">${ur>=0?'+':''}${fP(ur)} pts</b></div></div>
       ${(()=>{ const J=window.__SIGJ; if(!J) return ''; const L=J.lot(m), G=J.guard(); return `<div class="sgS"><b>Lot ${L.lot.toFixed(2)}</b> · risk $${L.riskUsd.toFixed(0)} (${J.cfg.risk}%) · SL ${fP(Math.abs(m.entry-m.sl))} + cost ${J.cfg.cost} pts${L.tooBig?' · <span class="down">stop too wide for this risk (min lot 0.01 risks more)</span>':''}${G.stop?' · <span class="down"><b>DAILY STOP HIT — skip this trade</b></span>':''}</div>`; })()}
       <div class="sgS" title="${m.why.replace(/"/g,'&quot;')}">${m.src==='EXR'?'Exhaustion reversal':'Sniper '+m.name} · grade ${m.grade} · ${m.why.slice(0,150)}</div>`; }
-  else ph=`<div class="sgS">${D.conflict?'Two validated triggers disagree — no trade.':'No open trade plan. A plan appears only when a validated trigger fires (Sniper setup or exhaustion reversal); the entry, stop and target come from that trigger.'}</div>`;
+  else ph=D.conflict?`<div class="sgS">Two validated triggers disagree — no trade until one of them resolves.</div>`:watchPlan(D);
   set('sgPlan',ph); set('sgPlanH',m&&!D.conflict?`Trade plan · ${m.dir>0?'LONG':'SHORT'}`:'Trade plan');
   // instruments
   const d=m&&!D.conflict?m.dir:(D.zone||0);
@@ -4673,6 +4675,32 @@ function render(){
     <div><span class="muted">Market</span><b class="${A?(A.lvl==='HIGH'?'up':A.lvl==='LOW'?'warn':'down'):''}">${A?`${A.lvl} activity ${Math.round(A.r*100)}%${A.lvl==='HIGH'?'':' · smaller size'}`:'—'}</b></div>`);
   set('sgH',X.hist.slice(0,6).map(x=>`<div><span class="muted">${hm(x.t)}</span> <b class="${x.dir>0?'up':'down'}">${x.dir>0?'BUY':'SELL'}</b> ${x.src==='EXR'?'exhaustion':x.name.toLowerCase()} ${x.g} · ${fP(x.entry)} · ${x.agree}/${x.n} agree</div>`).join('')||'<span class="muted">No integrated signal yet in this browser.</span>');
 }
+/* plan column while waiting: what exactly would trigger a trade, where, and what the trade would look like */
+function watchPlan(D){
+  const c=EXR.ctx, B=EXR.B, p=D.p; if(!c||!B||p==null) return '<div class="sgS">Loading 5m structure…</div>';
+  const A=c.A, vp=c.vp, dist=x=>x==null?'—':`${x>=p?'+':'−'}${fP(Math.abs(x-p))}`;
+  const upLvl=Math.max(vp?vp.vah:-1e12,c.swH??-1e12), dnLvl=Math.min(vp?vp.val:1e12,c.swL??1e12);
+  const side=D.zone||0, lines=[];
+  const cond=(dir)=>{ const L=dir<0?upLvl:dnLvl, e=L, R=RULE.minSl*A, sl=e-dir*R, tp=e+dir*RULE.tpR*R;
+    return `<div class="sgPlan"><div><span class="lbl">Sweep level</span><b>${fP(L)}</b></div><div><span class="lbl">Entry ≈</span><b>${fP(e)}</b></div><div><span class="lbl">Stop ≈</span><b class="down">${fP(sl)}</b></div><div><span class="lbl">Target ≈ 3R</span><b class="up">${fP(tp)}</b></div></div>`; };
+  const st=[B[3].b,B[5].b,B[15].b];
+  if(side){ const dir=side>0?1:-1, L=dir<0?upLvl:dnLvl;
+    lines.push(`<div class="lbl2" style="color:#ffd84d">If triggered · ${dir>0?'LONG':'SHORT'} (estimate)</div>`+cond(dir));
+    const past=(p-L)*-dir>0; lines.push(`<div class="sgS">${past?`Price is already ${dir<0?'above':'below'} <b>${fP(L)}</b> (${dist(L)}): the signal fires if a 5m candle closes back`:`Wait for a 5m candle to trade <b>${dir<0?'above':'below'} ${fP(L)}</b> (${dist(L)} from now) and close back`} ${dir<0?'below':'above'} it with ${dir<0?'selling':'buying'} delta. Exact entry / stop come from that candle; stop ≥ ${fP(RULE.minSl*A)} pts (1.3× 5m ATR).</div>`); }
+  else { const need=x=>Math.max(0,RULE.B-Math.abs(x));
+    lines.push(`<div class="lbl2">Waiting for a reversal zone</div>`);
+    lines.push(`<div class="sgS">▼ SHORT zone needs 3m / 5m / 15m bias ≥ +${RULE.B}: now ${st.map(x=>(x>=0?'+':'')+x.toFixed(2)).join(' / ')} → then a sweep above <b>${fP(upLvl)}</b> (${dist(upLvl)}).</div>`);
+    lines.push(`<div class="sgS">▲ LONG zone needs ≤ −${RULE.B}: → then a sweep below <b>${fP(dnLvl)}</b> (${dist(dnLvl)}).</div>`); }
+  const mg=window.__LQ&&window.__LQ.mag, O=window.__OBM;
+  lines.push(`<div class="sgPlan" style="margin-top:3px"><div><span class="lbl">5m POC</span><b style="color:#ff6df5">${vp?fP(vp.poc):'—'}</b></div><div><span class="lbl">5m value area</span><b>${vp?fP(vp.val)+' – '+fP(vp.vah):'—'}</b></div>
+    <div><span class="lbl">Liq magnet ↑ / ↓</span><b>${mg&&mg.up?fP(mg.up.p):'—'} / ${mg&&mg.dn?fP(mg.dn.p):'—'}</b></div><div><span class="lbl">Meter target</span><b>${O&&O.tgt?fP(O.tgt.p):'balanced'}</b></div></div>`);
+  const J=window.__SIGJ, last=J&&J.list.find(e=>e.pts!=null);
+  lines.push(`<div class="sgS">${last?`Last closed signal: <b class="${last.dir>0?'up':'down'}">${last.dir>0?'BUY':'SELL'}</b> ${last.src==='EXR'?'exhaustion':last.name.toLowerCase()} → <b class="${last.pts-J.cfg.cost>0?'up':'down'}">${last.status} ${last.pts-J.cfg.cost>=0?'+':''}${fP(last.pts-J.cfg.cost)} pts</b>`:'No closed signal in the journal yet.'} · Levels are for planning; trade only when the panel turns BUY / SELL.</div>`);
+  return lines.join(''); }
+/* stretch meter in the verdict column: how close 3m / 5m / 15m are to the zone threshold */
+function stretchMeter(){ const B=EXR.B; if(!B) return ''; const bar=(lab,b)=>{ const x=Math.max(-1,Math.min(1,b)), w=Math.abs(x)*50, hit=Math.abs(b)>=RULE.B;
+    return `<div style="display:grid;grid-template-columns:28px minmax(0,1fr) 40px;gap:5px;align-items:center;font-size:9.5px"><span class="muted">${lab}</span><div style="position:relative;height:7px;background:var(--line);border-radius:4px"><i style="position:absolute;top:-2px;bottom:-2px;left:${50-RULE.B*50}%;width:1px;background:#ffd84d"></i><i style="position:absolute;top:-2px;bottom:-2px;left:${50+RULE.B*50}%;width:1px;background:#ffd84d"></i><i style="position:absolute;top:0;bottom:0;${x>=0?'left:50%':'right:50%'};width:${w}%;border-radius:4px;background:${hit?(x>0?'#ff5a4d':'#3dff9a'):'#6b7280'}"></i></div><b class="${hit?'warn':''}">${b>=0?'+':''}${b.toFixed(2)}</b></div>`; };
+  return `<div class="lbl2" style="margin-top:4px">Stretch → zone at ±${RULE.B}</div>`+bar('3m',B[3].b)+bar('5m',B[5].b)+bar('15m',B[15].b)+`<div class="muted" style="font-size:9px">right = stretched up (short zone) · left = stretched down (long zone)</div>`; }
 function set(id,h){ const e=$(id); if(e&&e._h!==h){ e.innerHTML=h; e._h=h; } }
 exrEval(); setInterval(exrEval,5000);
 setInterval(()=>{ if(!document.hidden) try{ render(); }catch(e){ console.error(e); } },1000);
