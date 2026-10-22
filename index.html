@@ -853,7 +853,25 @@ html.ob-max{overflow:hidden}
   <header class="top a-hdr">
     <div class="symbar" role="group" aria-label="Market and timeframe">
       <label class="symsel"><span>Market</span><select id="symSel" aria-label="Market"><option value="BTCUSDT">BTCUSDT · Bitcoin</option><option value="XAUUSDT">XAUUSDT · Gold</option><option value="BNBUSDT">BNBUSDT · BNB</option><option value="SOLUSDT">SOLUSDT · Solana</option></select></label>
-      <label class="symsel"><span>Timeframe</span><select id="tfSel" aria-label="Timeframe" title="One timeframe for every instrument: Bollinger / MA chart + momentum meter, live per-second graph (open reference), TradingView window + Sniper Indicator + AI Agent, Footprint (1M / 5M; higher TFs keep 5M). Liquidation map, order book heatmap and Big trades use fixed windows."><option value="1m">1M · 1 minute</option><option value="5m">5M · 5 minutes</option><option value="15m">15M · 15 minutes</option><option value="1h">1H · 1 hour</option><option value="4h">4H · 4 hours</option><option value="1d">1D · 1 day</option></select></label>
+      <label class="symsel symmode"><span>Mode</span><select id="modeSel" aria-label="Trading mode" title="Scalping: 1M · 5M · 15M. Swing: 15M · 30M · 1H · 4H · 1D. The Timeframe list follows the mode."><option value="scalp">Scalping</option><option value="swing">Swing</option></select></label>
+      <label class="symsel"><span>Timeframe</span><select id="tfSel" aria-label="Timeframe" title="One timeframe for every instrument: Bollinger / MA chart + momentum meter, live per-second graph (open reference), TradingView window + Sniper Indicator + AI Agent, Footprint (1M / 5M; higher TFs keep 5M). Liquidation map, order book heatmap and Big trades use fixed windows."><option value="1m">1M · 1 minute</option><option value="5m">5M · 5 minutes</option><option value="15m">15M · 15 minutes</option><option value="30m">30M · 30 minutes</option><option value="1h">1H · 1 hour</option><option value="4h">4H · 4 hours</option><option value="1d">1D · 1 day</option></select></label>
+      <script id="tradeMode">
+      /* trading mode: Scalping or Swing; the header Timeframe list (and so every instrument) follows the mode */
+      (()=>{ const M={scalp:{tfs:['1m','5m','15m'],def:'5m'},swing:{tfs:['15m','30m','1h','4h','1d'],def:'1h'}},
+          ms=document.getElementById('modeSel'), tf=document.getElementById('tfSel'),
+          all=[...tf.options].map(o=>[o.value,o.textContent]), K='trade-mode', T='scalp-tf';
+        const get=k=>{ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
+          put=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+        const fill=m=>{ tf.innerHTML=all.filter(([v])=>M[m].tfs.includes(v)).map(([v,t])=>`<option value="${v}">${t}</option>`).join(''); };
+        let mode=M[get(K)]?get(K):'scalp'; window.tradeMode=mode; ms.value=mode; fill(mode);
+        const saved=get(T); if(!M[mode].tfs.includes(saved)) put(T,M[mode].def);   /* boot reads 'scalp-tf' */
+        tf.value=get(T);
+        ms.addEventListener('change',()=>{ const m=ms.value; if(!M[m]||m===mode) return;
+          const cur=tf.value; mode=m; window.tradeMode=m; put(K,m); fill(m);
+          const next=M[m].tfs.includes(cur)?cur:M[m].def; tf.value=next;
+          if(next!==cur) tf.dispatchEvent(new Event('change')); });
+      })();
+      </script>
       <a class="dlbtn" href="btcusdt-user-guide.pdf" download="BTCUSDT-Scalp-Deck-User-Guide.pdf" target="_blank" rel="noopener" title="Download the user guide (PDF, English): every panel, indicator and signal explained with screenshots" aria-label="Download user guide PDF"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 17v3h16v-3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>USER GUIDE · PDF</span></a>
       <span class="symnote" id="symNote"></span>
       <div id="pxFloat" aria-live="off" aria-label="Current price of the selected pair"><div class="pfh"><span id="pfSym">BTC/USDT</span><span id="pfDot" title="live stream">●</span></div><div class="pfp num" id="pfPx">—</div><div class="pfc num" id="pfCh">24h —</div></div>
@@ -897,7 +915,7 @@ html.ob-max{overflow:hidden}
       </div>
       <div class="tkP" aria-label="Real-time per-second price graph with open-price momentum">
         <div class="tkH"><b>Live · per second</b>
-          <label title="Candle open used as the reference line">Open <select id="tkOpen"><option value="60">1m</option><option value="300">5m</option><option value="900">15m</option><option value="3600">1h</option><option value="14400">4h</option><option value="86400">1D</option></select></label>
+          <label title="Candle open used as the reference line">Open <select id="tkOpen"><option value="60">1m</option><option value="300">5m</option><option value="900">15m</option><option value="1800">30m</option><option value="3600">1h</option><option value="14400">4h</option><option value="86400">1D</option></select></label>
           <label title="Time window shown">Win <select id="tkWin"><option value="60">1 min</option><option value="120">2 min</option><option value="300">5 min</option></select></label>
           <span class="r" id="tkSt">connecting…</span></div>
         <div class="tkS" id="tkS"></div>
@@ -1292,9 +1310,9 @@ const WSS = ['wss://data-stream.binance.vision', 'wss://stream.binance.com:9443'
 const TFS = ['1m','5m','15m','1h','4h','1d'];
 const ASSETS = [...new Set([SYMBOL,'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','DOGEUSDT','ADAUSDT','DOTUSDT'])].slice(0,8);
 const RTF = ['5m','15m','1h'];
-const TF_MS = {'1m':6e4,'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5,'1w':6048e5};
-const HTF = {'1m':'15m','5m':'1h','15m':'1h','1h':'4h','4h':'1d','1d':'1w'};
-const ATR_MIN = {'1m':0.03,'5m':0.07,'15m':0.12,'1h':0.25,'4h':0.5,'1d':1.2};
+const TF_MS = {'1m':6e4,'5m':3e5,'15m':9e5,'30m':18e5,'1h':36e5,'4h':144e5,'1d':864e5,'1w':6048e5};
+const HTF = {'1m':'15m','5m':'1h','15m':'1h','30m':'4h','1h':'4h','4h':'1d','1d':'1w'};
+const ATR_MIN = {'1m':0.03,'5m':0.07,'15m':0.12,'30m':0.18,'1h':0.25,'4h':0.5,'1d':1.2};
 const TZ = -new Date().getTimezoneOffset() * 60;
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const C = {up:css('--up'),down:css('--down'),warn:css('--warn'),e9:css('--ema9'),e21:css('--ema21'),e50:css('--ema50'),vwap:css('--vwap'),
@@ -1737,7 +1755,7 @@ function clock(){
   $('session').textContent=`Active session: ${act.join(' + ')||'quiet (between sessions)'}`;
   const wib=new Date(now+7*36e5).toISOString().slice(11,19), utc=d.toISOString().slice(11,19);
   $('clk').textContent=utc; $('lat').textContent=`UTC · ${S.rtt??'—'} ms`;
-  $('strap').textContent=`${wib} WIB · TF ${S.tf.toUpperCase()}`;
+  $('strap').textContent=`${wib} WIB · ${window.tradeMode==='swing'?'SWING':'SCALPING'} · TF ${S.tf.toUpperCase()}`;
 }
 setInterval(clock,1000); clock();
 
@@ -1745,7 +1763,7 @@ setInterval(clock,1000); clock();
 $('tfSel').value=S.tf;
 $('tfSel').addEventListener('change',async()=>{
   const b={dataset:{tf:$('tfSel').value}};
-  if(b.dataset.tf===S.tf||!TFS.includes(b.dataset.tf)) return;
+  if(b.dataset.tf===S.tf||!HTF[b.dataset.tf]) return;
   S.tf=b.dataset.tf; S.last=null;
   $('mainTitle').textContent=`${SYM.name} · ${S.tf.toUpperCase()} · ${SYM.src}`;
   store.set('scalp-tf',S.tf);
@@ -2929,7 +2947,7 @@ WIDGETS.push(['xvw','xvTg','xvTop','scalp-xvmini']);
 
 /* ---------- boot ---------- */
 (async()=>{
-  const saved=store.get('scalp-tf'); if(saved&&TFS.includes(saved)){ S.tf=saved; $('tfSel').value=saved; $('mainTitle').textContent=`${SYM.name} · ${S.tf.toUpperCase()} · ${SYM.src}`; }
+  const saved=store.get('scalp-tf'); if(saved&&HTF[saved]){ S.tf=saved; $('tfSel').value=saved; $('mainTitle').textContent=`${SYM.name} · ${S.tf.toUpperCase()} · ${SYM.src}`; }
   try{ syncTF(S.tf); }catch(e){}
   try{ await loadMain(); }catch(e){ $('strap').textContent='Failed to fetch Binance data. Check your internet connection / VPN.'; return; }
   connect(); liqInit(); actLoad(true);
@@ -4672,10 +4690,13 @@ html.gated #aiw{display:none}
 /* ===== HEADER · symmetric two-row grid: row 1 market · timeframe · guide · AI agent · price  |  row 2 brand · strap · alert · exness · contact · clock ===== */
 :root{--hh:36px}
 header.top.a-hdr{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;column-gap:14px!important;row-gap:10px!important;padding:6px 6px 8px!important}
-header.top.a-hdr>.symbar{grid-column:1/-1;display:grid;grid-template-columns:auto auto auto minmax(0,1fr) auto;align-items:center;gap:10px 14px;padding-bottom:10px}
+header.top.a-hdr>.symbar{grid-column:1/-1;display:grid;grid-template-columns:auto auto auto auto minmax(0,1fr) auto;align-items:center;gap:10px 14px;padding-bottom:10px}
 header.top.a-hdr>.symbar #symNote:not(:empty){grid-column:1/-1;order:9}
 header.top.a-hdr .symsel select,header.top.a-hdr .dlbtn,header.top.a-hdr #aiw .aih,header.top.a-hdr #pxFloat,header.top.a-hdr .controls .btn,header.top.a-hdr .clockbox{height:var(--hh);box-sizing:border-box}
 header.top.a-hdr .symsel select{padding-top:0;padding-bottom:0;min-width:190px}
+header.top.a-hdr .symmode select{min-width:130px}
+@media (min-width:700px) and (max-width:1439px){ header.top.a-hdr .symsel>span{display:none} header.top.a-hdr .symmode select{min-width:0} }
+@media (max-width:699px){ header.top.a-hdr>.symbar>.symsel:first-child{grid-column:1/-1} }
 header.top.a-hdr .dlbtn{padding:0 14px}
 header.top.a-hdr #aiw{max-width:none;min-width:0;width:100%}
 header.top.a-hdr #aiw .aih{padding-top:0;padding-bottom:0}
@@ -4694,7 +4715,7 @@ header.top.a-hdr .clockbox b{font-size:19px;line-height:1}
 header.top.a-hdr .clockbox span{font-size:9px}
 @media (min-width:700px) and (max-width:1599px){ header.top.a-hdr #pxFloat{min-width:220px} }
 @media (min-width:700px) and (max-width:1439px){ header.top.a-hdr #symH1{font-size:20px} header.top.a-hdr .controls .btn{min-width:0;padding:0 10px} header.top.a-hdr .strap{font-size:10px} header.top.a-hdr #pxFloat{min-width:0} header.top.a-hdr .symsel select{min-width:0} }
-@media (min-width:700px) and (max-width:1100px){ header.top.a-hdr{grid-template-columns:minmax(0,1fr) auto} header.top.a-hdr .strap{grid-column:1/-1;order:5} header.top.a-hdr>.symbar{grid-template-columns:auto auto auto minmax(0,1fr)} header.top.a-hdr #pxFloat{grid-column:1/-1} }
+@media (min-width:700px) and (max-width:1100px){ header.top.a-hdr{grid-template-columns:minmax(0,1fr) auto} header.top.a-hdr .strap{grid-column:1/-1;order:5} header.top.a-hdr>.symbar{grid-template-columns:auto auto auto auto minmax(0,1fr)} header.top.a-hdr #pxFloat{grid-column:1/-1} }
 @media (max-width:699px){ header.top.a-hdr{grid-template-columns:minmax(0,1fr) auto} header.top.a-hdr>.symbar{grid-template-columns:1fr 1fr} header.top.a-hdr>.symbar>*{grid-column:1/-1} header.top.a-hdr>.symbar>.symsel{grid-column:auto}
   header.top.a-hdr .strap{grid-column:1/-1;white-space:normal;text-align:left} header.top.a-hdr .controls{grid-column:1/-1;flex-wrap:wrap} header.top.a-hdr .controls .btn{flex:1 1 30%;min-width:0} header.top.a-hdr #symH1{font-size:18px;white-space:normal} header.top.a-hdr .clockbox{min-width:0;order:2} header.top.a-hdr .brand{order:1} header.top.a-hdr .strap{order:3} header.top.a-hdr .controls{order:4} header.top.a-hdr>.symbar{order:0} header.top.a-hdr #pxFloat{min-width:0} header.top.a-hdr .symsel select{min-width:0} }
 </style>
@@ -4876,10 +4897,10 @@ const K={pts:[],last:null,bv:0,sv:0,tr:[],openTf:ST.get('tk-open',60),win:ST.get
 const cv=$('tkCv'); if(!cv) return;
 $('tkOpen').value=K.openTf; $('tkWin').value=K.win;
 $('tkOpen').onchange=e=>{ K.openTf=+e.target.value; ST.set('tk-open',K.openTf); K.openT=0; };
-{ const hs=$('tfSel'), map={'1m':60,'5m':300,'15m':900,'1h':3600,'4h':14400,'1d':86400}, follow=()=>{ const v=map[hs?.value]; if(v&&v!==K.openTf){ K.openTf=v; $('tkOpen').value=v; ST.set('tk-open',v); K.openT=0; } };
+{ const hs=$('tfSel'), map={'1m':60,'5m':300,'15m':900,'30m':1800,'1h':3600,'4h':14400,'1d':86400}, follow=()=>{ const v=map[hs?.value]; if(v&&v!==K.openTf){ K.openTf=v; $('tkOpen').value=v; ST.set('tk-open',v); K.openT=0; } };
   if(hs){ hs.addEventListener('change',follow); follow(); } }
 $('tkWin').onchange=e=>{ K.win=+e.target.value; ST.set('tk-win',K.win); };
-async function fetchOpen(T){ try{ const iv={60:'1m',300:'5m',900:'15m',3600:'1h',14400:'4h',86400:'1d'}[K.openTf]; const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=${iv}&limit=1`,{cache:'no-store'}); const a=await r.json(); if(a[0]&&a[0][0]/1000===T&&K.openT===T) K.open=+a[0][1]; }catch(e){} }
+async function fetchOpen(T){ try{ const iv={60:'1m',300:'5m',900:'15m',1800:'30m',3600:'1h',14400:'4h',86400:'1d'}[K.openTf]; const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=${iv}&limit=1`,{cache:'no-store'}); const a=await r.json(); if(a[0]&&a[0][0]/1000===T&&K.openT===T) K.open=+a[0][1]; }catch(e){} }
 async function seed(){ try{ const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=1s&limit=300`,{cache:'no-store'}); const a=await r.json(); if(Array.isArray(a)&&a.length&&!K.pts.length){ K.pts=a.map(k=>({t:k[0]/1000,p:+k[4]})); K.last=K.pts[K.pts.length-1].p; } }catch(e){} }
 function conn(){ const ws=new WebSocket(`wss://data-stream.binance.vision/ws/${sym.toLowerCase()}@aggTrade`); K.ws=ws;
   ws.onmessage=ev=>{ const d=JSON.parse(ev.data), p=+d.p, q=+d.q*p; K.last=p; K.age=Date.now(); const t=Date.now()/1000; K.tr.push({t,b:!d.m,q}); };
@@ -4894,7 +4915,7 @@ function stats(){ const p=K.last; if(p==null) return; const now=Date.now()/1000,
   const m=s=>{ const q=at(s); return q==null?null:p-q; }, m10=m(10), m30=m(30), m60=m(60);
   const buy=K.tr.filter(x=>x.t>now-30&&x.b).reduce((a,x)=>a+x.q,0), sell=K.tr.filter(x=>x.t>now-30&&!x.b).reduce((a,x)=>a+x.q,0), bp=buy+sell?buy/(buy+sell)*100:50;
   const dO=K.open!=null?p-K.open:null, col=v=>v==null?'inherit':v>0?'#3dff9a':v<0?'#ff5a4d':'inherit', arr=v=>v==null?'—':(v>0?'▲ ':v<0?'▼ ':'')+fD(v);
-  const tfL={60:'1m',300:'5m',900:'15m',3600:'1h',14400:'4h',86400:'1D'}[K.openTf];
+  const tfL={60:'1m',300:'5m',900:'15m',1800:'30m',3600:'1h',14400:'4h',86400:'1D'}[K.openTf];
   const C=(l,v,c)=>`<div><span>${l}</span><b style="color:${c||'inherit'}">${v}</b></div>`;
   $('tkS').innerHTML=C('Price',fP(p))+C(`Δ ${tfL} open`,dO==null?'—':fD(dO),col(dO))+C('Speed 10s',m10==null?'—':(m10/10>=0?'+':'−')+Math.abs(m10/10).toFixed(dp)+'/s',col(m10))
     +C('Mom 30s',arr(m30),col(m30))+C('Mom 60s',arr(m60),col(m60))+C('Buy 30s',bp.toFixed(0)+'%',bp>=60?'#3dff9a':bp<=40?'#ff5a4d':'inherit');
@@ -4929,7 +4950,7 @@ function draw(){ const r=cv.getBoundingClientRect(), dpr=devicePixelRatio||1; if
   // dots at each minute open on the line
   for(const x of pts) if(x.t%60===0){ g.beginPath(); g.arc(X(x.t),Y(x.p),2.5,0,7); g.fillStyle='#ffd84d'; g.fill(); }
   // open line
-  if(op!=null){ const y=Y(op), tfL={60:'1m',300:'5m',900:'15m',3600:'1h',14400:'4h',86400:'1D'}[K.openTf];
+  if(op!=null){ const y=Y(op), tfL={60:'1m',300:'5m',900:'15m',1800:'30m',3600:'1h',14400:'4h',86400:'1D'}[K.openTf];
     if(y>=padT-4&&y<=H-padB+4){ g.setLineDash([5,4]); g.strokeStyle='rgba(255,216,77,.85)'; g.lineWidth=1; g.beginPath(); g.moveTo(0,y); g.lineTo(W-padR,y); g.stroke(); g.setLineDash([]);
       g.fillStyle='#ffd84d'; g.fillRect(W-padR+2,y-7,padR-4,14); g.fillStyle='#000'; g.font='bold 9px ui-monospace,monospace'; g.textAlign='left'; g.fillText('OPEN '+tfL,W-padR+5,y+3); }
     else { g.fillStyle='#ffd84d'; g.font='9px ui-monospace,monospace'; g.textAlign='left'; g.fillText((y<padT?'▲ ':'▼ ')+'open '+fP(op),W-padR-110,y<padT?padT+2:H-padB-4); } }
