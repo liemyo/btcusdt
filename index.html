@@ -855,7 +855,7 @@ html.ob-max{overflow:hidden}
     <div class="symbar" role="group" aria-label="Market and timeframe">
       <label class="symsel"><span>Market</span><select id="symSel" aria-label="Market"><option value="BTCUSDT">BTCUSDT · Bitcoin</option><option value="XAUUSDT">XAUUSDT · Gold</option><option value="BNBUSDT">BNBUSDT · BNB</option><option value="SOLUSDT">SOLUSDT · Solana</option></select></label>
       <label class="symsel symmode"><span>Mode</span><select id="modeSel" aria-label="Trading mode" title="Scalping: 1M · 5M · 15M. Swing: 15M · 30M · 1H · 4H · 1D. The Timeframe list follows the mode."><option value="scalp">Scalping</option><option value="swing">Swing</option></select></label>
-      <label class="symsel"><span>Timeframe</span><select id="tfSel" aria-label="Timeframe" title="One timeframe for every instrument: Bollinger / MA chart + momentum meter, live per-second graph (open reference), TradingView window + Sniper Indicator + AI Agent, Footprint (1M / 5M; higher TFs keep 5M). Liquidation map, order book heatmap and Big trades use fixed windows."><option value="1m">1M · 1 minute</option><option value="5m">5M · 5 minutes</option><option value="15m">15M · 15 minutes</option><option value="30m">30M · 30 minutes</option><option value="1h">1H · 1 hour</option><option value="4h">4H · 4 hours</option><option value="1d">1D · 1 day</option></select></label>
+      <label class="symsel"><span>Timeframe</span><select id="tfSel" aria-label="Timeframe" title="Mode + timeframe pick the Trade action strategy (Scalping → 15M trend pullback · Swing 15M–1H → 1H breakout/pullback · Swing 4H/1D → 4H breakout/pullback). One timeframe for every instrument: Bollinger / MA chart + momentum meter, live per-second graph (open reference), TradingView window + Sniper Indicator + AI Agent, Footprint (1M / 5M; higher TFs keep 5M). Liquidation map, order book heatmap and Big trades use fixed windows."><option value="1m">1M · 1 minute</option><option value="5m">5M · 5 minutes</option><option value="15m">15M · 15 minutes</option><option value="30m">30M · 30 minutes</option><option value="1h">1H · 1 hour</option><option value="4h">4H · 4 hours</option><option value="1d">1D · 1 day</option></select></label>
       <script id="tradeMode">
       /* trading mode: Scalping or Swing; the header Timeframe list (and so every instrument) follows the mode */
       (()=>{ const M={scalp:{tfs:['1m','5m','15m'],def:'5m'},swing:{tfs:['15m','30m','1h','4h','1d'],def:'1h'}},
@@ -886,6 +886,21 @@ html.ob-max{overflow:hidden}
     </div>
     <div class="clockbox num"><b id="clk">--:--:--</b><span id="lat">UTC · — ms</span></div>
   </header>
+  <!-- TRADE ACTION: one answer to "what position do I open now?" from the validated strategy of the selected mode -->
+  <section class="panel a-tx" id="txPanel" aria-label="Trade action: which position to open now, with stop loss, trailing stop and lot size">
+    <div class="txg num">
+      <div class="txV wait" id="txV">
+        <div class="txL"><span>Trade action</span> · <span id="txMode">—</span> · <span class="symTxt">BTC</span><button type="button" class="txMin" id="txMin" title="Compact / full panel">▾</button></div>
+        <div class="txA" id="txA">LOADING</div>
+        <div class="txS" id="txS">reading candles…</div>
+        <div class="txGr" id="txGr"></div>
+      </div>
+      <div class="txP" id="txP"><div class="muted">Loading the strategy…</div></div>
+      <div class="txC" id="txC"></div>
+      <div class="txM" id="txM"></div>
+      <div class="txT" id="txT"></div>
+    </div>
+  </section>
 
   <!-- MARKET ACTIVITY STATUS -->
   <!-- BOLLINGER BAND · MA · OPEN-PRICE STRATEGY (replaces the integrated signal panel) -->
@@ -4993,11 +5008,13 @@ function tick(){ // keeps running in a background tab so the ALERT siren still f
   const TV=window.__TVW, SP=TV&&TV.SP, PL=TV&&TV.PL, BBx=window.__BB, OS=BBx&&BBx.OS&&BBx.OS.now, SQ=BBx&&BBx.B, TK=window.__TK&&window.__TK.snap, OBM=window.__OBM, FP=window.__FP, BT=window.__BT;
   const px=TK?.p??SQ?.px??null, rows=[]; let score=0, wsum=0;
   const vote=(name,dir,w,txt)=>{ rows.push([dir,name,txt]); if(dir){ score+=dir*w; } wsum+=w; };
+  // trade action (validated strategy of the selected mode) — decisive when it has a position to open
+  const AX=window.__ACTION; vote(`Trade action · ${AX?AX.strategy:'—'}`,AX&&AX.dir||0,4,AX?`${AX.head} · grade ${AX.grade} · timing ${AX.timing}`:'loading…');
   // sniper indicator
   const spA=SP&&SP.active; vote(`Sniper · ${TV?({'1m':'1M','5m':'5M','15m':'15M','30m':'30M','1h':'1H','4h':'4H','1d':'D','1w':'W'}[document.getElementById('tvwTf')?.value]||''):''}`,spA?spA.s:0,3,SP?`${SP.status} · ${SP.market}`:'loading…');
   vote('Trend EMA 50/200',SP?SP.trend:0,1,SP?(SP.trend>0?'bullish':SP.trend<0?'bearish':'mixed'):'—');
   // squeeze 1H
-  const sq=SQ&&SQ.open&&SQ.open.entry!=null&&!SQ.open.live?SQ.open:null; vote('BB squeeze 1H',sq?sq.dir:0,3,sq?`${sq.dir>0?'BUY':'SELL'} active @ ${fP(sq.entry)}`:SQ&&SQ.sq&&SQ.sq.on?'armed · waiting close':'no squeeze');
+  const sq=SQ&&SQ.open&&SQ.open.entry!=null&&!SQ.open.live?SQ.open:null; vote('BB squeeze 1H (3 y PF 1.0)',sq?sq.dir:0,1,sq?`${sq.dir>0?'BUY':'SELL'} active @ ${fP(sq.entry)}`:SQ&&SQ.sq&&SQ.sq.on?'armed · waiting close':'no squeeze');
   // footprint
   const fs=FP&&FP.sig&&(FP.sig.status==='LIVE'||FP.sig.status==='PENDING')?FP.sig:null; vote('Footprint setup',fs?fs.dir:0,2,fs?`${fs.dir>0?'LONG':'SHORT'} ${fs.status.toLowerCase()} @ ${fP(fs.entry)}`:'no setup');
   // pressure meter
@@ -5010,10 +5027,11 @@ function tick(){ // keeps running in a background tab so the ALERT siren still f
   // momentum meter (only when stretched → counts against chasing)
   const ov=OS?OS.v:null; rows.push([ov==null?0:ov>=80?-1:ov<=20?1:0,'Momentum meter',ov==null?'—':`${ov.toFixed(0)} ${ov>=80?'overbought · do not chase longs':ov<=20?'oversold · do not chase shorts':ov>=70?'near overbought':ov<=30?'near oversold':'neutral'}`]);
   if(ov!=null){ if(ov>=80) score-=1; if(ov<=20) score+=1; wsum+=1; }
-  const conf=wsum?score/wsum:0, dir=conf>=.2?1:conf<=-.2?-1:0;
+  const conf=wsum?score/wsum:0, dir=AX&&AX.state?AX.dir:conf>=.2?1:conf<=-.2?-1:0; // the validated Trade action decides; votes are shown as context
   // plan
   let plan=null;
-  if(spA&&spA.s===dir) plan={src:'Sniper Indicator',s:spA.s,e:spA.e,sl:spA.sl,sl0:spA.sl0,tp:spA.tp};
+  if(AX&&AX.dir&&AX.dir===dir&&AX.plan){ const q=AX.plan, R=Math.abs(q.e-q.sl); plan={src:'Trade action · '+q.src,s:q.d,e:q.e,sl:q.sl,sl0:q.sl0,tp:q.trail?[q.e+q.d*R,q.e+q.d*2*R,q.e+q.d*3*R]:[q.tp],trail:q.trail}; }
+  else if(spA&&spA.s===dir) plan={src:'Sniper Indicator',s:spA.s,e:spA.e,sl:spA.sl,sl0:spA.sl0,tp:spA.tp};
   else if(fs&&fs.dir===dir) plan={src:'Footprint setup',s:fs.dir,e:fs.entry,sl:fs.sl,tp:[fs.tp1,fs.tp2]};
   else if(sq&&sq.dir===dir) plan={src:'BB squeeze 1H',s:sq.dir,e:sq.entry,sl:sq.sl,tp:[sq.entry+sq.dir*.5*(sq.tp-sq.entry),sq.tp]};
   else if(PL&&PL.s===dir) plan={src:'Auto TP/SL · '+PL.src,s:PL.s,e:PL.entry,sl:PL.sl,tp:PL.tps};
@@ -5023,13 +5041,13 @@ function tick(){ // keeps running in a background tab so the ALERT siren still f
     $('aiC').textContent=`agreement ${(Math.abs(conf)*100).toFixed(0)}% · ${plan.src}`;
     const P=(k,v,c)=>`<div><span>${k}</span><b style="color:${c||'#fff'}">${v}</b></div>`;
     $('aiP').innerHTML=P(far&&!good?'Open (limit)':'Open price',fP(plan.e),'#ffd166')+plan.tp.slice(0,3).map((t,k)=>P('Take profit '+(k+1),fP(t),'#3dff9a')).join('')+P(plan.sl0!=null&&plan.sl!==plan.sl0?'Cut loss (moved to BE)':'Cut loss',fP(plan.sl),'#ff5a4d')+P('Risk / reward',`1 : ${(Math.abs(plan.tp[Math.min(1,plan.tp.length-1)]-plan.e)/R).toFixed(1)}`)+P('Price now',fP(px));
-    $('aiN').textContent=(far&&!good?`Price is ${fP(Math.abs(px-plan.e))} away from the open price — place a limit at ${fP(plan.e)} instead of chasing. `:'')+'Move the cut loss to the open price after TP1. Chart aid — the sniper rules are not backtested; size small.'; }
-  else { el.className=mini?'min':''; $('aiS').innerHTML=`<span style="color:#cfd6e3">WAIT</span> · agreement ${(Math.abs(conf)*100).toFixed(0)}%`; V.textContent='WAIT'; V.style.color='#cfd6e3';
-    $('aiC').textContent=`agreement ${(Math.abs(conf)*100).toFixed(0)}% ${conf>0?'buy':conf<0?'sell':''} · need ≥ 20% and a plan on the same side`;
+    $('aiN').textContent=(far&&!good?`Price is ${fP(Math.abs(px-plan.e))} away from the open price — place a limit at ${fP(plan.e)} instead of chasing. `:'')+(plan.trail?'Validated strategy: no fixed TP — exit when the trailing stop in the Trade action panel is hit (TP lines are guides only).':'Move the cut loss to the open price after TP1. Chart aid — the sniper rules are not backtested; size small.'); }
+  else { el.className=mini?'min':''; const wt=AX&&AX.state?AX.head:'WAIT'; $('aiS').innerHTML=`<span style="color:#cfd6e3">${wt}</span> · agreement ${(Math.abs(conf)*100).toFixed(0)}%`; V.textContent=wt; V.style.color='#cfd6e3';
+    $('aiC').textContent=AX&&AX.state?`agreement ${(Math.abs(conf)*100).toFixed(0)}% ${conf>0?'buy':conf<0?'sell':''} · follows the Trade action panel (${AX.strategy})`:`agreement ${(Math.abs(conf)*100).toFixed(0)}% ${conf>0?'buy':conf<0?'sell':''} · need ≥ 20% and a plan on the same side`;
     const lq=SP&&SP.liq||[], up=lq.filter(l=>l.s>0).sort((a,b)=>a.p-b.p)[0], dn=lq.filter(l=>l.s<0).sort((a,b)=>b.p-a.p)[0];
     const P=(k,v,c)=>`<div><span>${k}</span><b style="color:${c||'#fff'}">${v}</b></div>`;
     $('aiP').innerHTML=P('Price now',fP(px))+P('Liquidity above',up?`${fP(up.p)} ${up.tf}`:'—','#ff9a90')+P('Liquidity below',dn?`${fP(dn.p)} ${dn.tf}`:'—','#7dffc0');
-    $('aiN').textContent='Indicators disagree or no side has a plan — no open price yet. Watch for a Sniper SELL/BUY, a footprint setup or a 1H squeeze break.'; }
+    $('aiN').textContent=AX&&AX.state?'No new position from the validated strategy right now — see the Trade action panel for the next trigger (or the trailing stop if you are already in).':'Indicators disagree or no side has a plan — no open price yet. Watch for a Sniper SELL/BUY, a footprint setup or a 1H squeeze break.'; }
   $('aiI').innerHTML=rows.map(([d,n,t])=>`<div><i style="color:${d>0?'#3dff9a':d<0?'#ff5a4d':'#8a93a4'}">${d>0?'▲':d<0?'▼':'·'}</i><span>${n}</span><em>${t}</em></div>`).join('');
 }
 /* alerts: strong → loud siren (AI verdict, new Sniper signal); weak → soft beep (momentum extremes, open drive) */
@@ -5155,6 +5173,308 @@ html[data-theme="light"] #bbV{color:var(--ink-2)}
   }
   b.addEventListener('click',()=>set(root.dataset.theme==='light'?'dark':'light',true));
   set(root.dataset.theme==='light'?'light':'dark',false);
+})();
+</script>
+<style id="txStyle">
+/* ===== TRADE ACTION panel (grid area tx, right under the header) ===== */
+.a-tx{min-width:0;overflow:hidden;margin:0!important;border:2px solid rgba(255,255,255,.9)!important}
+@media (min-width:1400px){
+  .frame{grid-template-areas:"hdr hdr hdr" "tx tx tx" "act act act" "top top top" "tvw tvw tvw" "me me me"!important}
+  .a-tx{grid-area:tx!important} }
+@media (min-width:1280px) and (min-height:680px){
+  .frame{grid-template-rows:auto auto auto minmax(0,1fr) minmax(0,1fr)!important;grid-template-areas:"hdr hdr" "tx tx" "act act" "lq tvw" "ob me"!important}
+  .a-tx{grid-area:tx!important} }
+.txg{display:grid;grid-template-columns:250px minmax(0,1.15fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.9fr);height:150px;background:var(--panel);font-size:10.5px}
+.txg>div{min-width:0;min-height:0;overflow:auto;padding:6px 10px}
+.txg>div+div{border-left:1px solid var(--line)}
+.txg h4{margin:0 0 3px;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);font-weight:800;display:flex;justify-content:space-between;gap:6px}
+.txg h4 em{font-style:normal;letter-spacing:0;text-transform:none;font-weight:700;color:var(--ink-3)}
+/* verdict box: glowing border, blinks when a position should be opened now */
+.txV{margin:6px;border:3px solid #9aa0ad;border-radius:10px;overflow:hidden!important;display:flex;flex-direction:column;gap:2px;background:rgba(0,0,0,.25);padding:5px 9px!important}
+.txV .txL{display:flex;gap:4px;align-items:center;white-space:nowrap;overflow:hidden;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);font-weight:800}
+.txV .txL>span:first-child{color:#ffd166}
+.txMin{margin-left:auto;background:none;border:1px solid var(--line-2);color:var(--ink-2);border-radius:5px;font-size:10px;line-height:1;padding:2px 5px;cursor:pointer}
+.txV .txA{font-family:var(--display);font-size:25px;line-height:1.02;text-align:center;letter-spacing:.02em;color:#cfd6e3;margin-top:2px}
+.txV .txS{text-align:center;font-size:10.5px;color:var(--ink);line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.txV .txGr{text-align:center;font-size:9px;line-height:1.3;color:var(--ink-2);margin-top:auto}
+.txV.buy{border-color:#3dff9a;box-shadow:0 0 16px rgba(61,255,154,.45)} .txV.buy .txA{color:#3dff9a}
+.txV.sell{border-color:#ff5a4d;box-shadow:0 0 16px rgba(255,90,77,.5)} .txV.sell .txA{color:#ff5a4d}
+.txV.hold{border-color:#5ab4ff;box-shadow:0 0 12px rgba(90,180,255,.35)} .txV.hold .txA{color:#8fd0ff}
+.txV.watch{border-color:#ffd166;box-shadow:0 0 12px rgba(255,209,102,.35)} .txV.watch .txA{color:#ffd166}
+.txV.now{animation:txBlink 1s steps(2,end) infinite}
+@keyframes txBlink{50%{box-shadow:none;border-color:transparent}}
+/* plan rows */
+.txR{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 8px;line-height:1.5}
+.txR span{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .txR b{text-align:right;color:var(--ink)}
+.txR b.g,.txK .g{color:#3dff9a} .txR b.r,.txK .r{color:#ff5a4d} .txR b.y,.txK .y{color:#ffd166} .txR b.b{color:#8fd0ff}
+.txLot{display:flex;gap:6px;align-items:center;margin-top:3px;flex-wrap:wrap;color:var(--ink-2)}
+.txLot input{width:74px;background:var(--panel-2);border:1px solid var(--line-2);color:var(--ink);border-radius:5px;padding:1px 4px;font:inherit}
+.txLot input.sm{width:44px}
+.txN{color:var(--ink-2);font-size:9.5px;line-height:1.35;margin-top:3px}
+/* checklist + chips */
+.txK{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:0 5px;line-height:1.45}
+.txK i{font-style:normal;text-align:center} .txK em{font-style:normal;color:var(--ink-2);text-align:right;white-space:nowrap}
+.txK span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.txTm{margin:3px 0 1px;font-weight:800;letter-spacing:.06em}
+/* multi-timeframe matrix */
+.txX{width:100%;border-collapse:collapse;font-size:10px}
+.txX th,.txX td{padding:0 3px;text-align:center;white-space:nowrap;line-height:1.4}
+.txX th{color:var(--ink-3);font-weight:700} .txX td:first-child,.txX th:first-child{text-align:left}
+.txX tr.on td:first-child{color:#ffd166;font-weight:800}
+.txX .g{color:#3dff9a} .txX .r{color:#ff5a4d} .txX .n{color:var(--ink-3)}
+.txD{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 8px;margin-top:3px;line-height:1.45}
+.txD div{display:flex;justify-content:space-between;gap:4px} .txD span{color:var(--ink-2)}
+/* track record */
+.txH{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:0 6px;line-height:1.45}
+.txH span{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.txO{margin-top:4px;line-height:1.45}
+.txO div{display:flex;justify-content:space-between;gap:6px} .txO span{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* compact mode: only the verdict + plan */
+.a-tx.min .txC,.a-tx.min .txM,.a-tx.min .txT{display:none}
+.a-tx.min .txg{grid-template-columns:250px minmax(0,1fr);height:auto}
+.a-tx.min .txP{display:flex;flex-wrap:wrap;gap:2px 16px;align-content:center}
+.a-tx.min .txP .txR{display:flex;gap:6px} .a-tx.min .txP h4,.a-tx.min .txN{display:none}
+.a-tx.min .txV .txGr{display:none}
+@media (min-width:1280px) and (max-height:900px){ .txg{height:136px} .txV .txA{font-size:21px} .txV .txS{-webkit-line-clamp:2;font-size:10px} }
+@media (max-width:1279px){ .txg{grid-template-columns:240px minmax(0,1fr) minmax(0,1fr);height:auto} .txg>div{max-height:190px} .txM{border-left:0!important;border-top:1px solid var(--line)} .txT{border-top:1px solid var(--line)} .txM{grid-column:1/3} }
+@media (max-width:699px){ .txg{grid-template-columns:minmax(0,1fr)} .txg>div{border-left:0!important;max-height:none} .txg>div+div{border-top:1px solid var(--line)} .txM{grid-column:auto} .a-tx.min .txg{grid-template-columns:minmax(0,1fr)} }
+html[data-theme="light"] .txV{background:rgba(255,255,255,.35)}
+html[data-theme="light"] .txV.buy .txA,html[data-theme="light"] .txR b.g,html[data-theme="light"] .txK .g,html[data-theme="light"] .txX .g,html[data-theme="light"] .txT .g{color:var(--up)}
+html[data-theme="light"] .txV.sell .txA,html[data-theme="light"] .txR b.r,html[data-theme="light"] .txK .r,html[data-theme="light"] .txX .r,html[data-theme="light"] .txT .r{color:var(--down)}
+html[data-theme="light"] .txV.watch .txA,html[data-theme="light"] .txR b.y,html[data-theme="light"] .txK .y,html[data-theme="light"] .txV .txL>span:first-child,html[data-theme="light"] .txX tr.on td:first-child{color:var(--warn)}
+html[data-theme="light"] .txV.hold .txA,html[data-theme="light"] .txR b.b{color:#1f6fd1}
+html[data-theme="light"] .txV .txA{color:var(--ink-2)}
+.txT .g{color:#3dff9a} .txT .r{color:#ff5a4d}
+</style>
+<script id="txEngine">
+/* ===== TRADE ACTION engine =====
+   One validated strategy per mode, replayed on live Binance candles so the panel always knows the current state
+   (new signal → open now, open trade → hold + where the trailing stop is, no trade → what has to happen next).
+   Strategies (research 2026-10-23, Binance spot, cost 0.02–0.03 % of price per trade, entry at the next candle open,
+   exit only by a chandelier trailing stop: first stop 2.5 × ATR14, then 4 × ATR14 from the best price; fixed / partial TPs tested worse):
+     SC15  Scalping · trend pullback 15M — 1H and 4H close above/below EMA50, 15M EMA20>50>200 (or <), ADX14 ≥ 20,
+           candle dips to EMA20 and closes back on the trend side. 400 days.
+     SW1H  Swing · trend breakout / pullback 1H — 4H trend (close vs EMA50); close beyond the 20-candle high/low,
+           or the EMA20 pullback above. 3 years.
+     SW4H  Swing · same rules on 4H with the 1D trend. 3 years.
+   The other instruments on the page only rate the entry timing; they never block or create a trade. */
+(()=>{
+'use strict';
+const SY=window.SYM, dp=SY.dp, $=id=>document.getElementById(id);
+const fP=p=>p==null||!isFinite(p)?'—':(+p).toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
+const ST={get(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??d; }catch(e){ return d; } },set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
+const MS={'1m':6e4,'5m':3e5,'15m':9e5,'30m':18e5,'1h':36e5,'4h':144e5,'1d':864e5};
+const LIM={'1m':250,'5m':250,'15m':1000,'30m':250,'1h':1000,'4h':1000,'1d':400};
+const TFN={'1m':'1M','5m':'5M','15m':'15M','30m':'30M','1h':'1H','4h':'4H','1d':'1D'};
+/* backtest per market: [trades, win %, PF, PF train 60 %, PF test 40 %, trades / year, average hold h] */
+const BT={
+  SC15:{BTC:[469,36,1.27,1.22,1.35,428,6.7],XAU:[498,36,1.53,1.83,1.18,455,5.9],SOL:[438,34,1.07,.85,1.5,400,7],BNB:[432,36,1.26,1.37,1.12,395,6.8]},
+  SW1H:{BTC:[592,36,1.36,1.28,1.48,197,26.8],XAU:[538,35,1.27,.98,1.59,179,32.1],SOL:[569,34,1.2,1.23,1.16,189,28.1],BNB:[596,34,1.05,1.06,1.04,198,26.4]},
+  SW4H:{BTC:[126,37,1.76,2,1.51,42,115.8],XAU:[128,41,1.83,1.41,2.34,43,117.6],SOL:[133,35,1.2,1.15,1.27,44,118.5],BNB:[133,32,1.33,1.35,1.32,44,108]}};
+const STR={
+  SC15:{id:'SC15',name:'Trend pullback 15M',lt:'15m',ht:['1h','4h'],bo:false,maxB:288,yrs:'400 days'},
+  SW1H:{id:'SW1H',name:'Trend breakout / pullback 1H',lt:'1h',ht:['4h'],bo:true,maxB:400,yrs:'3 years'},
+  SW4H:{id:'SW4H',name:'Trend breakout / pullback 4H',lt:'4h',ht:['1d'],bo:true,maxB:180,yrs:'3 years'}};
+const K0=2.5, KT=4; // first stop and trailing distance in ATR14
+const btOf=id=>BT[id][SY.base]||BT[id].BTC;
+const grade=b=>{ const mn=Math.min(b[3],b[4]); return b[2]>=1.5&&mn>=1.15?'A':b[2]>=1.2&&mn>=1.1?'B':'C'; };
+
+/* ---------- indicators (same formulas as the backtest) ---------- */
+const ema=(a,n)=>{ const k=2/(n+1); let e=null; return a.map(x=>e=e==null?x:e+k*(x-e)); };
+const atr=(C,n=14)=>{ let e=null; return C.map((b,i)=>{ const p=i?C[i-1].c:b.c, tr=Math.max(b.h-b.l,Math.abs(b.h-p),Math.abs(b.l-p)); e=e==null?tr:e+(tr-e)/n; return e; }); };
+const rsi=(a,n=14)=>{ let g=0,l=0; return a.map((x,i)=>{ if(!i) return 50; const d=x-a[i-1]; g=(g*(n-1)+Math.max(d,0))/n; l=(l*(n-1)+Math.max(-d,0))/n; return l?100-100/(1+g/l):100; }); };
+function adx(C,n=14){ let tr=0,p=0,m=0,ad=null; return C.map((b,i)=>{ if(!i) return {adx:0,pdi:0,mdi:0}; const q=C[i-1], up=b.h-q.h, dn=q.l-b.l;
+  const pdm=up>dn&&up>0?up:0, mdm=dn>up&&dn>0?dn:0, t=Math.max(b.h-b.l,Math.abs(b.h-q.c),Math.abs(b.l-q.c));
+  tr=tr-tr/n+t; p=p-p/n+pdm; m=m-m/n+mdm; const pdi=100*p/tr, mdi=100*m/tr, dx=100*Math.abs(pdi-mdi)/((pdi+mdi)||1); ad=ad==null?dx:ad+(dx-ad)/n; return {adx:ad,pdi,mdi}; }); }
+
+/* ---------- candles ---------- */
+const K={}, KT_={};
+async function load(tf){ const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${SY.data}&interval=${tf}&limit=${LIM[tf]}`); if(!r.ok) throw new Error(r.status);
+  const j=await r.json(); K[tf]=j.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})); KT_[tf]=Date.now(); }
+const closed=tf=>{ const a=K[tf]; if(!a) return null; const now=Date.now(); return a.filter(b=>b.t+MS[tf]<=now); };
+const forming=tf=>{ const a=K[tf]; if(!a||!a.length) return null; const b=a[a.length-1]; return b.t+MS[tf]>Date.now()?b:null; };
+const livePx=()=>window.__TK?.snap?.p ?? (K['1m']&&K['1m'].length?K['1m'][K['1m'].length-1].c:null);
+function trendArr(tf){ const C=closed(tf); if(!C||C.length<60) return null; const e=ema(C.map(b=>b.c),50); return {C,d:C.map((b,i)=>b.c>e[i]?1:b.c<e[i]?-1:0),e}; }
+function mapHt(L,H,ms){ let j=-1; return L.map(b=>{ while(j+1<H.C.length&&H.C[j+1].t+ms<=b.t) j++; return j>=0?H.d[j]:0; }); }
+
+/* ---------- strategy replay: closed trades, open trade, fresh signal, next trigger ---------- */
+function replay(S){
+  const C=closed(S.lt); if(!C||C.length<260) return null;
+  const Hs=S.ht.map(t=>trendArr(t)); if(Hs.some(h=>!h)) return null;
+  const n=C.length, c=C.map(b=>b.c), A=atr(C), E20=ema(c,20), E50=ema(c,50), E200=ema(c,200), AD=adx(C);
+  const tr=Hs.map((h,k)=>mapHt(C,h,MS[S.ht[k]]));
+  const dirAt=i=>{ const d=tr[0][i]; return d&&tr.every(x=>x[i]===d)?d:0; };
+  const hi=(i,m)=>{ let x=-Infinity; for(let k=Math.max(0,i-m+1);k<=i;k++) x=Math.max(x,C[k].h); return x; };
+  const lo=(i,m)=>{ let x=Infinity; for(let k=Math.max(0,i-m+1);k<=i;k++) x=Math.min(x,C[k].l); return x; };
+  const align=i=>E20[i]>E50[i]&&E50[i]>E200[i]?1:E20[i]<E50[i]&&E50[i]<E200[i]?-1:0;
+  const sigAt=i=>{ const d=dirAt(i); if(!d) return null;
+    if(S.bo&&(d>0?c[i]>hi(i-1,20):c[i]<lo(i-1,20))) return {d,kind:'BREAKOUT'};
+    const b=C[i]; if(AD[i].adx>=20&&align(i)===d&&(d>0?b.l<=E20[i]&&b.c>E20[i]:b.h>=E20[i]&&b.c<E20[i])) return {d,kind:'PULLBACK'};
+    return null; };
+  const trades=[]; let busy=-1, open=null, fresh=null;
+  const cost=S.lt==='15m'?.0002:.0003;
+  for(let i=220;i<n;i++){ if(i<=busy) continue; const s=sigAt(i); if(!s) continue;
+    if(i===n-1){ fresh={...s,i,t:C[i].t,atr:A[i]}; break; }
+    const e=C[i+1].o, R0=K0*A[i]; let sl=e-s.d*R0, ext=e, x=null, j;
+    for(j=i+1;j<Math.min(n,i+1+S.maxB);j++){ const b=C[j];
+      if(s.d>0){ if(b.l<=sl){ x=sl; break; } ext=Math.max(ext,b.h); sl=Math.max(sl,ext-KT*A[j]); }
+      else { if(b.h>=sl){ x=sl; break; } ext=Math.min(ext,b.l); sl=Math.min(sl,ext+KT*A[j]); } }
+    if(x==null&&j>=n){ open={...s,i,t:C[i].t,e,R0,sl,sl0:e-s.d*R0,ext,bars:n-1-i}; busy=n; break; }
+    if(x==null){ j=Math.min(n-1,j); x=C[j].c; }
+    busy=j; const r=((x-e)*s.d-cost*e)/R0; trades.push({t:C[i].t,d:s.d,kind:s.kind,e,x,r,out:C[j].t});
+  }
+  /* what has to happen at the next candle close */
+  const L=n-1, d=dirAt(L), al=align(L), ad=AD[L].adx;
+  const watch={d,ad,al,e20:E20[L],e50:E50[L],e200:E200[L],hi20:hi(L,20),lo20:lo(L,20),atr:A[L],ht:Hs.map((h,k)=>({tf:S.ht[k],d:h.d[h.d.length-1],e:h.e[h.e.length-1],c:h.C[h.C.length-1].c}))};
+  const w=trades.filter(x=>x.r>0), gp=w.reduce((a,x)=>a+x.r,0), gl=-trades.filter(x=>x.r<=0).reduce((a,x)=>a+x.r,0);
+  return {S,C,trades,open,fresh,watch,stats:{n:trades.length,wr:trades.length?w.length/trades.length*100:0,pf:gl?gp/gl:null,sumR:gp-gl,from:C[220]?.t}};
+}
+
+/* ---------- derivatives (Gate USDT perpetual): funding, open interest, long/short ratios ---------- */
+const DV={};
+async function loadDeriv(){ try{ const r=await fetch(`https://api.gateio.ws/api/v4/futures/usdt/contract_stats?contract=${SY.gate}&interval=1h&limit=25`); if(!r.ok) return; const a=await r.json(); if(!a.length) return;
+  const z=a[a.length-1], f=a[0]; DV.fund=+z.last_funding_rate*100; DV.oi=+z.open_interest_usd; DV.oiCh=f.open_interest_usd?(z.open_interest_usd/f.open_interest_usd-1)*100:null;
+  DV.lsr=+z.lsr_account; DV.top=+z.top_lsr_size; DV.px24=f.mark_price?(z.mark_price/f.mark_price-1)*100:null; DV.t=Date.now(); }catch(e){} }
+
+/* ---------- multi-timeframe matrix ---------- */
+function mtf(){ return ['1m','5m','15m','30m','1h','4h','1d'].map(tf=>{ const C=closed(tf); if(!C||C.length<60) return {tf};
+  const c=C.map(b=>b.c), e20=ema(c,20), e50=ema(c,50), L=C.length-1, R=rsi(c), A=adx(C)[L];
+  const t=c[L]>e50[L]&&e20[L]>e50[L]?2:c[L]>e50[L]?1:c[L]<e50[L]&&e20[L]<e50[L]?-2:c[L]<e50[L]?-1:0;
+  return {tf,t,rsi:R[L],adx:A.adx,di:A.pdi>A.mdi?1:-1}; }); }
+
+/* ---------- entry timing from the live instruments (context only) ---------- */
+function timing(dir){ const rows=[]; let s=0, w=0; const add=(name,v,wt,txt)=>{ rows.push([v,name,txt]); s+=v*wt; w+=wt; };
+  const OBM=window.__OBM; if(OBM){ const v=OBM.sm; add('Pressure meter',v>=15?1:v<=-15?-1:0,1,`${v>=0?'+':''}${v.toFixed(0)}`); }
+  const v30=window.__BT?.vol?.find(x=>x[0]==='30m'); if(v30){ const f=(v30[1].b-v30[1].s)/((v30[1].b+v30[1].s)||1); add('Taker flow 30m',f>.06?1:f<-.06?-1:0,1,`${(f*100).toFixed(0)}%`); }
+  const tk=window.__TK?.snap; if(tk&&tk.m60!=null) add('Momentum 60 s',Math.sign(Math.round(tk.m60)),.5,`buy ${tk.bp.toFixed(0)}%`);
+  const os=window.__BB?.OS?.now; if(os&&os.v!=null) add('Momentum meter',os.v>=80?-1:os.v<=20?1:0,1,`${os.v.toFixed(0)}${os.v>=80?' overbought':os.v<=20?' oversold':''}`);
+  const fp=window.__FP?.sig; if(fp&&(fp.status==='LIVE'||fp.status==='PENDING')) add('Footprint setup',fp.dir,1,fp.dir>0?'long':'short');
+  const sp=window.__TVW?.SP; if(sp) add('Sniper indicator',sp.active?sp.active.s:0,1,sp.active?(sp.active.s>0?'buy':'sell'):sp.status||'—');
+  if(DV.fund!=null) add('Funding',DV.fund>.03?-1:DV.fund<-.01?1:0,.5,`${DV.fund.toFixed(4)}%`);
+  if(DV.lsr) add('Retail long/short',DV.lsr>2.5?-1:DV.lsr<.8?1:0,.5,DV.lsr.toFixed(2));
+  const sc=w?s/w:0, q=dir?sc*dir:0;
+  return {rows,sc,q,label:!dir?'—':q>=.25?'GOOD':q>=-.1?'OK':'POOR'}; }
+
+/* ---------- position size ---------- */
+let bal=ST.get('tx-bal',1000), risk=ST.get('tx-risk',1);
+const lotOf=dist=>{ if(!(dist>0)) return null; const money=bal*risk/100, lot=money/(dist*(SY.lot||1)); return {money,lot:Math.floor(lot*100)/100,min:.01*dist*(SY.lot||1)}; };
+const lotTxt=L=>L.lot>=.01?L.lot.toFixed(2):`0.01 = risk ${L.min.toFixed(0)} USD`;
+
+/* ---------- render ---------- */
+const el=$('txPanel'); let mini=ST.get('tx-min',innerWidth<700); el.classList.toggle('min',mini); $('txMin').textContent=mini?'▸':'▾';
+$('txMin').onclick=()=>{ mini=!mini; el.classList.toggle('min',mini); $('txMin').textContent=mini?'▸':'▾'; ST.set('tx-min',mini); };
+const R_=(k,v,c,t)=>`<div class="txR"${t?` title="${t}"`:''}><span>${k}</span><b class="${c||''}">${v}</b></div>`;
+const ago=t=>{ const m=(Date.now()-t)/6e4; return m<60?`${m.toFixed(0)}m ago`:m<2880?`${(m/60).toFixed(1)}h ago`:`${(m/1440).toFixed(1)}d ago`; };
+const dd=t=>new Date(t).toLocaleString('en-GB',{timeZone:'Asia/Jakarta',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const side=d=>d>0?'BUY':'SELL', arrow=d=>d>0?'▲':d<0?'▼':'·', cls=d=>d>0?'g':d<0?'r':'n';
+const AC={fresh:null,stop:null,first:true};
+
+function pick(){ const mode=window.tradeMode||'scalp', tf=$('tfSel')?.value||'5m';
+  if(mode==='scalp') return {mode,tf,main:STR.SC15,alt:STR.SW1H};
+  return ['4h','1d'].includes(tf)?{mode,tf,main:STR.SW4H,alt:STR.SW1H}:{mode,tf,main:STR.SW1H,alt:STR.SW4H}; }
+
+function render(){
+  const P=pick(), px=livePx(), M=replay(P.main), A2=replay(P.alt), V=$('txV');
+  $('txMode').textContent=`${P.mode==='scalp'?'SCALPING':'SWING'} · ${TFN[P.main.lt]} strategy`;
+  if(!M||px==null){ $('txA').textContent='LOADING'; return; }
+  const b=btOf(P.main.id), g=grade(b), weak=g==='C';
+  const ME=SY.btc&&P.mode==='scalp'?window.ME_STATE?.sig:null;
+  let st='wait', head='WAIT', sub='', plan=null, now=false, note='';
+  const nb=forming(P.main.lt), left=nb?Math.max(0,(nb.t+MS[P.main.lt]-Date.now())/1000):null, leftTxt=left==null?'':left>=3600?`${Math.floor(left/3600)}h ${Math.floor(left%3600/60)}m`:`${Math.floor(left/60)}m ${String(Math.floor(left%60)).padStart(2,'0')}s`;
+  if(M.fresh){ const f=M.fresh, e=nb?nb.o:px, R0=K0*f.atr, sl=e-f.d*R0, late=(px-e)*f.d>.5*R0, gone=(px-sl)*f.d<=0;
+    if(!gone){ st=f.d>0?'buy':'sell'; now=!late; head=late?`${side(f.d)} LIMIT`:`${side(f.d)} NOW`;
+      sub=late?`price ran ${fP(Math.abs(px-e))} — limit at ${fP(e)}, don't chase`:`${f.kind.toLowerCase()} signal closed ${ago(f.t+MS[P.main.lt])} · market order`;
+      plan={d:f.d,e:late?e:px,ref:e,sl,sl0:sl,R0,kind:late?'Limit':'Market',src:P.main.name+' · '+f.kind.toLowerCase(),trail:true}; } }
+  if(!plan&&M.open){ const o=M.open, lateOK=(px-o.e)*o.d<=.5*o.R0&&(px-o.sl)*o.d>0, hit=(px-o.sl)*o.d<=0;
+    if(hit){ st='watch'; head='EXIT'; sub=`price crossed the trailing stop ${fP(o.sl)} — close the ${side(o.d).toLowerCase()} position`; }
+    else if(lateOK){ st=o.d>0?'buy':'sell'; head=`${side(o.d)} · LATE OK`; sub=`${o.kind.toLowerCase()} trade from ${ago(o.t+MS[P.main.lt])} still near its entry`;
+      plan={d:o.d,e:px,ref:o.e,sl:o.sl,sl0:o.sl0,R0:Math.abs(px-o.sl),kind:'Market',src:P.main.name+' · '+o.kind.toLowerCase()+' (late entry)',trail:true}; }
+    else { st='hold'; head=`HOLD ${o.d>0?'LONG':'SHORT'}`; sub=`in trade since ${dd(o.t+MS[P.main.lt])} WIB · new entries: wait for the next signal`;
+      plan={d:o.d,e:o.e,ref:o.e,sl:o.sl,sl0:o.sl0,R0:o.R0,kind:'Open since '+dd(o.t+MS[P.main.lt]),src:P.main.name+' · '+o.kind.toLowerCase(),trail:true,hold:true}; } }
+  if(!plan&&ME&&(ME.live||ME.pending)){ const e=ME.live?px:ME.entry, d=ME.dir; st=d>0?'buy':'sell'; now=!!ME.live; head=ME.live?`${side(d)} NOW`:`${side(d)} ${ME.pending?'LIMIT':''}`;
+    sub=`fast scalp 5M · ${ME.name}`; plan={d,e,ref:ME.entry,sl:ME.entry-d*ME.slPts,sl0:ME.entry-d*ME.slPts,R0:ME.slPts,tp:ME.entry+d*ME.tpPts,kind:ME.live?'Market':'Limit',src:`Sniper engine 5M · ${ME.name} (validated 400 d)`,trail:false}; }
+  if(!plan&&st==='wait'){ const w=M.watch;
+    if(!w.d){ head='WAIT'; sub=`${w.ht.map(h=>TFN[h.tf]+' '+(h.d>0?'up':h.d<0?'down':'flat')).join(' · ')} — trends disagree, stay out`; }
+    else { st='watch'; head=`WATCH ${w.d>0?'BUY':'SELL'}`; sub=`${w.ht.map(h=>TFN[h.tf]).join('+')} trend ${w.d>0?'up':'down'} · waiting for the ${TFN[P.main.lt]} trigger`; } }
+  if(weak&&plan) sub+=' · weak edge on '+SY.base+': half size';
+  V.className='txV '+st+(now?' now':''); $('txA').textContent=head; $('txS').textContent=sub;
+  $('txGr').innerHTML=`grade <b>${g}</b> · PF ${b[2]} · win ${b[1]}% · ${b[5]} trades/yr${leftTxt?`<br>${TFN[P.main.lt]} candle closes in ${leftTxt}`:''}`;
+
+  /* plan column */
+  const T=timing(plan?plan.d:M.watch.d);
+  let h='';
+  if(plan){ const dist=Math.abs((plan.hold?px:plan.e)-plan.sl), lock=(plan.sl-plan.ref)*plan.d, L=lotOf(dist);
+    h+=`<h4><span>Plan · ${side(plan.d)}</span><em>${plan.src}</em></h4>`;
+    h+=R_(plan.kind.startsWith('Open')?'Entry':'Open ('+plan.kind.toLowerCase()+')',fP(plan.hold?plan.ref:plan.e),'y',plan.kind.startsWith('Open')?plan.kind:'');
+    h+=R_(plan.trail?(plan.sl!==plan.sl0?'Stop loss (trailed — move it here)':'Stop loss'):'Stop loss',fP(plan.sl),'r');
+    if(plan.trail){ const ext=plan.d>0?'highest high':'lowest low'; h+=R_('Take profit','trailing stop',null,`No fixed TP: after every ${TFN[P.main.lt]} close move the stop to ${ext} since entry ${plan.d>0?'−':'+'} ${KT} × ATR. Fixed / partial take-profits tested worse.`);
+      h+=R_('Trail distance',`${KT} × ATR = ${fP(KT*M.watch.atr)}`,'b'); }
+    else h+=R_('Take profit',fP(plan.tp),'g');
+    h+=plan.hold?R_('Price → stop',`${fP(dist)}${lock>0?` · profit locked ${fP(lock)}`:''}`,lock>0?'g':''):R_('Risk now',`${fP(dist)} (${(dist/plan.e*100).toFixed(2)}%)`);
+    if(L&&!plan.hold) h+=R_(`Lot (${risk}% of ${bal.toLocaleString('en-US')})`,lotTxt(L),L.lot>=.01?'b':'r',`risk ${L.money.toFixed(2)} USD ÷ (${fP(dist)} × ${SY.lot} contract)`);
+    note=plan.hold?'Already in? keep it and only move the stop. Not in? do not enter now.':plan.trail?`Exit only when price closes past the stop. Expect ~${100-b[1]}% losers; winners average ~1.8 R.`:'Validated 5M scalp: fixed TP / SL.';
+  } else { const w=M.watch;
+    h+=`<h4><span>Next trigger</span><em>${TFN[P.main.lt]} candle close${leftTxt?' · '+leftTxt:''}</em></h4>`;
+    if(w.d){ if(P.main.bo) h+=R_(`Breakout: ${TFN[P.main.lt]} close ${w.d>0?'above':'below'}`,fP(w.d>0?w.hi20:w.lo20),'y',`20-candle ${w.d>0?'high':'low'}`);
+      h+=R_(`Pullback: dip to EMA20, close back ${w.d>0?'above':'below'}`,fP(w.e20),w.al===w.d&&w.ad>=20?'y':'',w.al===w.d?(w.ad>=20?'EMAs aligned, ADX ok':'ADX below 20 — pullback rule off'):'EMA20/50/200 not aligned — pullback rule off');
+      h+=R_('Stop if triggered',`${K0} × ATR ≈ ${fP(K0*w.atr)}`,'r');
+      const L=lotOf(K0*w.atr); if(L) h+=R_(`Lot (${risk}% of ${bal.toLocaleString('en-US')})`,lotTxt(L),L.lot>=.01?'b':'r');
+      note=`Only ${w.d>0?'BUY':'SELL'} signals count while the ${w.ht.map(x=>TFN[x.tf]).join(' + ')} trend points ${w.d>0?'up':'down'}.`; }
+    else { h+=R_('Higher-TF trend',w.ht.map(x=>`${TFN[x.tf]} ${arrow(x.d)}`).join(' '),'y'); h+=R_('Rule','both must agree'); note='No position. Trends on the higher timeframes disagree.'; }
+  }
+  h+=`<div class="txLot"><label>Balance <input id="txBal" type="number" min="1" step="any" value="${bal}"></label><label>Risk % <input id="txRisk" class="sm" type="number" min=".1" max="10" step=".1" value="${risk}"></label></div>`;
+  h+=`<div class="txN">${note}</div>`;
+  const ae=document.activeElement, keep=ae&&(ae.id==='txBal'||ae.id==='txRisk');
+  if(!keep) $('txP').innerHTML=h;
+
+  /* checklist + timing */
+  const w=M.watch, dirW=plan?plan.d:w.d; let k=`<h4><span>Rules · ${TFN[P.main.lt]}</span><em>${dirW?side(dirW):'no side'}</em></h4>`;
+  const ck=(ok,name,val)=>`<div class="txK"><i class="${ok?'g':'r'}">${ok?'✓':'✕'}</i><span>${name}</span><em>${val}</em></div>`;
+  for(const x of w.ht) k+=ck(dirW&&x.d===dirW,`${TFN[x.tf]} trend (close vs EMA50)`,`${arrow(x.d)} ${fP(x.e)}`);
+  k+=ck(dirW&&w.al===dirW,'EMA 20 / 50 / 200 aligned',w.al>0?'bull':w.al<0?'bear':'mixed');
+  k+=ck(w.ad>=20,'ADX ≥ 20 (trend strength)',w.ad.toFixed(0));
+  if(P.main.bo) k+=ck(dirW&&(dirW>0?px>w.hi20:px<w.lo20),'Beyond 20-candle '+(dirW<0?'low':'high'),fP(dirW<0?w.lo20:w.hi20));
+  k+=`<div class="txTm">Entry timing: <span class="${T.label==='GOOD'?'g':T.label==='POOR'?'r':'y'}">${T.label}</span> <span class="muted" style="font-weight:600">(live instruments · never blocks)</span></div>`;
+  k+=T.rows.map(([v,n,t])=>`<div class="txK"><i class="${cls(v)}">${arrow(v)}</i><span>${n}</span><em>${t}</em></div>`).join('');
+  $('txC').innerHTML=k;
+
+  /* MTF matrix + derivatives */
+  const X=mtf(), on=new Set([P.main.lt,...P.main.ht]);
+  let m=`<h4><span>Multi-timeframe</span><em>trend · RSI · ADX</em></h4><table class="txX"><tr><th>TF</th><th>Trend</th><th>RSI</th><th>ADX</th></tr>`;
+  m+=X.map(r=>r.t==null?`<tr><td>${TFN[r.tf]}</td><td colspan="3" class="n">…</td></tr>`:`<tr class="${on.has(r.tf)?'on':''}"><td>${TFN[r.tf]}</td><td class="${cls(r.t)}">${r.t===2?'▲▲':r.t===1?'▲':r.t===-2?'▼▼':r.t===-1?'▼':'·'}</td><td class="${r.rsi>=70?'r':r.rsi<=30?'g':''}">${r.rsi.toFixed(0)}</td><td class="${r.adx>=25?(r.di>0?'g':'r'):'n'}">${r.adx.toFixed(0)}</td></tr>`).join('')+'</table>';
+  const up=X.filter(r=>r.t>0).length, dn=X.filter(r=>r.t<0).length;
+  m+=`<div class="txD"><div><span>TF up / down</span><b class="${up>dn?'g':dn>up?'r':''}">${up} / ${dn}</b></div>`;
+  if(DV.t){ m+=`<div><span>Funding 8h</span><b class="${DV.fund>.03?'r':DV.fund<0?'g':''}">${DV.fund.toFixed(4)}%</b></div><div><span>Open int. 24h</span><b>${DV.oiCh!=null?(DV.oiCh>=0?'+':'')+DV.oiCh.toFixed(1)+'%':'—'}</b></div><div><span>Retail L/S</span><b>${DV.lsr.toFixed(2)}</b></div><div><span>Top traders L/S</span><b>${DV.top.toFixed(2)}</b></div>`; }
+  m+='</div>'; $('txM').innerHTML=m;
+
+  /* track record + the other strategy */
+  const s=M.stats; let t=`<h4><span>Track record</span><em>${TFN[P.main.lt]} · live replay</em></h4>`;
+  t+=`<div class="txN" style="margin:0 0 2px">Backtest ${P.main.yrs}: ${b[0]} trades · win ${b[1]}% · PF ${b[2]} (train ${b[3]} / test ${b[4]}) · avg hold ${b[6]} h</div>`;
+  t+=`<div class="txN" style="margin:0 0 3px">Loaded candles since ${s.from?dd(s.from):'—'}: ${s.n} trades · win ${s.wr.toFixed(0)}% · PF ${s.pf==null?'—':s.pf.toFixed(2)} · <b class="${s.sumR>=0?'g':'r'}">${s.sumR>=0?'+':''}${s.sumR.toFixed(1)} R</b></div>`;
+  t+=M.trades.slice(-5).reverse().map(x=>`<div class="txH"><b class="${cls(x.d)}">${side(x.d)}</b><span>${dd(x.t+MS[P.main.lt])} · ${x.kind.toLowerCase()}</span><b class="${x.r>=0?'g':'r'}">${x.r>=0?'+':''}${x.r.toFixed(2)} R</b></div>`).join('');
+  if(A2){ const st2=A2.open?`${A2.open.d>0?'LONG':'SHORT'} since ${dd(A2.open.t+MS[A2.S.lt])} · stop ${fP(A2.open.sl)}`:A2.fresh?`NEW ${side(A2.fresh.d)} signal`:A2.watch.d?`no trade · trend ${A2.watch.d>0?'up':'down'}`:'no trade · trends mixed';
+    const conflict=plan&&!plan.hold&&A2.open&&A2.open.d!==plan.d;
+    t+=`<div class="txO"><div><span>${A2.S.name} (grade ${grade(btOf(A2.S.id))})</span></div><div><b class="${A2.open?cls(A2.open.d):''}">${st2}</b></div>${conflict?'<div><b class="r">⚠ against the bigger swing position — size down</b></div>':''}</div>`;
+    if(conflict) $('txS').textContent+=' · ⚠ against '+TFN[A2.S.lt]+' swing'; }
+  $('txT').innerHTML=t;
+
+  window.__ACTION={mode:P.mode,strategy:P.main.id,grade:g,state:st,head,dir:plan&&!plan.hold?plan.d:0,plan,px,timing:T.label};
+  alerts(P,M,plan,head);
+}
+function alerts(P,M,plan,head){ const H=window.hdrAlert, sym=SY.base;
+  const fk=M.fresh?P.main.id+':'+M.fresh.t:null; if(fk&&fk!==AC.fresh&&!AC.first&&H&&plan&&!plan.hold) H.alarm(plan.d,`Trade action ${plan.d>0?'buy':'sell'} ${sym}`); if(fk) AC.fresh=fk;
+  const ex=head==='EXIT'?P.main.id+':'+M.open?.t:null; if(ex&&ex!==AC.stop&&!AC.first&&H) H.beep(800,2); AC.stop=ex; AC.first=false; }
+
+document.addEventListener('change',e=>{ if(e.target.id==='txBal'){ const v=+e.target.value; if(v>0){ bal=v; ST.set('tx-bal',v); } } if(e.target.id==='txRisk'){ const v=+e.target.value; if(v>0&&v<=10){ risk=v; ST.set('tx-risk',v); } } render(); });
+['modeSel','tfSel'].forEach(id=>$(id)?.addEventListener('change',()=>setTimeout(render,50)));
+
+/* refresh schedule: each timeframe refetched when a new candle can exist, at most every 15 s */
+const ALL=['1m','5m','15m','30m','1h','4h','1d'];
+async function refresh(force){ const now=Date.now(); await Promise.all(ALL.map(async tf=>{ const last=K[tf]?.[K[tf].length-1];
+  const due=force||!K[tf]||now-KT_[tf]>Math.min(Math.max(MS[tf]/6,15e3),12e4)||(last&&now>=last.t+MS[tf]);
+  if(due){ try{ await load(tf); }catch(e){} } })); }
+(async()=>{ await refresh(true); await loadDeriv(); render(); setInterval(()=>{ refresh().then(render); },15e3); setInterval(loadDeriv,3e5); setInterval(()=>{ try{ render(); }catch(e){} },1000); })();
+window.__TX={K,replay,STR,render};
 })();
 </script>
 </body>
