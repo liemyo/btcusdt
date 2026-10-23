@@ -786,6 +786,7 @@ html.ob-max{overflow:hidden}
 @media (max-width:1279px){ .fpg{grid-template-columns:220px minmax(0,1fr) 270px} }
 @media (max-width:1023px){ .fpg{grid-template-columns:minmax(0,1fr)} .fpT{order:0;border-right:0;border-bottom:1px solid var(--line)} .fpM{order:1} .fpP{order:2;border-left:0;border-top:1px solid var(--line)} #fpCv{height:480px} #fpRing{height:170px} }
 </style>
+<script id="themeEarly">try{document.documentElement.dataset.theme=localStorage.getItem('btcusdt-theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}</script>
 </head>
 <body>
 <div class="floatcol">
@@ -2431,7 +2432,6 @@ const JKT_T=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jakarta',hour:'2-dig
 const JKT_DS=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jakarta',day:'2-digit',month:'short',year:'numeric'});
 
 
-try{ localStorage.removeItem('btcusdt-theme'); }catch(e){} // theme switcher removed: dashboard is dark only
 
 /* ---------- AI agent process log: every step before a decision, with Jakarta date & time ---------- */
 const APK='agent-process-log-v1';
@@ -5040,6 +5040,121 @@ function alerts(){ const H=window.hdrAlert; if(!H) return; const TV=window.__TVW
   const os=window.__BB?.OS?.now, z=os?os.v>=80?1:os.v<=20?-1:0:0; if(AL.oz!==null&&z&&z!==AL.oz) H.beep(z>0?420:1250); AL.oz=z;
   const tk=window.__TK?.snap; if(tk&&tk.z!=null&&Math.abs(tk.z)>=2&&tk.el<=60&&Date.now()-AL.od>60000){ AL.od=Date.now(); H.beep(tk.z>0?1320:520); } }
 tick(); setInterval(()=>{ tick(); try{ alerts(); }catch(e){} $('aiTf').textContent=(document.getElementById('tvwTf')?.value||'').toUpperCase(); },1000); window.__AI={tick};
+})();
+</script>
+<style id="themeGlass">
+/* ===== THEME · dark / light mode with liquid glass (html[data-theme], saved 'btcusdt-theme') ===== */
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --lg-bg:#04050b; --lg-b1:rgba(123,97,255,.55); --lg-b2:rgba(234,108,196,.42); --lg-b3:rgba(40,160,255,.40); --lg-b4:rgba(37,208,125,.22);
+  --lg-panel:rgba(14,18,32,.46); --lg-panel-2:rgba(255,255,255,.045);
+  --lg-edge:rgba(255,255,255,.22); --lg-hi:rgba(255,255,255,.30); --lg-sheen:rgba(255,255,255,.09);
+  --lg-shadow:0 18px 50px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.35);
+  --lg-grid:rgba(255,255,255,.07); --lg-btn:rgba(255,255,255,.07); --lg-btn-h:rgba(255,255,255,.16);
+  --panel:rgba(10,12,20,.30); --panel-2:rgba(255,255,255,.05); --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.16);
+}
+html[data-theme="light"]{
+  color-scheme:light;
+  --lg-bg:#e9edf6; --lg-b1:rgba(140,120,255,.55); --lg-b2:rgba(255,140,200,.45); --lg-b3:rgba(90,190,255,.50); --lg-b4:rgba(120,230,180,.40);
+  --lg-panel:rgba(255,255,255,.42); --lg-panel-2:rgba(255,255,255,.50);
+  --lg-edge:rgba(255,255,255,.85); --lg-hi:rgba(255,255,255,.95); --lg-sheen:rgba(255,255,255,.55);
+  --lg-shadow:0 18px 44px rgba(40,50,90,.16),0 2px 6px rgba(40,50,90,.10);
+  --lg-grid:rgba(30,40,80,.07); --lg-btn:rgba(255,255,255,.55); --lg-btn-h:rgba(255,255,255,.85);
+  --ground:#e9edf6; --panel:rgba(255,255,255,.30); --panel-2:rgba(255,255,255,.55); --line:rgba(25,35,70,.12); --line-2:rgba(25,35,70,.22);
+  --ink:#141a28; --ink-2:#465166; --ink-3:#6a7488;
+  --up:#0b9a57; --down:#d8392a; --warn:#b67700; --frame:#c2409a; --frame-deep:#a32f80;
+}
+/* moving colour field behind the glass */
+html[data-theme]{background:var(--lg-bg)!important}
+html[data-theme] body{background:transparent!important;color:var(--ink)}
+html[data-theme] body::before{content:"";position:fixed;inset:-12vmax;z-index:-1;pointer-events:none;
+  background:radial-gradient(36vmax 36vmax at 12% 18%,var(--lg-b1),transparent 62%),radial-gradient(40vmax 40vmax at 88% 10%,var(--lg-b2),transparent 62%),
+  radial-gradient(46vmax 46vmax at 72% 94%,var(--lg-b3),transparent 62%),radial-gradient(32vmax 32vmax at 20% 88%,var(--lg-b4),transparent 62%);
+  filter:blur(24px);animation:lgDrift 40s ease-in-out infinite alternate}
+@keyframes lgDrift{to{transform:translate3d(4vmax,-3vmax,0) rotate(10deg) scale(1.08)}}
+@media (prefers-reduced-motion:reduce){ html[data-theme] body::before{animation:none} }
+html[data-theme] .frame{background-color:transparent!important;border-color:var(--lg-edge)!important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cpath d='M0 .5H28M.5 0V28' fill='none' stroke='%23808080' stroke-opacity='.35' stroke-dasharray='3 3'/%3E%3C/svg%3E")!important}
+/* glass panels: translucent fill + blur + bright rim + top sheen */
+html[data-theme] .panel{background:linear-gradient(160deg,var(--lg-sheen),transparent 38%),var(--lg-panel)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(175%);backdrop-filter:blur(22px) saturate(175%);
+  border:1px solid var(--lg-edge)!important;border-radius:16px!important;
+  box-shadow:inset 0 1px 0 var(--lg-hi),inset 0 -1px 0 rgba(255,255,255,.06),inset 1px 0 0 rgba(255,255,255,.08),var(--lg-shadow)!important}
+html[data-theme] .bbg,html[data-theme] .tkP,html[data-theme] .tkS div,html[data-theme] .liqL.lqtop,html[data-theme] #obTg,html[data-theme] #btp,
+html[data-theme] .tvwbody,html[data-theme] .fpg{background:transparent!important}
+html[data-theme] .panel .ph{border-bottom-color:var(--line)}
+/* glass header controls */
+html[data-theme] .btn{background:var(--lg-btn);color:var(--ink);border:1px solid var(--lg-edge);border-radius:999px;
+  box-shadow:inset 0 1px 0 var(--lg-hi),0 4px 14px rgba(0,0,0,.18);transition:background .2s,transform .15s}
+html[data-theme] .btn:hover{background:var(--lg-btn-h)}
+html[data-theme] .btn:active{transform:scale(.97)}
+html[data-theme] .btn[aria-pressed="true"]{background:var(--ink);color:var(--lg-bg)}
+html[data-theme] select{background:var(--lg-btn)!important;color:var(--ink)!important;border:1px solid var(--lg-edge)!important}
+html[data-theme] select option{background:var(--lg-bg);color:var(--ink)}
+#themeBtn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+#themeBtn svg{width:14px;height:14px;flex:none}
+/* ---------- light-mode fixes for hard-coded dark colours ---------- */
+html[data-theme="light"] h1,html[data-theme="light"] .clockbox,html[data-theme="light"] .strap{color:var(--ink)!important}
+html[data-theme="light"] .logo{background:var(--ink);color:#fff;box-shadow:3px 3px 0 var(--frame)}
+html[data-theme="light"] .btn:focus-visible,html[data-theme="light"] input:focus-visible{outline-color:var(--ink)}
+/* canvases & charts draw on dark backgrounds: flip them to light while keeping green/red hues */
+html[data-theme="light"] canvas{filter:invert(1) hue-rotate(180deg) saturate(1.25)}
+html[data-theme="light"] .tkOB{background:rgba(255,255,255,.75);border-color:var(--line-2)}
+html[data-theme="light"] .tkOB.up{color:var(--up);border-color:var(--up)} html[data-theme="light"] .tkOB.dn{color:var(--down);border-color:var(--down)}
+html[data-theme="light"] .bbSig{background:rgba(255,255,255,.35)}
+html[data-theme="light"] .bbSig.buy .bbV,html[data-theme="light"] .bbR .ok>i{color:var(--up)}
+html[data-theme="light"] .bbSig.sell .bbV{color:var(--down)}
+html[data-theme="light"] .bbSig.armed .bbV,html[data-theme="light"] .bbR .wt>i{color:var(--warn)}
+html[data-theme="light"] .osB em i{background:var(--ink)}
+html[data-theme="light"] .osB em{background:linear-gradient(90deg,rgba(11,154,87,.35) 0 20%,rgba(20,30,60,.08) 20% 80%,rgba(216,57,42,.35) 80%)}
+/* header pills (AI agent, price box, music/dock toggles) */
+html[data-theme] #aiw .aih,html[data-theme] #pxFloat{-webkit-backdrop-filter:blur(16px) saturate(170%);backdrop-filter:blur(16px) saturate(170%)}
+html[data-theme="light"] #aiw{color:var(--ink)}
+html[data-theme="light"] #aiw .aih{background:linear-gradient(160deg,rgba(255,255,255,.75),rgba(235,230,255,.55))!important;box-shadow:inset 0 1px 0 #fff,0 4px 14px rgba(123,97,255,.25)}
+html[data-theme="light"] #aiS,html[data-theme="light"] #aiMin{color:var(--ink)!important}
+html[data-theme="light"] #aiw .aib{background:rgba(255,255,255,.88)!important;color:var(--ink);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+html[data-theme="light"] #pxFloat{background:linear-gradient(160deg,rgba(255,255,255,.78),rgba(255,236,200,.55))!important}
+html[data-theme="light"] #pfPx{color:var(--ink)!important} html[data-theme="light"] #pfSym{color:var(--warn)!important}
+html[data-theme="light"] .btn.wa{color:#0b7a3e!important} html[data-theme="light"] .btn.wa svg{fill:#0b9a57}
+html[data-theme="light"] .omh,html[data-theme="light"] #tvwSym{color:var(--ink)!important}
+html[data-theme="light"] #fpHead{color:var(--warn)!important}
+html[data-theme="light"] #muTg,html[data-theme="light"] #fhTg{background:rgba(255,255,255,.7)!important;color:var(--ink)!important}
+html[data-theme="light"] #muLb{color:var(--ink)!important}
+/* neon text colours (CSS + inline styles written by the scripts) → readable on light glass */
+html[data-theme="light"] :is([style^="color:#3dff9a"],[style*=";color:#3dff9a"],[style^="color: rgb(61, 255, 154)"],[style*="; color: rgb(61, 255, 154)"],
+  [style^="color:#5ef0a0"],[style*=";color:#5ef0a0"],[style^="color: rgb(94, 240, 160)"],[style*="; color: rgb(94, 240, 160)"]){color:var(--up)!important}
+html[data-theme="light"] :is([style^="color:#ffd84d"],[style*=";color:#ffd84d"],[style^="color: rgb(255, 216, 77)"],[style*="; color: rgb(255, 216, 77)"]){color:var(--warn)!important}
+html[data-theme="light"] :is([style^="color:#ff5a4d"],[style*=";color:#ff5a4d"],[style^="color: rgb(255, 90, 77)"],[style*="; color: rgb(255, 90, 77)"]){color:var(--down)!important}
+html[data-theme="light"] :is(#aiw .aih b,#aiSym,#aiTf){color:#5b45d6!important}
+html[data-theme="light"] :is(#pxFloat.up .pfp,#pfDot,#btFoot .on){color:var(--up)!important}
+html[data-theme="light"] #pxFloat.dn .pfp{color:var(--down)!important}
+html[data-theme="light"] .hdl{color:#c77a00!important}
+html[data-theme="light"] .oml,html[data-theme="light"] .oml small{color:var(--warn)!important}
+html[data-theme="light"] #bbV{color:var(--ink-2)}
+@media (prefers-reduced-motion:reduce){ html[data-theme] .btn{transition:none} }
+</style>
+<script id="themeToggle">
+(()=>{
+  const KEY='btcusdt-theme', root=document.documentElement;
+  const SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>';
+  const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>';
+  const ctl=document.querySelector('header.top .controls');
+  if(!ctl) return;
+  const b=document.createElement('button');
+  b.className='btn'; b.id='themeBtn'; b.type='button';
+  ctl.insertBefore(b,ctl.firstChild);
+  function set(t,save){
+    root.dataset.theme=t;
+    const light=t==='light';
+    // button shows the mode it switches to
+    b.innerHTML=(light?MOON:SUN)+'<span>'+(light?'DARK':'LIGHT')+'</span>';
+    b.title=light?'Switch to dark mode':'Switch to light mode';
+    b.setAttribute('aria-label',b.title);
+    const m=document.querySelector('meta[name="theme-color"]'); if(m) m.content=light?'#e9edf6':'#04050b';
+    if(save){ try{ localStorage.setItem(KEY,t); }catch(e){} }
+  }
+  b.addEventListener('click',()=>set(root.dataset.theme==='light'?'dark':'light',true));
+  set(root.dataset.theme==='light'?'light':'dark',false);
 })();
 </script>
 </body>
