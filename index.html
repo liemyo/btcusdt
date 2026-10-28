@@ -5554,6 +5554,19 @@ header.top.a-hdr #aiw .aih{overflow:hidden}
   draw(null); setTimeout(tick,900);
 })();
 </script>
+<style id="fitScreen">
+/* ===== fit to screen 100%: the desktop 7-column header grid (liveOnStyle) leaked into phones and made the page 556px wide,
+   so mobile Safari zoomed out and left an empty strip on the right. Phones get a 2-column header; nothing may exceed the viewport. ===== */
+html,body{max-width:100%;overflow-x:hidden}
+/* trade action label: the strategy text shortens (…) instead of pushing the ▸ button off narrow screens */
+.txV .txL>span{min-width:0;overflow:hidden;text-overflow:ellipsis} .txV .txL>.txMin{flex:none}
+@media (max-width:699px){
+  header.top.a-hdr>.symbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+  header.top.a-hdr>.symbar>*{min-width:0;max-width:100%}
+  header.top.a-hdr>.symbar select{width:100%;min-width:0;max-width:100%}
+  header.top.a-hdr>.symbar>#pxFloat,header.top.a-hdr>.symbar>#aiw{grid-column:1/-1}
+  .frame>*{min-width:0;max-width:100%} }
+</style>
 </body>
 </html>
 <script id="fp4Core">
