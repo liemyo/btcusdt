@@ -876,6 +876,7 @@ html.ob-max{overflow:hidden}
       <a class="dlbtn" href="btcusdt-user-guide.pdf" download="BTCUSDT-Scalp-Deck-User-Guide.pdf" target="_blank" rel="noopener" title="Download the user guide (PDF, English): every panel, indicator and signal explained with screenshots" aria-label="Download user guide PDF"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 17v3h16v-3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>USER GUIDE · PDF</span></a>
       <span class="symnote" id="symNote"></span>
       <div id="pxFloat" aria-live="off" aria-label="Current price of the selected pair"><div class="pfh"><span id="pfSym">BTC/USDT</span><span id="pfDot" title="live stream">●</span></div><div class="pfp num" id="pfPx">—</div><div class="pfc num" id="pfCh">24h —</div></div>
+      <div id="liveOn" role="status" aria-live="off" title="Traders viewing this dashboard right now"><span class="lvDot" aria-hidden="true"></span><span class="lvT"><b class="lvN num" id="lvN">—</b><small>ONLINE</small></span><svg class="lvS" viewBox="0 0 60 20" preserveAspectRatio="none" aria-hidden="true"><polyline points="" /></svg></div>
     </div>
     <div class="brand"><div class="logo" id="symLogo">₿</div><h1 id="symH1">VVIP Master Scalping <span class="hdl">• @Liemyo_</span></h1></div>
     <div class="strap" id="strap">Connecting to Binance…</div>
@@ -5475,6 +5476,81 @@ async function refresh(force){ const now=Date.now(); await Promise.all(ALL.map(a
   if(due){ try{ await load(tf); }catch(e){} } })); }
 (async()=>{ await refresh(true); await loadDeriv(); render(); setInterval(()=>{ refresh().then(render); },15e3); setInterval(loadDeriv,3e5); setInterval(()=>{ try{ render(); }catch(e){} },1000); })();
 window.__TX={K,replay,STR,render};
+})();
+</script>
+<style id="liveOnStyle">
+/* header row 1: live price on the LEFT · Mode / Market / Timeframe on the RIGHT */
+header.top.a-hdr>.symbar{grid-template-columns:auto auto auto minmax(0,1fr) auto auto auto}
+header.top.a-hdr>.symbar>#pxFloat{order:1} header.top.a-hdr>.symbar>#liveOn{order:2} header.top.a-hdr>.symbar>.dlbtn{order:3}
+header.top.a-hdr>.symbar>#aiw{order:4} header.top.a-hdr>.symbar>label.symmode{order:5}
+header.top.a-hdr>.symbar>label.symsel:nth-of-type(1){order:6} header.top.a-hdr>.symbar>label.symsel:nth-of-type(3){order:7}
+header.top.a-hdr>.symbar>#symNote{order:9}
+/* live online counter */
+#liveOn{display:flex;align-items:center;gap:8px;height:var(--hh);box-sizing:border-box;padding:0 10px;border:2px solid rgba(61,255,154,.55);border-radius:10px;
+  background:linear-gradient(160deg,rgba(6,40,24,.85),rgba(4,16,12,.85));box-shadow:0 0 10px rgba(61,255,154,.18);font-family:var(--mono,monospace);color:#e6fff1;white-space:nowrap}
+#liveOn .lvDot{width:8px;height:8px;border-radius:50%;background:#3dff9a;box-shadow:0 0 0 0 rgba(61,255,154,.7);animation:lvPulse 1.6s ease-out infinite;flex:none}
+@keyframes lvPulse{0%{box-shadow:0 0 0 0 rgba(61,255,154,.7)}70%{box-shadow:0 0 0 7px rgba(61,255,154,0)}100%{box-shadow:0 0 0 0 rgba(61,255,154,0)}}
+#liveOn .lvT{display:flex;align-items:baseline;gap:5px}
+#liveOn .lvN{font-size:17px;font-weight:800;min-width:3ch;text-align:right;transition:color .35s}
+#liveOn small{font-size:9px;letter-spacing:.16em;font-weight:800;color:#8fe8b6}
+#liveOn.up .lvN{color:#3dff9a} #liveOn.dn .lvN{color:#ffb4a8}
+#liveOn .lvS{width:46px;height:18px;flex:none}
+#liveOn .lvS polyline{fill:none;stroke:#3dff9a;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke;opacity:.85}
+@media (prefers-reduced-motion:reduce){ #liveOn .lvDot{animation:none} }
+html[data-theme="light"] #liveOn{background:linear-gradient(160deg,rgba(255,255,255,.78),rgba(210,255,230,.55))!important;color:var(--ink);border-color:rgba(20,170,90,.55);box-shadow:inset 0 1px 0 #fff,0 4px 14px rgba(20,170,90,.18)}
+html[data-theme="light"] #liveOn small{color:#178a4f} html[data-theme="light"] #liveOn.up .lvN{color:var(--up)} html[data-theme="light"] #liveOn.dn .lvN{color:var(--down)}
+html[data-theme="light"] #liveOn .lvS polyline{stroke:#16a35a}
+@media (min-width:700px) and (max-width:1799px){ #liveOn .lvS{display:none} }
+/* 1440–1799: drop the select captions so the AI agent bar keeps its room */
+@media (min-width:1440px) and (max-width:1799px){ header.top.a-hdr .symsel>span{display:none} header.top.a-hdr .symmode select{min-width:0} header.top.a-hdr #pxFloat{min-width:240px} }
+header.top.a-hdr #aiw .aih{overflow:hidden}
+/* tablets: row A price · online · guide, row B agent · mode · market · timeframe */
+@media (min-width:700px) and (max-width:1100px){
+  header.top.a-hdr>.symbar{grid-template-columns:minmax(0,1fr) auto auto auto}
+  header.top.a-hdr>.symbar>#pxFloat{grid-column:1/2} header.top.a-hdr>.symbar>.dlbtn{grid-column:3/5} }
+/* phones: price, online + guide, agent, mode + market, timeframe */
+@media (max-width:699px){
+  header.top.a-hdr>.symbar>#liveOn,header.top.a-hdr>.symbar>.dlbtn{grid-column:auto}
+  header.top.a-hdr>.symbar>#liveOn{justify-content:center}
+  header.top.a-hdr>.symbar>.symsel:first-child{grid-column:auto} header.top.a-hdr>.symbar>label.symsel:nth-of-type(3){grid-column:1/-1} }
+</style>
+<script id="liveOnScript">
+/* visitors-online counter (simulated): 8–598, follows the trading day in WIB (Asia · London · New York sessions),
+   lower on weekends, livelier when the market moves. The base level is computed from the clock, so every visitor
+   sees about the same number and a reload does not jump; on top of it the count drifts second by second. */
+(()=>{ const el=document.getElementById('liveOn'); if(!el) return;
+  const nEl=document.getElementById('lvN'), pl=el.querySelector('polyline'), MIN=8, MAX=598;
+  const hash=i=>{ let x=Math.imul(i^0x9e3779b9,0x85ebca6b); x^=x>>>13; x=Math.imul(x,0xc2b2ae35); x^=x>>>16; return (x>>>0)/4294967296; };
+  const vn=(t,span,seed)=>{ const k=Math.floor(t/span), f=t/span-k, s=(1-Math.cos(f*Math.PI))/2;
+    return hash(k*7919+seed)*(1-s)+hash((k+1)*7919+seed)*s; };
+  const bell=(h,c,w)=>{ let d=Math.abs(h-c); d=Math.min(d,24-d); return Math.exp(-d*d/(2*w*w)); };
+  const base=ms=>{ const d=new Date(ms+7*3600e3), h=d.getUTCHours()+d.getUTCMinutes()/60, wd=d.getUTCDay();
+    let a=.01+.30*bell(h,9.5,2)+.42*bell(h,15.5,2.2)+.75*bell(h,21.5,2.6)+.12*bell(h,1,2);
+    a*=1-.6*bell(h,4.5,1.2); if(wd===0||wd===6) a*=.62;
+    const m=ms/60000;
+    a*=(.45+1.05*vn(m,47,11))*(.92+.16*vn(m,6,23))*(.97+.06*vn(ms/1000,40,37));
+    return MIN+(MAX-MIN)*Math.min(1,a); };
+  const vol=()=>{ const t=(document.getElementById('pfCh')||{}).textContent||'', m=t.match(/([+-]?\d+(?:\.\d+)?)\s*%/);
+    return m?1+Math.min(.25,Math.abs(+m[1])*.04):1; };
+  const clamp=v=>Math.max(MIN,Math.min(MAX,Math.round(v)));
+  let n=clamp(base(Date.now())*vol()+(Math.random()-.5)*6), burst=0, hist=[], flashT=0;
+  const draw=prev=>{ nEl.textContent=n;
+    if(prev!=null&&n!==prev){ el.classList.toggle('up',n>prev); el.classList.toggle('dn',n<prev);
+      clearTimeout(flashT); flashT=setTimeout(()=>el.classList.remove('up','dn'),700); }
+    el.setAttribute('aria-label',n+' traders online');
+    hist.push(n); if(hist.length>60) hist.shift();
+    const lo=Math.min(...hist), hi=Math.max(...hist), r=Math.max(4,hi-lo), off=60-hist.length;
+    pl.setAttribute('points',hist.map((v,i)=>(off+i)+','+(18-(v-lo)/r*16).toFixed(1)).join(' ')); };
+  const tick=()=>{ const T=base(Date.now())*vol()+burst, gap=T-n, prev=n;
+    burst*=.94; if(Math.random()<.004) burst+=6+Math.random()*22;          /* a shared link brings a small group */
+    let step=gap*.08+(Math.random()-.5)*2.4*Math.sqrt(Math.max(1,n)/60);
+    if(Math.random()<.35&&Math.abs(gap)<15) step=0;                          /* many seconds nothing changes */
+    n=clamp(n+step); draw(prev);
+    setTimeout(tick,650+Math.random()*900); };
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ const prev=n; n=clamp(base(Date.now())*vol()+(Math.random()-.5)*6); draw(prev); } });
+  { let v=n; const back=[]; for(let i=0;i<40;i++){ back.push(v); if(Math.random()<.6) v=clamp(v+(Math.random()-.5)*2.4*Math.sqrt(Math.max(1,v)/60)); }
+    hist=back.reverse().slice(0,-1); }                                       /* the last ~40 s, walked backwards */
+  draw(null); setTimeout(tick,900);
 })();
 </script>
 </body>
