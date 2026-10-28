@@ -5480,9 +5480,9 @@ window.__TX={K,replay,STR,render};
 })();
 </script>
 <style id="liveOnStyle">
-/* header row 1: live price on the LEFT · Mode / Market / Timeframe on the RIGHT */
-header.top.a-hdr>.symbar{grid-template-columns:auto auto auto minmax(0,1fr) auto auto auto}
-header.top.a-hdr>.symbar>#pxFloat{order:1} header.top.a-hdr>.symbar>#liveOn{order:2} header.top.a-hdr>.symbar>.dlbtn{order:3}
+/* header row 1: live price on the LEFT · Mode / Market / Timeframe · user guide on the RIGHT (guide = top-right corner) */
+header.top.a-hdr>.symbar{grid-template-columns:auto auto minmax(0,1fr) auto auto auto auto}
+header.top.a-hdr>.symbar>#pxFloat{order:1} header.top.a-hdr>.symbar>#liveOn{order:2} header.top.a-hdr>.symbar>.dlbtn{order:8}
 header.top.a-hdr>.symbar>#aiw{order:4} header.top.a-hdr>.symbar>label.symmode{order:5}
 header.top.a-hdr>.symbar>label.symsel:nth-of-type(1){order:6} header.top.a-hdr>.symbar>label.symsel:nth-of-type(3){order:7}
 header.top.a-hdr>.symbar>#symNote{order:9}
@@ -5508,10 +5508,10 @@ header.top.a-hdr #aiw .aih{overflow:hidden}
 /* tablets: row A price · online · guide, row B agent · mode · market · timeframe */
 @media (min-width:700px) and (max-width:1100px){
   header.top.a-hdr>.symbar{grid-template-columns:minmax(0,1fr) auto auto auto}
-  header.top.a-hdr>.symbar>#pxFloat{grid-column:1/2} header.top.a-hdr>.symbar>.dlbtn{grid-column:3/5} }
+  header.top.a-hdr>.symbar>#pxFloat{grid-column:1/2} header.top.a-hdr>.symbar>.dlbtn{grid-column:3/5;order:3} }
 /* phones: price, online + guide, agent, mode + market, timeframe */
 @media (max-width:699px){
-  header.top.a-hdr>.symbar>#liveOn,header.top.a-hdr>.symbar>.dlbtn{grid-column:auto}
+  header.top.a-hdr>.symbar>#liveOn,header.top.a-hdr>.symbar>.dlbtn{grid-column:auto} header.top.a-hdr>.symbar>.dlbtn{order:3}
   header.top.a-hdr>.symbar>#liveOn{justify-content:center}
   header.top.a-hdr>.symbar>.symsel:first-child{grid-column:auto} header.top.a-hdr>.symbar>label.symsel:nth-of-type(3){grid-column:1/-1} }
 </style>
