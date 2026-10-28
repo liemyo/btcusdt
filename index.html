@@ -4141,7 +4141,8 @@ const TFL={'1m':'1M','5m':'5M','15m':'15M','30m':'30M','1h':'1H','4h':'4H','1d':
 const ZM={low:4,med:2.6,high:1.6}, FR={low:8,med:5,high:3};
 const OFF={fib:false,bo:false,tpsl:false,nst:false,rsi:false,snp:false};
 let tf=ST.get('tvw-tf','1h'); if(!TFL[tf]) tf='1h';
-let on=Object.assign({...OFF},ST.get('tvw-tools',{}));
+const DEF={...OFF,tpsl:true}; // default: Auto Take Profit & Stop Loss only (new key so earlier saved blanks don't override it)
+let on=Object.assign({...OFF},ST.get('tvw-tools2',DEF));
 let sens=ST.get('tvw-sens','med'); if(!ZM[sens]) sens='med';
 const PD=SYMW.btc?2:(SYMW.dp??2), LD=SYMW.btc?1:(SYMW.dp??2), TZ=-new Date().getTimezoneOffset()*60;
 const API='https://data-api.binance.vision/api/v3/klines?symbol='+(SYMW.data||'BTCUSDT');
@@ -4455,7 +4456,7 @@ function view(){ const n=C.length; ts.setVisibleLogicalRange({from:Math.max(0,n-
 const menu=$('tvwMenu'), btn=$('tvwToolsBtn');
 function syncUI(){ menu.querySelectorAll('input[data-t]').forEach(i=>i.checked=!!on[i.dataset.t]); $('tvwSens').value=sens;
   const showR=!!on.rsi; if(rbox.hidden===showR){ rbox.hidden=!showR; if(showR){ if(RS) setRsi(C.map((c,i)=>RS.R[i]==null?{time:c.time}:{time:c.time,value:RS.R[i]})); setTimeout(fit,30); } }
-  ts.applyOptions({rightOffset:on.tpsl||on.snp?30:6}); ST.set('tvw-tools',on); if(C.length>=60){ try{ PL=calcPlan(); }catch(e){ PL=null; } if(on.snp){ htfLoad(); try{ SP=calcSP(); }catch(e){ SP=null; } } } info(); }
+  ts.applyOptions({rightOffset:on.tpsl||on.snp?30:6}); ST.set('tvw-tools2',on); if(C.length>=60){ try{ PL=calcPlan(); }catch(e){ PL=null; } if(on.snp){ htfLoad(); try{ SP=calcSP(); }catch(e){ SP=null; } } } info(); }
 btn.addEventListener('click',e=>{ e.stopPropagation(); menu.hidden=!menu.hidden; btn.setAttribute('aria-expanded',String(!menu.hidden)); });
 document.addEventListener('click',e=>{ if(!menu.hidden&&!menu.contains(e.target)&&e.target!==btn){ menu.hidden=true; btn.setAttribute('aria-expanded','false'); } });
 menu.addEventListener('change',e=>{ const t=e.target.dataset?.t; if(t){ on[t]=e.target.checked; syncUI(); } });
@@ -4517,12 +4518,12 @@ setInterval(()=>{ paint(); if(flashT&&Date.now()-flashT>900){ el.classList.remov
 })();
 </script>
 <style id="splitView">
-/* ===== desktop split view: every window on one screen (left = liquidation map + order book row, right = status + TradingView + footprint) ===== */
+/* ===== desktop split view: every window on one screen (left = TradingView + order book row, right = liquidation map + footprint) ===== */
 @media (min-width:1280px) and (min-height:680px){
   html,body{height:100%;overflow:hidden}
   .frame{height:100vh;height:100dvh;min-height:0!important;padding:8px 10px!important;gap:8px!important;box-sizing:border-box;align-items:stretch!important;
     grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:auto auto minmax(0,1fr) minmax(0,1fr)!important;
-    grid-template-areas:"hdr hdr" "act act" "lq tvw" "ob me"!important}
+    grid-template-areas:"hdr hdr" "act act" "tvw lq" "ob me"!important}
   .a-hdr{grid-area:hdr!important} .a-act{grid-area:act!important} .a-tvw{grid-area:tvw!important} .a-fp{grid-area:me!important}
   .frame>.panel{min-height:0;overflow:hidden;margin:0!important}
   .ph{padding-top:5px!important;padding-bottom:5px!important}
@@ -5183,7 +5184,7 @@ html[data-theme="light"] #bbV{color:var(--ink-2)}
   .frame{grid-template-areas:"hdr hdr hdr" "tx tx tx" "act act act" "top top top" "tvw tvw tvw" "me me me"!important}
   .a-tx{grid-area:tx!important} }
 @media (min-width:1280px) and (min-height:680px){
-  .frame{grid-template-rows:auto auto auto minmax(0,1fr) minmax(0,1fr)!important;grid-template-areas:"hdr hdr" "tx tx" "act act" "lq tvw" "ob me"!important}
+  .frame{grid-template-rows:auto auto auto minmax(0,1fr) minmax(0,1fr)!important;grid-template-areas:"hdr hdr" "tx tx" "act act" "tvw lq" "ob me"!important}
   .a-tx{grid-area:tx!important} }
 .txg{display:grid;grid-template-columns:250px minmax(0,1.15fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.9fr);height:150px;background:var(--panel);font-size:10.5px}
 .txg>div{min-width:0;min-height:0;overflow:auto;padding:6px 10px}
