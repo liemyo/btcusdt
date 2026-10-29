@@ -4,6 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BTC Scalp Deck</title>
+<script id="noFlicker">
+/* ===== anti-flicker: most panels rewrite innerHTML / textContent every 0.3–1 s even when nothing changed, which rebuilds the
+   DOM, restarts hover states and repaints the whole panel (the "kedip"). Identical writes are now skipped. Containers holding
+   controls (buttons, inputs, links…) are always written, so scripts that re-bind listeners after a write keep working. ===== */
+(()=>{ const P=Element.prototype, d=Object.getOwnPropertyDescriptor(P,'innerHTML'); if(!d||!d.set||!d.get) return;
+  const CTL='button,input,select,textarea,a,label,[role=button],[tabindex]';
+  Object.defineProperty(P,'innerHTML',{configurable:true,enumerable:d.enumerable,get(){ return d.get.call(this); },
+    set(v){ v=v==null?'':String(v);
+      if(this.__ihIn===v&&this.__ihOut!==undefined&&!this.querySelector(CTL)&&d.get.call(this)===this.__ihOut) return;
+      d.set.call(this,v); this.__ihIn=v; this.__ihOut=d.get.call(this); }});
+  const t=Object.getOwnPropertyDescriptor(Node.prototype,'textContent'); if(!t||!t.set) return;
+  Object.defineProperty(Node.prototype,'textContent',{configurable:true,enumerable:t.enumerable,get(){ return t.get.call(this); },
+    set(v){ v=v==null?'':String(v); const f=this.firstChild; if(this.nodeType===1&&f&&f===this.lastChild&&f.nodeType===3&&f.data===v) return; t.set.call(this,v); }});
+})();
+/* one-time intro fade only when the page is actually on screen (a background tab would otherwise keep panels at opacity 0) */
+try{ if(document.visibilityState==='visible'){ const R=document.documentElement; R.classList.add('sm-intro'); setTimeout(()=>R.classList.remove('sm-intro'),1400); } }catch(e){}
+</script>
 <script id="symCfg">
 /* ===== market selector: one dashboard, four instruments (BTC · XAU · BNB · SOL). ps = point scale vs BTC (5M ATR ratio), vs = volume/USD scale ===== */
 (()=>{
@@ -4246,16 +4263,16 @@ function calcRS(){ const R=rsi(C,7), piv=[]; let st=0, cur=null;
   return {R,piv}; }
 
 /* Auto TP/SL: best active setup → entry, SL, TP1-3 */
-function calcPlan(){ const n=C.length-1, a=A[n], px=C[n].close; let p=null;
-  const any=on.fib||on.bo||on.nst, use=k=>on[k]||!any; // TP/SL follows the tools that are switched on (all of them when only TP/SL is on)
-  const nOk=use('nst')&&N&&!N.inval&&!N.hit;
+function calcPlan(want){ const n=C.length-1, a=A[n], px=C[n].close; let p=null; // want = ±1 forces that side (MTF agent)
+  const any=on.fib||on.bo||on.nst, use=k=>on[k]||!any, sd=x=>!want||x===want; // TP/SL follows the tools that are switched on (all of them when only TP/SL is on)
+  const nOk=use('nst')&&N&&!N.inval&&!N.hit&&sd(N.s);
   if(nOk&&!N.live){ const s=N.s; p={src:'N STRATEGY',s,type:N.brk>=0?'STOP · triggered':'STOP (break of B)',entry:N.b.p,sl:N.c.p-s*.25*a,tps:[N.V,N.N,N.E]}; }
-  else if(use('bo')&&B&&!B.failed){ const s=B.s; p={src:'BREAKOUT RETEST',s,type:'LIMIT (50% retest)',entry:B.Z(.5),sl:B.Z(.786)-s*.25*a,tps:[B.top,B.top+s*B.rg*.272,B.top+s*B.rg*.618]}; }
+  else if(use('bo')&&B&&!B.failed&&sd(B.s)){ const s=B.s; p={src:'BREAKOUT RETEST',s,type:'LIMIT (50% retest)',entry:B.Z(.5),sl:B.Z(.786)-s*.25*a,tps:[B.top,B.top+s*B.rg*.272,B.top+s*B.rg*.618]}; }
   else if(nOk){ const s=N.s; p={src:'N STRATEGY (forming)',s,type:'STOP (break of B)',entry:N.b.p,sl:N.c.p-s*.25*a,tps:[N.V,N.N,N.E]}; }
-  else if(use('fib')&&F){ const s=F.s; p={src:'FIB RETRACEMENT',s,type:'LIMIT (0.618)',entry:F.L(.618),sl:F.L(.786)-s*.25*a,tps:[F.L(0),F.L(-.272),F.L(-.618)]}; }
-  else { const e=ema(C,50), s=px>e[n]&&e[n]>e[n-5]?1:px<e[n]&&e[n]<e[n-5]?-1:0; if(!s) return null;
+  else if(use('fib')&&F&&sd(F.s)){ const s=F.s; p={src:'FIB RETRACEMENT',s,type:'LIMIT (0.618)',entry:F.L(.618),sl:F.L(.786)-s*.25*a,tps:[F.L(0),F.L(-.272),F.L(-.618)]}; }
+  else { const e=ema(C,50), s0=px>e[n]&&e[n]>e[n-5]?1:px<e[n]&&e[n]<e[n-5]?-1:0, s=want||s0; if(!s) return null;
     const sw=[...Z.P].reverse().find(q=>q.t===(s>0?'L':'H')); const sl=sw?sw.p-s*.25*a:px-s*1.5*a;
-    p={src:'TREND (EMA 50)',s,type:'MARKET',entry:px,sl,tps:[]}; }
+    p={src:want&&s0!==want?'COUNTER-TREND (EMA 50)':'TREND (EMA 50)',s,type:'MARKET',entry:px,sl,tps:[]}; }
   const s=p.s; if(s*(p.entry-p.sl)<.4*a) p.sl=p.entry-s*.4*a; const risk=s*(p.entry-p.sl);
   if(!p.tps.length) p.tps=[1,2,3].map(r=>p.entry+s*r*risk);
   p.tps=p.tps.filter(t=>s*(t-p.entry)>=.5*risk).sort((x,y)=>s*(x-y)); while(p.tps.length<3) p.tps.push(p.tps.length?p.tps[p.tps.length-1]+s*risk:p.entry+s*risk);
@@ -4471,7 +4488,11 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!menu.hidden){
 box.addEventListener('dblclick',view);
 $('tvwSym').textContent=(SYMW.name||SYMW.id||'BTC/USDT')+(SYMW.data&&SYMW.data!==SYMW.id?' ('+SYMW.data+')':'');
 syncUI(); load();
-window.__TVW={get C(){return C;},get F(){return F;},get B(){return B;},get N(){return N;},get RS(){return RS;},get PL(){return PL;},get SP(){return SP;},get on(){return on;}};
+/* Auto TP & SL on any candle set (used by the MTF AI agent): swaps the window state, runs the same maths, restores it */
+function planOf(K,want){ const sv=[C,A,Z,F,B,N,on]; try{ C=K; A=atr(C,14); Z=zigzag(C,A,ZM[sens]); on={...OFF,tpsl:true};
+  let f=null,b=null,q=null; try{ f=calcFib(); }catch(e){} try{ b=calcBO(); }catch(e){} F=f; B=b; try{ q=calcN(); }catch(e){} N=q;
+  let p=null; try{ p=calcPlan(want); }catch(e){} return {p,F:f,B:b,N:q,A:A[A.length-1]}; } finally { [C,A,Z,F,B,N,on]=sv; } }
+window.__TVW={planOf,get sens(){return sens;},get C(){return C;},get F(){return F;},get B(){return B;},get N(){return N;},get RS(){return RS;},get PL(){return PL;},get SP(){return SP;},get on(){return on;}};
 })();
 </script>
 <style id="trimAll">
@@ -5012,6 +5033,7 @@ function tick(){ // keeps running in a background tab so the ALERT siren still f
   const vote=(name,dir,w,txt)=>{ rows.push([dir,name,txt]); if(dir){ score+=dir*w; } wsum+=w; };
   // trade action (validated strategy of the selected mode) — decisive when it has a position to open
   const AX=window.__ACTION; vote(`Trade action · ${AX?AX.strategy:'—'}`,AX&&AX.dir||0,4,AX?`${AX.head} · grade ${AX.grade} · timing ${AX.timing}`:'loading…');
+  const MT=window.__MTF; vote('MTF confluence 15M–1D',MT&&MT.side||0,2,MT?(MT.side?`${MT.side>0?'BUY':'SELL'} ${MT.cnt}/5 · grade ${MT.grade}`:`WAIT · buy ${MT.nb}/5 · sell ${MT.ns}/5`):'loading…');
   // sniper indicator
   const spA=SP&&SP.active; vote(`Sniper · ${TV?({'1m':'1M','5m':'5M','15m':'15M','30m':'30M','1h':'1H','4h':'4H','1d':'D','1w':'W'}[document.getElementById('tvwTf')?.value]||''):''}`,spA?spA.s:0,3,SP?`${SP.status} · ${SP.market}`:'loading…');
   vote('Trend EMA 50/200',SP?SP.trend:0,1,SP?(SP.trend>0?'bullish':SP.trend<0?'bearish':'mixed'):'—');
@@ -5567,6 +5589,267 @@ html,body{max-width:100%;overflow-x:hidden}
   header.top.a-hdr>.symbar>#pxFloat,header.top.a-hdr>.symbar>#aiw{grid-column:1/-1}
   .frame>*{min-width:0;max-width:100%} }
 </style>
+<style id="mtfStyle">
+/* ===== AI AGENT · MTF confluence (TradingView window, Auto TP & SL on 15M · 30M · 1H · 4H · 1D, plan from 1H) ===== */
+#mtfA{position:relative;flex:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 10px;margin:4px 4px 0;
+  border:1px solid var(--line-2);border-radius:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink);
+  background:linear-gradient(135deg,rgba(123,97,255,.16),rgba(40,160,255,.06) 55%,transparent);--mc:138,147,164;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 0 1px rgba(var(--mc),.0);transition:border-color .5s ease,box-shadow .5s ease,background .5s ease}
+#mtfA.buy{--mc:61,255,154} #mtfA.sell{--mc:255,90,77} #mtfA.wait{--mc:255,209,102}
+#mtfA.buy,#mtfA.sell{border-color:rgba(var(--mc),.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 16px rgba(var(--mc),.28)}
+#mtfA.ga::after{content:"";position:absolute;inset:-1px;border-radius:12px;pointer-events:none;border:1px solid rgba(var(--mc),.9);animation:mtfBreath 2.6s ease-in-out infinite}
+@keyframes mtfBreath{0%,100%{opacity:.15}50%{opacity:1}}
+#mtfA .mV{display:grid;gap:1px;min-width:118px;padding-right:8px;border-right:1px solid var(--line)}
+#mtfA .mV small{font-size:9px;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase}
+#mtfA .mV b{font-size:15px;letter-spacing:.02em;color:rgb(var(--mc));transition:color .4s ease}
+#mtfA .mV em{font-style:normal;font-size:9.5px;color:var(--ink-2)}
+#mtfA .mM{display:grid;gap:4px;min-width:0}
+#mtfA .mTF{display:flex;gap:4px;flex-wrap:wrap}
+#mtfA .mTF span{display:inline-flex;gap:4px;align-items:center;padding:1px 7px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.04);white-space:nowrap;transition:background .4s ease,border-color .4s ease,color .4s ease}
+#mtfA .mTF span.u{color:#3dff9a;border-color:rgba(61,255,154,.55);background:rgba(61,255,154,.10)}
+#mtfA .mTF span.d{color:#ff5a4d;border-color:rgba(255,90,77,.55);background:rgba(255,90,77,.10)}
+#mtfA .mTF span.ref{box-shadow:0 0 0 1px rgba(255,209,102,.8)}
+#mtfA .mTF span i{font-style:normal;color:var(--ink-3);font-size:9px}
+#mtfA .mP{display:flex;gap:2px 12px;flex-wrap:wrap;color:var(--ink-2);min-width:0}
+#mtfA .mP b{color:var(--ink);transition:color .3s ease}
+#mtfA .mP .o b{color:#ffd166} #mtfA .mP .sl b{color:#ff5a4d} #mtfA .mP .tp b{color:#3dff9a}
+#mtfA .mB{display:flex;gap:6px;align-items:center}
+#mtfA .mB button{font:700 10px var(--mono);letter-spacing:.06em;padding:4px 9px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.06);color:var(--ink);cursor:pointer;transition:background .2s ease,transform .15s ease}
+#mtfA .mB button:hover{background:rgba(255,255,255,.16)} #mtfA .mB button:active{transform:scale(.96)}
+#mtfD{position:fixed;left:0;top:0;width:min(760px,calc(100vw - 16px));z-index:9050;max-height:70vh;overflow:auto;overscroll-behavior:contain;padding:10px 12px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.22);background:rgba(10,13,24,.92);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
+  box-shadow:0 18px 50px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.18);display:grid;gap:8px;font-size:10.5px;
+  opacity:0;transform:translateY(8px) scale(.985);pointer-events:none;visibility:hidden;transition:opacity .22s ease,transform .22s ease,visibility 0s linear .22s}
+#mtfD.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .22s ease,transform .22s ease,visibility 0s}
+#mtfD h5{margin:0;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+#mtfD .qmx{width:100%;border-collapse:collapse} #mtfD .qmx td,#mtfD .qmx th{padding:3px 6px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+#mtfD .qmx th{font-size:9px;letter-spacing:.12em;color:var(--ink-3);font-weight:700}
+#mtfD .qmx td.u{color:#3dff9a} #mtfD .qmx td.d{color:#ff5a4d}
+#mtfD .qmk{line-height:1.5;color:var(--ink)} #mtfD .qmk b{color:#ffd166}
+#mtfD .qmg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+#mtfD .qmg>div{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:rgba(255,255,255,.03)}
+#mtfD .qmg>div.on{border-color:rgba(255,209,102,.8);box-shadow:0 0 10px rgba(255,209,102,.25)}
+#mtfD .qmg b{display:block;font-size:11px} #mtfD .qmg span{color:var(--ink-2)}
+#mtfD .qmn{color:var(--ink-3);font-size:9.5px;line-height:1.45}
+#mtfD .qmh div{display:flex;gap:10px;justify-content:space-between;border-bottom:1px dashed var(--line);padding:2px 0}
+@media (max-width:699px){ #mtfA{grid-template-columns:minmax(0,1fr) auto} #mtfA .mM{grid-column:1/-1;grid-row:2} #mtfA .mV{border-right:0} }
+/* split view: the agent sits beside the info cards in the existing bottom row (no extra height is taken from the chart, and the
+   fixed row height means changing text never resizes the chart — that resize was one source of the jumping) */
+@media (min-width:1280px) and (min-height:680px){
+  .frame>section.a-tvw.panel{display:grid!important;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) 74px}
+  .frame>section.a-tvw>.ph,.frame>section.a-tvw>.tvwbody{grid-column:1/-1}
+  .frame>section.a-tvw>.tvwbody{min-height:0}
+  #mtfA{grid-column:1;grid-row:3;margin:3px;padding:4px 8px;gap:6px;overflow:hidden;align-items:stretch}
+  #mtfA .mV{min-width:100px;align-content:center} #mtfA .mV b{font-size:13px}
+  #mtfA .mM{align-content:center;gap:3px}
+  #mtfA .mTF{flex-wrap:nowrap;overflow:hidden} #mtfA .mTF span{padding:0 6px} #mtfA .mTF span i{display:none}
+  #mtfA .mP{gap:0 10px;line-height:13px;max-height:26px;overflow:hidden}
+  #mtfA{grid-template-columns:auto minmax(0,1fr)} #mtfA .mB{position:absolute;right:6px;top:4px} #mtfA .mB button{padding:1px 7px;font-size:9px}
+  #mtfA .mTF{padding-right:64px}
+  .frame>section.a-tvw>.tvwinfo{grid-column:2;grid-row:3;height:auto;max-height:none!important;min-height:0} }
+html[data-theme="light"] #mtfA.buy{--mc:11,154,87} html[data-theme="light"] #mtfA.sell{--mc:216,57,42} html[data-theme="light"] #mtfA.wait{--mc:182,119,0}
+html[data-theme="light"] #mtfA{background:linear-gradient(135deg,rgba(140,120,255,.18),rgba(255,255,255,.35))}
+html[data-theme="light"] #mtfD{background:rgba(255,255,255,.92);color:var(--ink)}
+html[data-theme="light"] #mtfA .mTF span.u,html[data-theme="light"] #mtfD .qmx td.u,html[data-theme="light"] #mtfA .mP .tp b{color:var(--up)}
+html[data-theme="light"] #mtfA .mTF span.d,html[data-theme="light"] #mtfD .qmx td.d,html[data-theme="light"] #mtfA .mP .sl b{color:var(--down)}
+html[data-theme="light"] #mtfA .mP .o b,html[data-theme="light"] #mtfD .qmk b{color:var(--warn)}
+@media (prefers-reduced-motion:reduce){ #mtfA.ga::after{animation:none;opacity:.8} #mtfD{transition:none} }
+</style>
+<script id="mtfAgent">
+/* ===== AI AGENT · MTF confluence =====
+   Each of 15M · 30M · 1H · 4H · 1D runs the TradingView window's "Auto Take Profit & Stop Loss" maths (N › Breakout retest › Fib › EMA 50 trend)
+   and votes BUY / SELL. Open price, stop loss and TP1–TP3 always come from the 1H plan on the side the timeframes agree on.
+   Backtest (3 y, 15M replay with in-progress HTF bars, 1H closes, cost 0.04 %, BTC / ETH): exit = stop → entry at +1R, then trail 3 × ATR(1H)
+     5/5 + 1H ADX ≥ 20 + 1H EMA 50/200 trend  → PF 1.25 / 1.69  (grade A)
+     4/5 or 5/5                              → PF 1.20 / 1.21  (grade B)
+     3/5                                     → PF 1.12 / 0.98  (grade C — half risk)
+     fixed exits at TP1/TP2/TP3 (1/3 each)    → PF 0.82 / 0.84 at 3/5 — so TPs are targets, the trailing stop is the exit. */
+(()=>{
+'use strict';
+const TV=()=>window.__TVW, SY=window.SYM||{data:'BTCUSDT',id:'BTCUSDT',dp:2,btc:true}, $=id=>document.getElementById(id);
+const host=$('tvw'), info=$('tvwInfo'); if(!host||!info) return;
+const dp=SY.btc?1:(SY.dp??2), fP=v=>v==null||!isFinite(v)?'—':(+v).toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
+const API='https://data-api.binance.vision/api/v3/klines?symbol='+(SY.data||'BTCUSDT');
+const TFS=[['15m','15M',500],['30m','30M',500],['1h','1H',1000],['4h','4H',500],['1d','1D',500]], H1=3600;
+const BT={A:'5/5 + ADX ≥ 20 + tren 1H · PF 1.25 BTC · 1.69 ETH · win 34–37 %',B:'≥ 4/5 · PF 1.20 BTC · 1.21 ETH · win 31 %',C:'3/5 · PF 1.12 BTC · 0.98 ETH · tipis, risiko ½'};
+const KEY='mtf-pos-'+(SY.id||'BTCUSDT'), ST={get(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v??d; }catch(e){ return d; } },set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
+
+/* ---------- UI ---------- */
+const el=document.createElement('div'); el.id='mtfA'; el.className='wait'; el.setAttribute('aria-live','polite');
+el.innerHTML=`<div class="mV"><small>🤖 AI Agent · MTF</small><b id="mtfV">…</b><em id="mtfG">memuat 5 timeframe…</em></div>
+  <div class="mM"><div class="mTF" id="mtfT"></div><div class="mP" id="mtfP"></div></div>
+  <div class="mB"><button type="button" id="mtfBtn" aria-expanded="false" title="Analisa lengkap, keterangan & backtest">DETAIL ▴</button></div>
+`;
+host.insertBefore(el,info);
+// the detail sheet lives on <body> (panels clip with overflow:hidden and backdrop-filter traps position:fixed)
+const DL=document.createElement('div'); DL.id='mtfD'; DL.setAttribute('role','dialog'); DL.setAttribute('aria-label','AI agent MTF detail'); document.body.appendChild(DL);
+const place=()=>{ if(!DL.classList.contains('open')) return; const r=el.getBoundingClientRect(), w=Math.min(760,innerWidth-16), up=r.top>320||r.top>innerHeight-r.bottom;
+  DL.style.width=w+'px'; DL.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+(r.width-w)/2))+'px';
+  if(up){ DL.style.top='auto'; DL.style.bottom=(innerHeight-r.top+6)+'px'; DL.style.maxHeight=Math.max(200,r.top-14)+'px'; } else { DL.style.bottom='auto'; DL.style.top=(r.bottom+6)+'px'; DL.style.maxHeight=Math.max(200,innerHeight-r.bottom-14)+'px'; } };
+addEventListener('resize',place); addEventListener('scroll',place,{passive:true});
+const btn=$('mtfBtn'); btn.onclick=e=>{ e.stopPropagation(); const o=el.classList.toggle('open'); DL.classList.toggle('open',o); btn.setAttribute('aria-expanded',o); btn.textContent=o?'TUTUP ▾':'DETAIL ▴'; if(o){ if(R) renderDetail(); place(); } };
+document.addEventListener('pointerdown',e=>{ if(el.classList.contains('open')&&!el.contains(e.target)&&!DL.contains(e.target)) btn.click(); });
+addEventListener('keydown',e=>{ if(e.key==='Escape'&&el.classList.contains('open')) btn.click(); });
+const set=(id,h)=>{ const n=$(id); if(n&&n._h!==h){ n.innerHTML=h; n._h=h; } }; // write only on change → no flicker
+
+/* ---------- maths (same formulas as the TradingView window) ---------- */
+const ema=(C,p)=>{ const k=2/(p+1), e=[]; C.forEach((c,i)=>e.push(i?c.close*k+e[i-1]*(1-k):c.close)); return e; };
+const atr=(C,p=14)=>{ const a=[]; let s=0; for(let i=0;i<C.length;i++){ const c=C[i], pc=i?C[i-1].close:c.open, tr=Math.max(c.high-c.low,Math.abs(c.high-pc),Math.abs(c.low-pc)); if(i<p){ s+=tr; a.push(s/(i+1)); } else a.push((a[i-1]*(p-1)+tr)/p); } return a; };
+const rsi=(C,p=14)=>{ let g=0,l=0,r=null; for(let i=1;i<C.length;i++){ const d=C[i].close-C[i-1].close, u=Math.max(d,0), w=Math.max(-d,0); if(i<=p){ g+=u; l+=w; if(i===p){ g/=p; l/=p; } } else { g=(g*(p-1)+u)/p; l=(l*(p-1)+w)/p; } if(i>=p) r=l===0?100:100-100/(1+g/l); } return r; };
+const adx=(C,p=14)=>{ let tr=0,pd=0,md=0,ad=null; for(let i=1;i<C.length;i++){ const c=C[i],q=C[i-1], up=c.high-q.high, dn=q.low-c.low, t=Math.max(c.high-c.low,Math.abs(c.high-q.close),Math.abs(c.low-q.close));
+  const P=up>dn&&up>0?up:0, M=dn>up&&dn>0?dn:0; if(i<=p){ tr+=t; pd+=P; md+=M; continue; } tr=tr-tr/p+t; pd=pd-pd/p+P; md=md-md/p+M; const a=100*pd/tr, b=100*md/tr, dx=a+b?100*Math.abs(a-b)/(a+b):0; ad=ad==null?dx:(ad*(p-1)+dx)/p; } return ad; };
+const toC=k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]});
+
+/* ---------- data ---------- */
+const D={}; let busy=false, lastLoad=0;
+async function load(){ if(busy) return; if(document.hidden&&!window.hdrAlert?.on()) return; busy=true;
+  try{ await Promise.all(TFS.map(async([tf,,lim])=>{ const j=await (await fetch(API+'&interval='+tf+'&limit='+lim,{cache:'no-store'})).json(); if(Array.isArray(j)&&j.length) D[tf]=j.map(toC); })); lastLoad=Date.now(); }catch(e){}
+  busy=false; analyse(); }
+// live price between loads: move the last candle of every TF with the ticker so the votes stay current
+function livePx(){ const p=window.__TK?.snap?.p; if(!(p>0)) return; for(const [tf] of TFS){ const C=D[tf]; if(!C||!C.length) continue; const c=C[C.length-1]; c.close=p; if(p>c.high) c.high=p; if(p<c.low) c.low=p; } }
+
+/* ---------- analysis ---------- */
+let R=null;
+function analyse(){ const T=TV(); if(!T||!T.planOf||!D['1h']) return; livePx();
+  const rows=TFS.map(([tf,lb])=>{ const C=D[tf]; if(!C||C.length<120) return {tf,lb,s:0,miss:1};
+    const r=T.planOf(C), p=r.p, n=C.length-1, e50=ema(C,50), e200=ema(C,200), px=C[n].close;
+    const tr=px>e50[n]&&e50[n]>e50[n-5]?1:px<e50[n]&&e50[n]<e50[n-5]?-1:0;
+    const st=p?(/N STRATEGY/.test(p.src)&&r.N?r.N.st:/BREAKOUT/.test(p.src)&&r.B?r.B.st:/FIB/.test(p.src)&&r.F?`retrace ${(r.F.ret*100).toFixed(0)} %`:p.type):'tidak ada setup';
+    return {tf,lb,s:p?p.s:0,p,st,tr,r14:rsi(C),big:e50[n]>e200[n]?1:-1}; });
+  const nb=rows.filter(x=>x.s>0).length, ns=rows.filter(x=>x.s<0).length, side=nb>=3?1:ns>=3?-1:0, cnt=side>0?nb:side<0?ns:Math.max(nb,ns);
+  const C1=D['1h'], n1=C1.length-1, a1=atr(C1)[n1], x1=adx(C1), e50=ema(C1,50), e200=ema(C1,200), px=C1[n1].close;
+  const t1=px>e50[n1]&&e50[n1]>e200[n1]?1:px<e50[n1]&&e50[n1]<e200[n1]?-1:0, r1=rows[2].r14;
+  const grade=!side?null:cnt===5&&x1>=20&&t1===side?'A':cnt>=4?'B':'C';
+  const plan=side?T.planOf(C1,side).p:null;
+  R={rows,nb,ns,side,cnt,grade,plan,a1,x1,t1,r1,px,ref:rows[2],t:Date.now()};
+  track(); render(); alerts(); window.__MTF=R; }
+
+/* ---------- virtual position (this browser): same rules as the backtest ---------- */
+function track(){ const C=D['1h']; if(!C||!R) return; let P=ST.get(KEY,null); const now=C[C.length-1].time;
+  if(P&&!P.done){ const s=P.s;
+    for(const c of C){ if(c.time<P.t0) continue; const fin=c.time+H1<=Date.now()/1000; // only closed bars move the trail; live bar checks the stop
+      if(!P.f){ if(c.time-P.t0>12*H1){ P.done='batal'; P.why='limit/stop tidak terisi dalam 12 jam'; break; }
+        if(s*((s>0?c.low:c.high)-P.sl)<=0){ P.done='batal'; P.why='stop loss tersentuh sebelum terisi'; break; }
+        const hit=P.stop?(s>0?c.high>=P.e:c.low<=P.e):(s>0?c.low<=P.e:c.high>=P.e); if(!hit){ if(s*((s>0?c.high:c.low)-P.tp[0])>=0){ P.done='batal'; P.why='TP1 tercapai sebelum terisi'; break; } continue; }
+        P.f=c.time; P.ext=P.e; }
+      if(c.time<P.f) continue;
+      if(s*((s>0?c.low:c.high)-P.st)<=0){ P.done=P.st===P.sl?'stop':'trail'; P.x=P.st; P.r=s*(P.st-P.e)/P.risk; P.why=P.st===P.sl?'kena stop loss':s*(P.st-P.e)>0?'trailing stop · profit dikunci':'stop di entry (impas)'; break; }
+      if(!fin) continue; P.ext=s>0?Math.max(P.ext,c.close):Math.min(P.ext,c.close); P.hit=Math.max(P.hit||0,P.tp.filter(t=>s*((s>0?c.high:c.low)-t)>=0).length);
+      if(s*(P.ext-P.e)>=P.risk){ let ns=P.ext-s*3*P.atr; if(s*(P.e-ns)>0) ns=P.e; if(s*(ns-P.st)>0) P.st=ns; } }
+    if(P.done){ const Hs=ST.get(KEY+'-h',[]); Hs.unshift({t:P.t0,s:P.s,g:P.g,e:P.e,done:P.done,r:P.r??null,why:P.why}); ST.set(KEY+'-h',Hs.slice(0,12)); }
+    ST.set(KEY,P); }
+  // open a new one when flat and the timeframes agree (≥ 3/5) with a 1H plan on that side
+  if((!P||P.done)&&R.side&&R.plan&&(!P||now>(P.t0||0))){ const q=R.plan, s=q.s, mk=/MARKET|triggered/.test(q.type), e=mk?R.px:q.entry, risk=s*(e-q.sl);
+    if(risk>0){ P={t0:now,s,g:R.grade,cnt:R.cnt,src:q.src,type:q.type,stop:/STOP/.test(q.type)&&!mk,e,sl:q.sl,st:q.sl,tp:q.tps.slice(0,3),risk,atr:R.a1,f:mk?now:0,ext:e}; ST.set(KEY,P); } }
+  R.pos=P&&!P.done?P:null; R.hist=ST.get(KEY+'-h',[]); }
+
+/* ---------- render ---------- */
+const nameS=s=>s>0?'BUY':s<0?'SELL':'WAIT';
+function render(){ if(!R) return; const {rows,side,cnt,grade,plan,pos}=R, s=side;
+  el.classList.toggle('buy',s>0); el.classList.toggle('sell',s<0); el.classList.toggle('wait',!s); el.classList.toggle('ga',grade==='A');
+  const head=s?`${nameS(s)} · ${cnt}/5`:`WAIT · ${Math.max(R.nb,R.ns)}/5`;
+  set('mtfV',head); set('mtfG',s?`grade ${grade} · ${cnt===5?'KONFIRMASI PENUH':cnt===4?'konfirmasi kuat':'konfirmasi cukup'}`:'timeframe belum sepakat');
+  set('mtfT',rows.map(x=>`<span class="${x.s>0?'u':x.s<0?'d':''}${x.tf==='1h'?' ref':''}" title="${x.p?x.p.src+' · '+x.st:'tidak ada setup'}">${x.lb} ${x.s>0?'▲':x.s<0?'▼':'·'} <i>${x.miss?'—':x.p?x.p.src.replace(/ \(.*\)/,'').replace('RETRACEMENT','FIB').replace('FIB FIB','FIB').split(' ')[0]:'—'}</i></span>`).join(''));
+  const q=pos||null, pl=plan;
+  if(q){ const live=q.f?'SINYAL AKTIF':'MENUNGGU ISI';
+    set('mtfP',`<span class="o">${live} ${nameS(q.s)} <b>${fP(q.e)}</b></span><span class="sl">${q.st!==q.sl?'trail stop':'SL'} <b>${fP(q.st)}</b></span>${q.tp.map((t,k)=>`<span class="tp">TP${k+1} <b>${fP(t)}</b></span>`).join('')}<span>R:R TP2 <b>1:${(Math.abs(q.tp[1]-q.e)/q.risk).toFixed(1)}</b></span>`); }
+  else if(s&&pl){ const mk=/MARKET|triggered/.test(pl.type), e=mk?R.px:pl.entry, rk=Math.abs(e-pl.sl);
+    set('mtfP',`<span class="o">OPEN ${mk?'MARKET':pl.type.split(' ')[0]} <b>${fP(e)}</b></span><span class="sl">SL <b>${fP(pl.sl)}</b></span>${pl.tps.slice(0,3).map((t,k)=>`<span class="tp">TP${k+1} <b>${fP(t)}</b></span>`).join('')}<span>R:R TP2 <b>1:${(Math.abs(pl.tps[1]-e)/rk).toFixed(1)}</b></span>`); }
+  else set('mtfP',`<span>Harga <b>${fP(R.px)}</b></span><span>BUY ${R.nb}/5 · SELL ${R.ns}/5</span><span>butuh ≥ 3 TF searah untuk rekomendasi</span>`);
+  renderDetail(); }
+
+function advice(){ const {side:s,cnt,grade,plan:pl,x1,t1,r1,ref,pos}=R; const W=nameS(s);
+  if(!s) return `Timeframe <b>belum sepakat</b> (BUY ${R.nb}/5 · SELL ${R.ns}/5). Tidak ada rekomendasi open posisi — tunggu minimal 3 dari 5 timeframe searah. Backtest menunjukkan 4/5 ke atas jauh lebih layak daripada 3/5.`;
+  const mk=/MARKET|triggered/.test(pl?.type||''), e=pl?(mk?R.px:pl.entry):null, far=pl&&!mk?Math.abs(R.px-e):0;
+  let t=cnt===5?`<b>Kelima timeframe menyatakan ${W}</b> (15M · 30M · 1H · 4H · 1D). `:cnt===4?`<b>4 dari 5 timeframe menyatakan ${W}</b>; ${R.rows.filter(x=>x.s!==s).map(x=>x.lb).join(', ')} belum searah. `:`<b>3 dari 5 timeframe menyatakan ${W}</b>; ${R.rows.filter(x=>x.s!==s).map(x=>x.lb).join(' & ')} belum searah. `;
+  t+=grade==='A'?`Grade <b>A</b>: ADX 1H ${x1.toFixed(0)} (tren kuat) dan EMA 50/200 1H searah — setup terbaik di backtest. `:grade==='B'?`Grade <b>B</b>${cnt===5?` (ADX 1H ${x1.toFixed(0)}${x1<20?' < 20':''}${t1!==s?', EMA 50/200 1H belum searah':''})`:''}: layak open dengan risiko normal. `:`Grade <b>C</b>: konfirmasi minimum — jika open, pakai <b>½ risiko</b> atau tunggu TF ke-4 ikut searah. `;
+  if(ref.s!==s) t+=`Catatan: 1H sendiri (acuan) belum ${W}, jadi plan 1H dihitung paksa ke arah ${W} (${pl?pl.src:'—'}). `;
+  if(pl) t+=mk?`Rekomendasi: <b>open ${W} market ≈ ${fP(e)}</b>, `:`Rekomendasi: pasang <b>${pl.type.split(' ')[0]} ${W} di ${fP(e)}</b> (${pl.src}; harga sekarang ${fP(far)} dari entry, berlaku 12 jam), `;
+  if(pl) t+=`stop loss <b>${fP(pl.sl)}</b>, target TP1 <b>${fP(pl.tps[0])}</b> · TP2 <b>${fP(pl.tps[1])}</b> · TP3 <b>${fP(pl.tps[2])}</b>. `;
+  if(r1!=null&&((s>0&&r1>=72)||(s<0&&r1<=28))) t+=`RSI 1H ${r1.toFixed(0)} sudah ${s>0?'jenuh beli':'jenuh jual'} — jangan kejar, utamakan limit. `;
+  t+=`<br>Manajemen (tervalidasi): saat profit +1R pindahkan SL ke entry, lalu trailing stop 3 × ATR 1H (${fP(3*R.a1)}) di belakang close 1H terbaik. TP1–TP3 adalah target/acuan partial, bukan exit wajib — exit tetap di TP1/TP2/TP3 terbukti lebih buruk di backtest.`;
+  if(pos) t+=`<br>Posisi AI di browser ini: <b>${pos.f?'aktif':'menunggu terisi'}</b> sejak ${new Date(pos.t0*1000).toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}, stop sekarang <b>${fP(pos.st)}</b>.`;
+  return t; }
+
+function renderDetail(){ if(!el.classList.contains('open')&&$('mtfD')._h) return; const {rows,grade}=R;
+  const tb=`<table class="qmx"><tr><th>TF</th><th>AUTO TP&amp;SL</th><th>SETUP</th><th>STATUS</th><th>OPEN</th><th>SL</th><th>TP1</th><th>TREN EMA50</th><th>RSI</th></tr>${rows.map(x=>`<tr><td>${x.lb}${x.tf==='1h'?' ★':''}</td><td class="${x.s>0?'u':x.s<0?'d':''}">${nameS(x.s)}</td><td>${x.p?x.p.src:'—'}</td><td>${x.st||'—'}</td><td>${x.p?fP(x.p.entry):'—'}</td><td>${x.p?fP(x.p.sl):'—'}</td><td>${x.p?fP(x.p.tps[0]):'—'}</td><td class="${x.tr>0?'u':x.tr<0?'d':''}">${x.tr>0?'naik':x.tr<0?'turun':'datar'}</td><td>${x.r14!=null?x.r14.toFixed(0):'—'}</td></tr>`).join('')}</table>`;
+  const g=['A','B','C'].map(k=>`<div class="${grade===k?'on':''}"><b>Grade ${k}</b><span>${BT[k]}</span></div>`).join('');
+  const hs=R.hist.length?`<div class="qmh">${R.hist.slice(0,6).map(h=>`<div><span>${new Date(h.t*1000).toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})} · ${nameS(h.s)} ${h.g||''}</span><span>${h.why}</span><b style="color:${h.r>0?'#3dff9a':h.r<0?'#ff5a4d':'#cfd6e3'}">${h.r!=null?(h.r>=0?'+':'')+h.r.toFixed(2)+'R':'—'}</b></div>`).join('')}</div>`:'<div class="qmn">Belum ada sinyal selesai di browser ini.</div>';
+  set('mtfD',`<h5>Keterangan &amp; rekomendasi · acuan 1H</h5><div class="qmk">${advice()}</div>
+    <h5>Konfirmasi 5 timeframe · Auto Take Profit &amp; Stop Loss</h5>${tb}
+    <h5>Backtest aturan ini · 3 tahun · biaya 0.04 % · exit trailing</h5><div class="qmg">${g}</div>
+    <h5>Riwayat sinyal AI (browser ini)</h5>${hs}
+    <div class="qmn">Setiap TF menjalankan rumus Auto TP &amp; SL (N strategy › breakout retest › Fibonacci › tren EMA 50) pada candle-nya sendiri; candle 4H/1D yang masih berjalan ikut dihitung, sama seperti di layar. Win rate 30–37 %: sebagian besar trade kecil rugi, profit datang dari trade yang di-trail jauh. Hasil masa lalu bukan jaminan — bukan saran investasi.</div>`); }
+
+/* ---------- alerts: new ≥ grade B signal → siren; grade C → soft beep ---------- */
+let lastSig=null;
+function alerts(){ const H=window.hdrAlert; const k=R.side?R.side+':'+R.grade:null; if(lastSig!==null&&k&&k!==lastSig&&H){ if(R.grade==='C') H.beep(R.side>0?1320:520,1); else H.alarm(R.side,`AI agent multi timeframe ${R.side>0?'buy':'sell'} grade ${R.grade}`); } lastSig=k||''; }
+
+load(); setInterval(load,30000); setInterval(()=>{ if(!document.hidden&&Date.now()-lastLoad<120000) analyse(); },5000);
+window.__MTFA={load,analyse};
+})();
+</script>
+<style id="smoothGlass">
+/* ===== smooth + liquid glass v2 =====
+   1. no hard on/off blinking: every steps(2) blink became a slow ease-in-out breath
+   2. the colour field behind the glass is static (it was a 40 s animated, 24 px-blurred full-screen layer, so every glass panel
+      had to re-blur its backdrop on every frame while 10+ canvases repainted → GPU stalls, tiles flashing)
+   3. panels no longer use backdrop-filter: the field behind them is a smooth gradient, so a blur changes nothing visible but
+      cost a full-panel blur per repaint. Glass = translucent tint + specular rim + top sheen. Small overlays keep real blur.
+   4. transitions: panels fade in once, menus pop, colours ease, theme switch cross-fades (View Transitions) */
+.live::before,.pxw .top .dot,.apw .aph .dot{animation:smDot 2.4s ease-in-out infinite!important}
+@keyframes smDot{0%,100%{opacity:1}50%{opacity:.3}}
+.alertbar{animation:smAlert 2.4s ease-in-out infinite!important}
+@keyframes smAlert{0%,100%{background:var(--down)}50%{background:#8f2318}}
+#meHot{animation:smMe 2.4s ease-in-out infinite!important} #meHot.calm{animation:none!important}
+@keyframes smMe{0%,100%{border-color:var(--down);background:#1d0503}50%{border-color:#ffb3aa;background:#2b0805}}
+.txV.now{animation:smTx 2.4s ease-in-out infinite!important}
+@keyframes smTx{0%,100%{filter:none}50%{filter:brightness(1.25) saturate(1.15)}}
+.bbSig.buy,.bbSig.sell{animation-duration:2.4s!important} .bbSig.armed{animation-duration:3.2s!important}
+.agpill.hot{animation-duration:2.4s!important}
+/* colour field: static, GPU-friendly (no filter, no animation) */
+html[data-theme] body::before{animation:none!important;filter:none!important;inset:0!important;transform:none!important;
+  background:radial-gradient(60vmax 50vmax at 8% 12%,var(--lg-b1),transparent 70%),radial-gradient(55vmax 45vmax at 92% 6%,var(--lg-b2),transparent 70%),
+    radial-gradient(70vmax 55vmax at 74% 100%,var(--lg-b3),transparent 72%),radial-gradient(50vmax 45vmax at 16% 92%,var(--lg-b4),transparent 70%)!important}
+html[data-theme="dark"]{--lg-panel:rgba(12,15,28,.58);--lg-rim:rgba(255,255,255,.55);--lg-rim2:rgba(255,255,255,.22)}
+html[data-theme="light"]{--lg-panel:rgba(255,255,255,.52);--lg-rim:rgba(255,255,255,1);--lg-rim2:rgba(255,255,255,.75)}
+html[data-theme] .panel{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  background:linear-gradient(158deg,var(--lg-sheen),transparent 34%),linear-gradient(0deg,rgba(255,255,255,.025),transparent 40%),var(--lg-panel)!important;
+  border:1px solid transparent!important;border-radius:18px!important;
+  box-shadow:inset 0 1px 0 var(--lg-hi),inset 0 -1px 0 rgba(255,255,255,.05),var(--lg-shadow)!important;
+  transition:box-shadow .4s ease,background-color .4s ease}
+/* specular rim: bright top-left and bottom-right edges like curved glass */
+html[data-theme] .panel::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:6;
+  background:linear-gradient(135deg,var(--lg-rim),var(--lg-rim2) 18%,rgba(255,255,255,.06) 45%,rgba(255,255,255,.04) 70%,var(--lg-rim2));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+html[data-theme] .a-tvw.max{border-radius:0!important} html[data-theme] .a-tvw.max::before{border-radius:0}
+/* small floating glass keeps the real blur (they sit over detailed content) */
+html[data-theme] :is(.tvmenu,#aiw .aib){-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%)}
+html[data-theme="dark"] .tvmenu{background:rgba(12,15,26,.86)!important;border:1px solid rgba(255,255,255,.28)!important;border-radius:14px!important}
+/* transitions */
+@keyframes smIn{from{opacity:0;transform:translateY(10px) scale(.992)}to{opacity:1;transform:none}}
+@keyframes smPop{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+.sm-intro .frame>.panel{animation:smIn .55s cubic-bezier(.2,.75,.25,1) backwards}
+.frame>.panel:nth-child(2){animation-delay:.04s}.frame>.panel:nth-child(3){animation-delay:.08s}.frame>.panel:nth-child(4){animation-delay:.12s}
+.frame>.panel:nth-child(5){animation-delay:.16s}.frame>.panel:nth-child(6){animation-delay:.2s}.frame>.panel:nth-child(n+7){animation-delay:.24s}
+.tvmenu:not([hidden]),#aiw:not(.min) .aib{animation:smPop .2s ease-out}
+.btn,select,button{transition:background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .25s ease,transform .15s ease}
+#pfPx,#pfCh,#aiS,#tvwHead,.txV .txA,.bbSig .bbV,#fpHead{transition:color .45s ease}
+.a-tvw.max{animation:smIn .25s ease-out}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.45s;animation-timing-function:ease}
+html.sm-theme *,html.sm-theme *::before{transition:background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease!important}
+@media (prefers-reduced-motion:reduce){ .frame>.panel,.tvmenu:not([hidden]),#aiw:not(.min) .aib,.a-tvw.max{animation:none!important}
+  .live::before,.pxw .top .dot,.apw .aph .dot,.alertbar,#meHot,.txV.now{animation:none!important} }
+</style>
+<script id="smoothFx">
+/* theme switch cross-fades instead of snapping (View Transitions where supported, colour transitions otherwise) */
+(()=>{ const b=document.getElementById('themeBtn'); if(!b) return; let pass=false;
+  b.addEventListener('click',e=>{ if(pass) return; e.stopImmediatePropagation(); e.preventDefault();
+    let done=false; const run=()=>{ if(done) return; done=true; pass=true; try{ b.click(); }finally{ pass=false; } }, root=document.documentElement;
+    if(document.startViewTransition&&!document.hidden&&!matchMedia('(prefers-reduced-motion:reduce)').matches){ try{ document.startViewTransition(run); }catch(err){ run(); } setTimeout(run,700); return; } // timer = safety if the transition is skipped
+    root.classList.add('sm-theme'); run(); setTimeout(()=>root.classList.remove('sm-theme'),520); },true);
+})();
+</script>
 </body>
 </html>
 <script id="fp4Core">
