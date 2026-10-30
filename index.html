@@ -5897,6 +5897,86 @@ addEventListener('resize',()=>requestAnimationFrame(place)); place();
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!ai.classList.contains('min')) document.getElementById('aiMin')?.click(); });
 })();
 </script>
+<style id="compactHdr">
+/* ===== desktop: one compact header row + windows edge to edge + AI agent / Auto TP & SL strip without scrolling (2026-10-30) =====
+   brand · price · online · AI agent · mode · market · timeframe · theme · alert · exness · contact · guide · clock, all 28px high.
+   The WIB / mode strap is dropped (mode + TF are already in the selects, the clock is beside them). */
+@media (min-width:1280px) and (min-height:680px){
+  html body .frame{padding:4px 5px!important;gap:5px!important}
+  html body header.top.a-hdr{--hh:28px;display:flex!important;flex-wrap:nowrap!important;align-items:center;gap:7px!important;padding:0!important;min-width:0}
+  html body header.top.a-hdr>.symbar{display:contents}
+  header.top.a-hdr>.brand{order:0} header.top.a-hdr>.symbar>#pxFloat{order:1} header.top.a-hdr>.symbar>#liveOn{order:2}
+  header.top.a-hdr>.symbar>#aiw{order:3} header.top.a-hdr>.symbar>label.symmode{order:4}
+  header.top.a-hdr>.symbar>label.symsel:nth-of-type(1){order:5} header.top.a-hdr>.symbar>label.symsel:nth-of-type(3){order:6}
+  header.top.a-hdr>.symbar>#symNote{order:7} header.top.a-hdr>.controls{order:8} header.top.a-hdr>.symbar>.dlbtn{order:9} header.top.a-hdr>.clockbox{order:10}
+  header.top.a-hdr>.strap{display:none!important}
+  header.top.a-hdr>.symbar>*{flex:none}
+  header.top.a-hdr .symnote:not(:empty){max-width:180px;font-size:9.5px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* brand */
+  header.top.a-hdr .brand{gap:7px;flex:none}
+  header.top.a-hdr .logo{width:24px;height:24px;font-size:13px;box-shadow:2px 2px 0 var(--frame)}
+  header.top.a-hdr #symH1{font-size:15px}
+  /* price + online */
+  header.top.a-hdr #pxFloat{min-width:0!important;gap:8px;padding:0 9px;border-width:1.5px;border-radius:8px}
+  header.top.a-hdr #pxFloat .pfh{font-size:8.5px;letter-spacing:.1em;gap:5px}
+  header.top.a-hdr #pxFloat .pfp{font-size:15px}
+  header.top.a-hdr #pxFloat .pfc{font-size:9.5px}
+  header.top.a-hdr #liveOn{gap:5px;padding:0 7px;border-width:1.5px;border-radius:8px}
+  header.top.a-hdr #liveOn .lvN{font-size:12.5px} header.top.a-hdr #liveOn small{font-size:7.5px;letter-spacing:.1em}
+  header.top.a-hdr #liveOn .lvS{display:none}
+  header.top.a-hdr #liveOn .lvDot{width:6px;height:6px}
+  /* AI agent bar takes the free width */
+  html body header.top.a-hdr>.symbar>#aiw{flex:1 1 0;width:auto;min-width:200px;max-width:none}
+  header.top.a-hdr #aiw .aih{gap:6px;padding:0 4px 0 8px;border-width:1.5px;border-radius:8px}
+  header.top.a-hdr #aiw .aih b{font-size:9px;letter-spacing:.08em}
+  header.top.a-hdr #aiw .aiS{font-size:10.5px}
+  header.top.a-hdr #aiw .aih button{font-size:11px;padding:1px 6px}
+  /* selects without captions */
+  header.top.a-hdr .symsel>span{display:none!important}
+  html body header.top.a-hdr .symsel select{min-width:0!important;font-size:11px;padding:0 22px 0 8px;border-radius:7px}
+  /* icon buttons */
+  header.top.a-hdr .controls{gap:5px;flex:none}
+  html body header.top.a-hdr .controls .btn{min-width:0!important;height:var(--hh);padding:0 8px;font-size:9.5px;letter-spacing:.08em;border-radius:7px;gap:0}
+  html body header.top.a-hdr .controls #themeBtn,html body header.top.a-hdr .controls #soundBtn,html body header.top.a-hdr .controls .btn.wa{width:var(--hh);padding:0;font-size:0;letter-spacing:0}
+  header.top.a-hdr #themeBtn span{display:none} header.top.a-hdr #themeBtn svg{width:14px;height:14px}
+  header.top.a-hdr .btn.wa svg{width:15px;height:15px}
+  header.top.a-hdr #soundBtn::before{content:"";width:14px;height:14px;background:currentColor;
+    -webkit-mask:var(--bell) center/contain no-repeat;mask:var(--bell) center/contain no-repeat}
+  header.top.a-hdr #soundBtn{--bell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9'/%3E%3Cpath d='M10.3 21a1.9 1.9 0 0 0 3.4 0'/%3E%3Cpath d='M2 2l20 20'/%3E%3C/svg%3E");opacity:.7}
+  header.top.a-hdr #soundBtn[aria-pressed="true"]{--bell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9'/%3E%3Cpath d='M10.3 21a1.9 1.9 0 0 0 3.4 0'/%3E%3C/svg%3E");opacity:1;color:#ffd166;border-color:#ffd166}
+  header.top.a-hdr .dlbtn{height:var(--hh);padding:0 8px!important;gap:4px;font-size:10px;border-radius:7px}
+  header.top.a-hdr .dlbtn span{display:none} header.top.a-hdr .dlbtn::after{content:"PDF"} header.top.a-hdr .dlbtn svg{width:13px;height:13px}
+  /* clock */
+  html body header.top.a-hdr .clockbox{min-width:0;padding:0 7px;border-width:1.5px;border-radius:7px;flex:none}
+  header.top.a-hdr .clockbox b{font-size:13px} header.top.a-hdr .clockbox span{font-size:7.5px}
+  /* AI agent · MTF + Auto TP & SL row: tall enough for every line, no scroll; the long disclaimer moves to the tooltip */
+  html body .frame>section.a-tvw.panel{grid-template-rows:auto minmax(0,1fr) 82px}
+  .frame>section.a-tvw>.tvwinfo{overflow:hidden!important}
+  .frame>section.a-tvw>.tvwinfo .note{display:none}
+  .frame>section.a-tvw>.tvwinfo .tpc{padding:3px 10px;display:flex;flex-wrap:wrap;align-items:baseline;column-gap:10px;row-gap:1px}
+  .frame>section.a-tvw>.tvwinfo .tpc>h4{margin:0;flex:none}
+  .frame>section.a-tvw>.tvwinfo .tpc>.st{flex:1 1 0;min-width:0;line-height:1.2}
+  .frame>section.a-tvw>.tvwinfo .tpc>.kv{flex:1 1 100%}
+}
+@media (min-width:1280px) and (max-width:1599px) and (min-height:680px){
+  header.top.a-hdr #symH1 .hdl{display:none}
+  .frame>section.a-tvw>.tvwinfo .tpc .kv{font-size:10px}
+  .frame>section.a-tvw>.tvwinfo .tpc>.st{font-size:11px}
+  html body .frame>section.a-tvw.panel{grid-template-rows:auto minmax(0,1fr) 90px}
+}
+@media (min-width:1280px) and (max-width:1439px) and (min-height:680px){
+  header.top.a-hdr #symH1{display:none}
+  header.top.a-hdr #liveOn small{display:none}
+}
+</style>
+<script id="compactHdrJs">
+/* the Auto TP & SL disclaimer is hidden in the desktop strip: keep it readable as the tooltip */
+(()=>{
+const i=document.getElementById('tvwInfo'); if(!i) return;
+const sync=()=>{ const n=i.querySelector('.note'), t=n?n.textContent.trim():''; if(t&&i.title!==t) i.title=t; };
+new MutationObserver(sync).observe(i,{childList:true,subtree:true}); sync();
+})();
+</script>
 </body>
 </html>
 <script id="fp4Core">
